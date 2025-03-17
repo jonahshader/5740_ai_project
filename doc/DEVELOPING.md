@@ -42,3 +42,32 @@ sudo apt install make
 ```
 
 For Windows, follow the instructions from their website.
+
+## Simulation
+
+To compile the simulation, run the following in `bash` or `powershell`:
+
+1. Create a folder for the build in the sim directory:
+
+    ```bash
+    mkdir build-debug
+    cd build-debug
+    ```
+
+2. Configure the project with `CMAKE_BUILD_TYPE=Debug` or `CMAKE_BUILD_TYPE=Release`:
+
+    ```bash
+    cmake -DCMAKE_BUILD_TYPE=Debug ..
+    ```
+
+3. Build the project:
+
+    ```bash
+    cmake --build .
+    ```
+
+4. The executable will be placed at /Debug/sim.exe on Windows, TODO: where on Ubuntu?:
+
+    ```bash
+    /Debug/sim
+    ```
