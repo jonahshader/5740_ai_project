@@ -1,0 +1,27 @@
+---
+Language: Cpp
+# Use K&R style
+BreakBeforeBraces: Attach
+# Indent width
+IndentWidth: 2
+# Don't indent public/private/protected
+AccessModifierOffset: -2
+# Align parameters
+AlignAfterOpenBracket: Align
+# Other useful settings
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+# Keep parameters on the same line if possible
+BinPackParameters: true
+# Column limit
+ColumnLimit: 100
+# Indent case labels
+IndentCaseLabels: true
+# Space before parentheses
+SpaceBeforeParens: ControlStatements
+# Spaces in parentheses
+SpacesInParentheses: false
+# Don't sort includes
+SortIncludes: false
