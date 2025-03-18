@@ -69,5 +69,5 @@ To compile the simulation, run the following in `bash` or `powershell`:
 4. The executable will be placed at /Debug/sim.exe on Windows, TODO: where on Ubuntu?:
 
     ```bash
-    /Debug/sim
+    ./Debug/sim
     ```

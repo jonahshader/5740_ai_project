@@ -20,7 +20,12 @@ find_package(OpenMP REQUIRED)
 
 # Create main executable
 add_executable(sim
+  src/core.cpp
+  src/core.h
+  src/fixed_point.h
   src/main.cpp
+  src/renderer.cpp
+  src/renderer.h
 )
 
 # Link libraries

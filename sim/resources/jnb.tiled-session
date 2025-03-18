@@ -1,0 +1,44 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "jnb_map1.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "jnb_map1.tmx": {
+            "scale": 22.42,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 39.98661909009813,
+                "y": 39.98661909009812
+            }
+        },
+        "jnb_tileset.tsx": {
+            "scaleInDock": 11,
+            "scaleInEditor": 1
+        }
+    },
+    "last.imagePath": "C:/Users/jonah/Documents/programming/5740_ai_project/sim/resources",
+    "map.height": 10,
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 8,
+    "map.tileWidth": 8,
+    "map.width": 10,
+    "openFiles": [
+        "jnb_tileset.tsx",
+        "jnb_map1.tmx"
+    ],
+    "project": "jnb.tiled-project",
+    "recentFiles": [
+        "jnb_tileset.tsx",
+        "jnb_map1.tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 8,
+        "width": 8
+    }
+}
