@@ -20,12 +20,15 @@ constexpr int WIDTH_CELLS = 10;
 constexpr int HEIGHT_CELLS = 10;
 
 constexpr Fixed3 JUMP_VEL = Fixed3::from_raw(12);
+constexpr Fixed3 JUMP_MIDAIR_ACCEL = Fixed3::from_raw(1);
+constexpr Fixed3 SPRING_VEL = Fixed3::from_raw(18);
 constexpr Fixed3 MOVE_ACCEL = Fixed3::from_raw(3);
 constexpr Fixed3 MOVE_ACCEL_WATER = Fixed3::from_raw(2); // slower in water
-constexpr Fixed3 MOVE_ACCEL_ICE = Fixed3::from_raw(1); // much slower on ice
-constexpr Fixed3 MOVE_MAX_VEL = Fixed3((int16_t) 2); // 2 pixels per second
+constexpr Fixed3 MOVE_ACCEL_ICE = Fixed3::from_raw(1);   // much slower on ice
+constexpr Fixed3 MOVE_MAX_VEL = Fixed3((int16_t)2);      // 2 pixels per second
+constexpr Fixed3 GRAVITY = Fixed3::from_raw(-3);
+constexpr Fixed3 GRAVITY_WATER = Fixed3::from_raw(-1);
 
-// using TilePos = std::pair<uint8_t, uint8_t>;
 struct TilePos {
   uint8_t x;
   uint8_t y;
@@ -42,11 +45,15 @@ enum Tile {
   COIN = 7
 };
 
-constexpr bool can_stand_on(Tile tile) {
+constexpr bool is_solid(Tile tile) {
   return tile == GROUND || tile == SPRING || tile == ICE;
 }
 
-    // clang-format off
+constexpr bool is_water(Tile tile) {
+  return tile == WATER_BODY || tile == WATER_TOP;
+}
+
+// clang-format off
 // note: this is using y-down indexing,
 // so 0, 0 is top left, HEIGHT_CELLS-1, 0 is bottom left.
 constexpr uint8_t base_map[HEIGHT_CELLS][WIDTH_CELLS] = {

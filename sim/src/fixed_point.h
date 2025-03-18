@@ -41,8 +41,13 @@ public:
   constexpr T raw_value() const {
     return value;
   }
-  constexpr T to_integer() const {
+  constexpr T to_integer_floor() const {
     return value >> FractionalBits;
+  }
+  constexpr T to_integer_ceil() const {
+    // If there is any fractional part, round up
+    T integer_part = value >> FractionalBits;
+    return (fractional_part() > 0) ? integer_part + 1 : integer_part;
   }
   constexpr T to_integer_rounded() const {
     return (value + (ONE >> 1)) >> FractionalBits;
