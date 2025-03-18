@@ -4,23 +4,49 @@
 #include <cstdint>
 #include <random>
 #include <utility>
+#include <vector>
 
 #include "fixed_point.h"
 
 namespace jnb {
 
-using Fixed3 = FixedPoint<int16_t, 4>;
+using Fixed3 = FixedPoint<int16_t, 3>;
 
 constexpr int CELL_SIZE = 8;
 constexpr int PLAYER_WIDTH = CELL_SIZE - 2;
-constexpr int PLAYER_HEIGHT = 2 * CELL_SIZE - 2;
+constexpr int PLAYER_HEIGHT = CELL_SIZE - 2;
 constexpr int PLAYER_HALF_HEIGHT = PLAYER_HEIGHT / 2;
 constexpr int WIDTH_CELLS = 10;
 constexpr int HEIGHT_CELLS = 10;
 
-using TilePos = std::pair<uint8_t, uint8_t>;
+constexpr Fixed3 JUMP_VEL = Fixed3::from_raw(12);
+constexpr Fixed3 MOVE_ACCEL = Fixed3::from_raw(3);
+constexpr Fixed3 MOVE_ACCEL_WATER = Fixed3::from_raw(2); // slower in water
+constexpr Fixed3 MOVE_ACCEL_ICE = Fixed3::from_raw(1); // much slower on ice
+constexpr Fixed3 MOVE_MAX_VEL = Fixed3((int16_t) 2); // 2 pixels per second
 
-// clang-format off
+// using TilePos = std::pair<uint8_t, uint8_t>;
+struct TilePos {
+  uint8_t x;
+  uint8_t y;
+};
+
+enum Tile {
+  NOTHING = 0,
+  GROUND = 1,
+  AIR = 2,
+  SPRING = 3,
+  WATER_BODY = 4,
+  WATER_TOP = 5,
+  ICE = 6,
+  COIN = 7
+};
+
+constexpr bool can_stand_on(Tile tile) {
+  return tile == GROUND || tile == SPRING || tile == ICE;
+}
+
+    // clang-format off
 // note: this is using y-down indexing,
 // so 0, 0 is top left, HEIGHT_CELLS-1, 0 is bottom left.
 constexpr uint8_t base_map[HEIGHT_CELLS][WIDTH_CELLS] = {
@@ -36,17 +62,6 @@ constexpr uint8_t base_map[HEIGHT_CELLS][WIDTH_CELLS] = {
   {4,4,4,4,4,4,4,4,1,1},
 };
 // clang-format on
-
-enum TILE {
-  NOTHING = 0,
-  GROUND = 1,
-  AIR = 2,
-  SPRING = 3,
-  WATER_BODY = 4,
-  WATER_TOP = 5,
-  ICE = 6,
-  COIN = 7
-};
 
 // we want to spawn coins in the air, but above non-air (so that they are accessible).
 // since the map is know at compile time, we can generate a list of these spawn locations
@@ -93,6 +108,7 @@ struct Player {
   Fixed3 y;
   Fixed3 x_vel;
   Fixed3 y_vel;
+  int score;
 };
 
 struct GameState {
@@ -100,6 +116,7 @@ struct GameState {
   Player p2;
   TilePos coin_pos;
   std::mt19937 rng;
+  uint32_t age;
 };
 
 struct PlayerInput {
@@ -109,5 +126,7 @@ struct PlayerInput {
 };
 
 void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2);
+void observe_state_simple(const GameState &state, std::vector<Fixed3> &observation);
+void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);
 
 } // namespace jnb
