@@ -13,31 +13,23 @@ constexpr Tile read_base_map(int x, int y) {
   return static_cast<Tile>(base_map[HEIGHT_CELLS - 1 - y][x]);
 }
 
-// check if the player is on the ground
-bool is_grounded(const Player &p) {
-  // calculate the y tile coordinate and check if our y position is exactly on it
-  int y_tile = p.y.to_integer() / CELL_SIZE; // can use shift on FPGA
-  if (Fixed3(static_cast<int16_t>(y_tile * CELL_SIZE)) != p.y)
-    // early return when its on exactly on the bottom of a tile
-    return false;
-
-  // we didn't early return, so we are on the bottom of a tile.
-  // check if the tile we're standing on something stand-able...
-  int x_tile = p.x.to_integer() / CELL_SIZE;
-  if (can_stand_on(read_base_map(x_tile, y_tile - 1)))
-    return true;
-  // try again for the right side of the player
-  x_tile += PLAYER_WIDTH - 1;
-  if (can_stand_on(read_base_map(x_tile, y_tile - 1)))
-    return true;
-  // neither side of the player is standing above solid ground...
-  return false;
-}
-
 void update_player(Player &p, const PlayerInput &input) {
   constexpr Fixed3 FIXED3_ZERO = Fixed3::from_raw(0);
 
-  bool grounded = is_grounded(p);
+  // determine if the player is grounded
+  bool grounded = false;
+  const int y_tile = p.y.to_integer() / CELL_SIZE;
+  if (Fixed3(static_cast<int16_t>(y_tile * CELL_SIZE)) == p.y) {
+    // we are on the bottom of a tile,
+    // so check if we are on something stand-able...
+    const int x_tile = p.x.to_integer() / CELL_SIZE;
+    // check both the left and right side of the player
+    if (can_stand_on(read_base_map(x_tile, y_tile - 1)) ||
+        can_stand_on(read_base_map(x_tile + PLAYER_WIDTH - 1, y_tile - 1))) {
+      grounded = true;
+    }
+  }
+
   if (grounded && input.jump) {
     p.y_vel = JUMP_VEL;
   }
