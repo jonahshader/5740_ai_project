@@ -1,19 +1,13 @@
 #include "core.h"
 
-#include <unordered_set>
+#include <cmath>
 
 namespace jnb {
 
 // read from the base map with y-up indexing,
 // out-of-bounds down, left, right returns GROUND.
 // out-of-bounds up returns AIR.
-constexpr Tile read_base_map(int x, int y) {
-  if (x < 0 || y < 0 || x >= WIDTH_CELLS)
-    return Tile::GROUND;
-  if (y >= HEIGHT_CELLS)
-    return Tile::AIR;
-  return static_cast<Tile>(base_map[HEIGHT_CELLS - 1 - y][x]);
-}
+
 
 TilePos get_random_spawn_pos(std::mt19937 &rng) {
   std::uniform_int_distribution<int> dist(0, COIN_SPAWN_COUNT - 1);
@@ -46,6 +40,16 @@ GameState init(uint64_t seed) {
   return state;
 }
 
+int get_tile_id(int pos) {
+  if (pos >= 0) {
+    return pos / CELL_SIZE;
+  } else {
+    // in our case, just returning -1 here is fine, since the player will never
+    // make it past -1 in any case.
+    return -1;
+  }
+}
+
 void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
                    bool &coin_collected) {
   constexpr Fixed4 F3_ZERO = Fixed4::from_raw(0);
@@ -55,10 +59,10 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
   const int y_low = p.y.to_integer_floor();
   const int y_high = p.y.to_integer_ceil();
 
-  const int x_tile_left = x_low / CELL_SIZE;
-  const int x_tile_right = (x_high + PLAYER_WIDTH - 1) / CELL_SIZE;
-  const int y_tile_down = y_low / CELL_SIZE;
-  const int y_tile_up = (y_high + PLAYER_HEIGHT - 1) / CELL_SIZE;
+  const int x_tile_left = get_tile_id(x_low);
+  const int x_tile_right = get_tile_id(x_high + PLAYER_WIDTH - 1);
+  const int y_tile_down = get_tile_id(y_low);
+  const int y_tile_up = get_tile_id(y_high + PLAYER_HEIGHT - 1);
 
   // get the tiles the player is standing on
   const Tile down_left_tile = read_base_map(x_tile_left, y_tile_down - 1);
@@ -79,7 +83,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
   // determine if in water
   const bool in_water = is_water(left_tile) || is_water(right_tile);
   // determine if on ice
-  const bool on_ice = left_tile == Tile::ICE || right_tile == Tile::ICE;
+  const bool on_ice = down_left_tile == Tile::ICE || down_right_tile == Tile::ICE;
   // determine acceleration based on context
   const Fixed4 gravity = in_water ? GRAVITY_WATER : GRAVITY;
   const Fixed4 move_accel = on_ice ? MOVE_ACCEL_ICE : (in_water ? MOVE_ACCEL_WATER : MOVE_ACCEL);
@@ -115,22 +119,24 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
       p.x_vel = MOVE_MAX_VEL;
     }
   } else {
-    // decelerate towards zero
-    if (p.x_vel > F3_ZERO) {
-      // check if we have room to do the full speed reduction
-      if (p.x_vel >= move_accel) {
-        p.x_vel -= move_accel;
-      } else {
-        // we are too slow to do the full speed reduction
-        p.x_vel = F3_ZERO;
-      }
-    } else if (p.x_vel < F3_ZERO) {
-      // check if we have room to do the full speed reduction
-      if (p.x_vel <= -move_accel) {
-        p.x_vel += move_accel;
-      } else {
-        // we are too slow to do the full speed reduction
-        p.x_vel = F3_ZERO;
+    // decelerate towards zero if grounded and not on ice
+    if (grounded && !on_ice) {
+      if (p.x_vel > F3_ZERO) {
+        // check if we have room to do the full speed reduction
+        if (p.x_vel >= move_accel) {
+          p.x_vel -= move_accel;
+        } else {
+          // we are too slow to do the full speed reduction
+          p.x_vel = F3_ZERO;
+        }
+      } else if (p.x_vel < F3_ZERO) {
+        // check if we have room to do the full speed reduction
+        if (p.x_vel <= -move_accel) {
+          p.x_vel += move_accel;
+        } else {
+          // we are too slow to do the full speed reduction
+          p.x_vel = F3_ZERO;
+        }
       }
     }
   }
@@ -145,10 +151,10 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
   const int yn_low = p.y.to_integer_floor();
   const int yn_high = p.y.to_integer_ceil();
 
-  const int xn_tile_left = xn_low / CELL_SIZE;
-  const int xn_tile_right = (xn_high + PLAYER_WIDTH - 1) / CELL_SIZE;
-  const int yn_tile_down = yn_low / CELL_SIZE;
-  const int yn_tile_up = (yn_high + PLAYER_HEIGHT - 1) / CELL_SIZE;
+  const int xn_tile_left = get_tile_id(xn_low);
+  const int xn_tile_right = get_tile_id(xn_high + PLAYER_WIDTH - 1);
+  const int yn_tile_down = get_tile_id(yn_low);
+  const int yn_tile_up = get_tile_id(yn_high + PLAYER_HEIGHT - 1);
 
   // handle left right collisions
   if (p.x_vel < F3_ZERO) {
@@ -167,7 +173,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
     const Tile right_2 = read_base_map(xn_tile_right, y_tile_up);
     if (is_solid(right_1) || is_solid(right_2)) {
       // make flush with wall
-      p.x = Fixed4(static_cast<int16_t>((xn_tile_right - 1) * CELL_SIZE));
+      p.x = Fixed4(static_cast<int16_t>(xn_tile_right * CELL_SIZE - PLAYER_WIDTH));
       // cancel velocity
       p.x_vel = F3_ZERO;
     }
@@ -187,7 +193,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
     const Tile top_1 = read_base_map(x_tile_left, yn_tile_up);
     const Tile top_2 = read_base_map(x_tile_right, yn_tile_up);
     if (is_solid(top_1) || is_solid(top_2)) {
-      p.y = Fixed4(static_cast<int16_t>((yn_tile_up - 1) * CELL_SIZE));
+      p.y = Fixed4(static_cast<int16_t>(yn_tile_up * CELL_SIZE - PLAYER_HEIGHT));
       // cancel velocity
       p.y_vel = F3_ZERO;
     }
@@ -199,12 +205,12 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
   // we'll just give both of them the point.
   const int x_center = p.x.to_integer_rounded() + PLAYER_WIDTH / 2;
   const int y_center = p.y.to_integer_rounded() + PLAYER_HEIGHT / 2;
-  const int x_tile_center = x_center / CELL_SIZE;
-  const int y_tile_center = y_center / CELL_SIZE;
+  const int x_tile_center = get_tile_id(x_center);
+  const int y_tile_center = get_tile_id(y_center);
   coin_collected = x_tile_center == coin_pos.x && y_tile_center == coin_pos.y;
   if (coin_collected) {
     // get a point for collecting coin
-    ++p.score;
+    p.score += POINTS_PER_COIN;
   }
 }
 
