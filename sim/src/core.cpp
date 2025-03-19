@@ -13,7 +13,7 @@ constexpr Tile read_base_map(int x, int y) {
   return static_cast<Tile>(base_map[HEIGHT_CELLS - 1 - y][x]);
 }
 
-void update_player(Player &p, const PlayerInput &input) {
+void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos, bool &coin_collected) {
   constexpr Fixed3 F3_ZERO = Fixed3::from_raw(0);
 
   const int x_low = p.x.to_integer_floor();
@@ -159,16 +159,35 @@ void update_player(Player &p, const PlayerInput &input) {
     }
   }
 
-  // TODO: check coin collision.
+  // check coin collision.
   // can do this in here (which would be both players in parallel in FPGA) because
   // in the edge case where both players collide with the coin on the same frame,
   // we'll just give both of them the point.
+  const int x_center = p.x.to_integer_rounded() + PLAYER_WIDTH / 2;
+  const int y_center = p.y.to_integer_rounded() + PLAYER_HEIGHT / 2;
+  const int x_tile_center = x_center / CELL_SIZE;
+  const int y_tile_center = y_center / CELL_SIZE;
+  coin_collected = x_tile_center == coin_pos.x && y_tile_center == coin_pos.y;
+  if (coin_collected) {
+    // get a point for collecting coin
+    ++p.score;
+  }
 }
 
 void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2) {
   // updating can happen in parallel in FPGA
-  update_player(state.p1, in1);
-  update_player(state.p2, in2);
+  bool p1_coin_collected;
+  bool p2_coin_collected;
+  update_player(state.p1, in1, state.coin_pos, p1_coin_collected);
+  update_player(state.p2, in2, state.coin_pos, p2_coin_collected);
+
+  // if the coin was collected,
+  // pick a new location from the valid coin spawn locations randomly.
+  if (p1_coin_collected || p2_coin_collected) {
+    std::uniform_int_distribution<int> coin_pos_dist(0, COIN_SPAWN_COUNT);
+    auto coin_pos_index = coin_pos_dist(state.rng);
+    state.coin_pos = COIN_SPAWN_POSITIONS[coin_pos_index];
+  }
   ++state.age;
 }
 
