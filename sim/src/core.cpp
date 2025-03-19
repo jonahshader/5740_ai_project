@@ -181,6 +181,17 @@ void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2) {
   update_player(state.p1, in1, state.coin_pos, p1_coin_collected);
   update_player(state.p2, in2, state.coin_pos, p2_coin_collected);
 
+  // TODO: handle player-player collision.
+  // the intent is to make it so that jumping on another player kills them,
+  // giving one point to the killer. if they collide but on the side instead
+  // of the top, they just collide.
+  // actually, maybe this should be handled mario-style, where we compare
+  // their y-velocities instead.
+  // some other ideas: maybe the player could place a temporary ground tile
+  // beneath them, at the expence of one point (the coin reward would have to 
+  // be much higher, so that its still worth placing ground tiles if it means
+  // increased likelyhood of getting the coin)
+
   // if the coin was collected,
   // pick a new location from the valid coin spawn locations randomly.
   if (p1_coin_collected || p2_coin_collected) {
