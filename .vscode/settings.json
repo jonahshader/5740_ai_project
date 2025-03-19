@@ -69,5 +69,6 @@
     "xutility": "cpp",
     "condition_variable": "cpp",
     "mutex": "cpp"
-  }
+  },
+  "cmake.ignoreCMakeListsMissing": true
 }
