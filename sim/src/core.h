@@ -10,7 +10,7 @@
 
 namespace jnb {
 
-using Fixed3 = FixedPoint<int16_t, 3>;
+using Fixed4 = FixedPoint<int16_t, 4>;
 
 constexpr int CELL_SIZE = 8;
 constexpr int PLAYER_WIDTH = CELL_SIZE - 2;
@@ -19,15 +19,15 @@ constexpr int PLAYER_HALF_HEIGHT = PLAYER_HEIGHT / 2;
 constexpr int WIDTH_CELLS = 10;
 constexpr int HEIGHT_CELLS = 10;
 
-constexpr Fixed3 JUMP_VEL = Fixed3::from_raw(12);
-constexpr Fixed3 JUMP_MIDAIR_ACCEL = Fixed3::from_raw(1);
-constexpr Fixed3 SPRING_VEL = Fixed3::from_raw(18);
-constexpr Fixed3 MOVE_ACCEL = Fixed3::from_raw(3);
-constexpr Fixed3 MOVE_ACCEL_WATER = Fixed3::from_raw(2); // slower in water
-constexpr Fixed3 MOVE_ACCEL_ICE = Fixed3::from_raw(1);   // much slower on ice
-constexpr Fixed3 MOVE_MAX_VEL = Fixed3((int16_t)2);      // 2 pixels per second
-constexpr Fixed3 GRAVITY = Fixed3::from_raw(-3);
-constexpr Fixed3 GRAVITY_WATER = Fixed3::from_raw(-1);
+constexpr Fixed4 JUMP_VEL = Fixed4::from_raw(25);
+constexpr Fixed4 JUMP_MIDAIR_ACCEL = Fixed4::from_raw(1);
+constexpr Fixed4 SPRING_VEL = Fixed4::from_raw(38);
+constexpr Fixed4 MOVE_ACCEL = Fixed4::from_raw(4);
+constexpr Fixed4 MOVE_ACCEL_WATER = Fixed4::from_raw(1); // slower in water
+constexpr Fixed4 MOVE_ACCEL_ICE = Fixed4::from_raw(0);   // much slower on ice
+constexpr Fixed4 MOVE_MAX_VEL = Fixed4::from_raw(10);
+constexpr Fixed4 GRAVITY = Fixed4::from_raw(-2);
+constexpr Fixed4 GRAVITY_WATER = Fixed4::from_raw(-1);
 
 struct TilePos {
   uint8_t x;
@@ -71,7 +71,7 @@ constexpr uint8_t base_map[HEIGHT_CELLS][WIDTH_CELLS] = {
 // clang-format on
 
 // we want to spawn coins in the air, but above non-air (so that they are accessible).
-// since the map is know at compile time, we can generate a list of these spawn locations
+// since the map is known at compile time, we can generate a list of these spawn locations
 // at compile time as well.
 
 // counts the number of valid coin spawn locations
@@ -111,29 +111,30 @@ constexpr int COIN_SPAWN_COUNT = count_coin_spawns();
 constexpr auto COIN_SPAWN_POSITIONS = get_coin_spawns<COIN_SPAWN_COUNT>();
 
 struct Player {
-  Fixed3 x;
-  Fixed3 y;
-  Fixed3 x_vel;
-  Fixed3 y_vel;
-  int score;
+  Fixed4 x = Fixed4::from_raw(0);
+  Fixed4 y = Fixed4::from_raw(0);
+  Fixed4 x_vel = Fixed4::from_raw(0);
+  Fixed4 y_vel = Fixed4::from_raw(0);
+  int score{0};
 };
 
 struct GameState {
-  Player p1;
-  Player p2;
-  TilePos coin_pos;
-  std::mt19937 rng;
-  uint32_t age;
+  Player p1{};
+  Player p2{};
+  TilePos coin_pos{0, 0};
+  std::mt19937 rng{0};
+  uint32_t age{0};
 };
 
 struct PlayerInput {
-  bool left;
-  bool right;
-  bool jump;
+  bool left{false};
+  bool right{false};
+  bool jump{false};
 };
 
+GameState init(uint64_t seed);
 void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2);
-void observe_state_simple(const GameState &state, std::vector<Fixed3> &observation);
+void observe_state_simple(const GameState &state, std::vector<Fixed4> &observation);
 void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);
 
 } // namespace jnb

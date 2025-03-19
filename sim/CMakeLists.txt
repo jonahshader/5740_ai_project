@@ -15,17 +15,31 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SDL2)
 
+# lodepng
+FetchContent_Declare(
+  lodepng
+  GIT_REPOSITORY https://github.com/lvandeve/lodepng.git
+  GIT_TAG master
+)
+FetchContent_GetProperties(lodepng)
+if(NOT lodepng_POPULATED)
+  FetchContent_Populate(lodepng)
+endif()
+
 # Find OpenMP
 find_package(OpenMP REQUIRED)
 
 # Create main executable
 add_executable(sim
+  src/core_render.cpp
+  src/core_render.h
   src/core.cpp
   src/core.h
   src/fixed_point.h
   src/main.cpp
-  src/renderer.cpp
-  src/renderer.h
+  src/pixel_game.cpp
+  src/pixel_game.h
+  ${lodepng_SOURCE_DIR}/lodepng.cpp
 )
 
 # Link libraries
@@ -37,6 +51,7 @@ target_link_libraries(sim PRIVATE
 # Include headers
 target_include_directories(sim PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${lodepng_SOURCE_DIR}
 )
 
 # Platform-specific configurations

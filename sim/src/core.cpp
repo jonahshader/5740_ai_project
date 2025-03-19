@@ -1,5 +1,7 @@
 #include "core.h"
 
+#include <unordered_set>
+
 namespace jnb {
 
 // read from the base map with y-up indexing,
@@ -13,8 +15,40 @@ constexpr Tile read_base_map(int x, int y) {
   return static_cast<Tile>(base_map[HEIGHT_CELLS - 1 - y][x]);
 }
 
-void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos, bool &coin_collected) {
-  constexpr Fixed3 F3_ZERO = Fixed3::from_raw(0);
+TilePos get_random_spawn_pos(std::mt19937 &rng) {
+  std::uniform_int_distribution<int> dist(0, COIN_SPAWN_COUNT - 1);
+  auto coin_pos_index = dist(rng);
+  return COIN_SPAWN_POSITIONS[coin_pos_index];
+}
+
+GameState init(uint64_t seed) {
+  GameState state{};
+  // create rng from seed
+  state.rng = std::mt19937(seed);
+  // pick random position for coin
+  state.coin_pos = get_random_spawn_pos(state.rng);
+  // pick random positions for p1, p2
+  std::uniform_int_distribution<int> spawn_index_dist(0, COIN_SPAWN_COUNT - 1);
+  auto spawn_index = spawn_index_dist(state.rng);
+  auto spawn = COIN_SPAWN_POSITIONS[spawn_index];
+  state.p1.x = Fixed4(static_cast<int16_t>(spawn.x * CELL_SIZE));
+  state.p1.y = Fixed4(static_cast<int16_t>(spawn.y * CELL_SIZE));
+  auto spawn_index_2 = spawn_index_dist(state.rng);
+  // ensure ps2 doesn't spawn on p1
+  // TODO: extend to coin logic? or is this needlessly complicated for FPGA impl?
+  if (spawn_index_2 == spawn_index) {
+    spawn_index_2 = (spawn_index + 1) % COIN_SPAWN_COUNT;
+  }
+  spawn = COIN_SPAWN_POSITIONS[spawn_index_2];
+  state.p2.x = Fixed4(static_cast<int16_t>(spawn.x * CELL_SIZE));
+  state.p2.y = Fixed4(static_cast<int16_t>(spawn.y * CELL_SIZE));
+
+  return state;
+}
+
+void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
+                   bool &coin_collected) {
+  constexpr Fixed4 F3_ZERO = Fixed4::from_raw(0);
 
   const int x_low = p.x.to_integer_floor();
   const int x_high = p.x.to_integer_ceil();
@@ -34,7 +68,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
 
   // determine if the player is grounded
   bool grounded = false;
-  if (Fixed3(static_cast<int16_t>(y_tile_down * CELL_SIZE)) == p.y) {
+  if (Fixed4(static_cast<int16_t>(y_tile_down * CELL_SIZE)) == p.y) {
     // we are on the bottom of a tile,
     // so check if we are on something stand-able...
     if (is_solid(down_left_tile) || is_solid(down_right_tile)) {
@@ -47,8 +81,8 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
   // determine if on ice
   const bool on_ice = left_tile == Tile::ICE || right_tile == Tile::ICE;
   // determine acceleration based on context
-  const Fixed3 gravity = in_water ? GRAVITY_WATER : GRAVITY;
-  const Fixed3 move_accel = on_ice ? MOVE_ACCEL_ICE : (in_water ? MOVE_ACCEL_WATER : MOVE_ACCEL);
+  const Fixed4 gravity = in_water ? GRAVITY_WATER : GRAVITY;
+  const Fixed4 move_accel = on_ice ? MOVE_ACCEL_ICE : (in_water ? MOVE_ACCEL_WATER : MOVE_ACCEL);
 
   // jump logic
   if (grounded) {
@@ -123,7 +157,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
     const Tile left_2 = read_base_map(xn_tile_left, y_tile_up);
     if (is_solid(left_1) || is_solid(left_2)) {
       // make flush with wall
-      p.x = Fixed3(static_cast<int16_t>((xn_tile_left + 1) * CELL_SIZE));
+      p.x = Fixed4(static_cast<int16_t>((xn_tile_left + 1) * CELL_SIZE));
       // cancel velocity
       p.x_vel = F3_ZERO;
     }
@@ -133,7 +167,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
     const Tile right_2 = read_base_map(xn_tile_right, y_tile_up);
     if (is_solid(right_1) || is_solid(right_2)) {
       // make flush with wall
-      p.x = Fixed3(static_cast<int16_t>((xn_tile_right - 1) * CELL_SIZE));
+      p.x = Fixed4(static_cast<int16_t>((xn_tile_right - 1) * CELL_SIZE));
       // cancel velocity
       p.x_vel = F3_ZERO;
     }
@@ -144,7 +178,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
     const Tile down_2 = read_base_map(x_tile_right, yn_tile_down);
     if (is_solid(down_1) || is_solid(down_2)) {
       // make flush with floor
-      p.y = Fixed3(static_cast<int16_t>((yn_tile_down + 1) * CELL_SIZE));
+      p.y = Fixed4(static_cast<int16_t>((yn_tile_down + 1) * CELL_SIZE));
       // cancel velocity
       p.y_vel = F3_ZERO;
     }
@@ -153,7 +187,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
     const Tile top_1 = read_base_map(x_tile_left, yn_tile_up);
     const Tile top_2 = read_base_map(x_tile_right, yn_tile_up);
     if (is_solid(top_1) || is_solid(top_2)) {
-      p.y = Fixed3(static_cast<int16_t>((yn_tile_up - 1) * CELL_SIZE));
+      p.y = Fixed4(static_cast<int16_t>((yn_tile_up - 1) * CELL_SIZE));
       // cancel velocity
       p.y_vel = F3_ZERO;
     }
@@ -188,16 +222,14 @@ void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2) {
   // actually, maybe this should be handled mario-style, where we compare
   // their y-velocities instead.
   // some other ideas: maybe the player could place a temporary ground tile
-  // beneath them, at the expence of one point (the coin reward would have to 
+  // beneath them, at the expence of one point (the coin reward would have to
   // be much higher, so that its still worth placing ground tiles if it means
   // increased likelyhood of getting the coin)
 
   // if the coin was collected,
   // pick a new location from the valid coin spawn locations randomly.
   if (p1_coin_collected || p2_coin_collected) {
-    std::uniform_int_distribution<int> coin_pos_dist(0, COIN_SPAWN_COUNT);
-    auto coin_pos_index = coin_pos_dist(state.rng);
-    state.coin_pos = COIN_SPAWN_POSITIONS[coin_pos_index];
+    state.coin_pos = get_random_spawn_pos(state.rng);
   }
   ++state.age;
 }
