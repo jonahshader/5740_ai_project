@@ -5,6 +5,8 @@
 
 #include "lodepng.h"
 
+// constexpr int asdf = 0;
+
 namespace jnb {
 void blit_tile(SDL_Renderer *renderer, const std::vector<uint8_t> &spritesheet, int x_tile,
                int y_tile, int t_id) {
@@ -46,11 +48,19 @@ void render(const GameState &state, SDL_Renderer *renderer,
   r.y = y1;
   SDL_RenderFillRect(renderer, &r);
 
-  // TODO: draw score
+  // draw score
+  SDL_SetRenderDrawColor(renderer, 255, 80, 80, 255);
+  for (int i = 0; i < state.p1.score; ++i) {
+    SDL_RenderDrawPoint(renderer, i, 0);
+  }
+  SDL_SetRenderDrawColor(renderer, 80, 80, 255, 255);
+  for (int i = 0; i < state.p2.score; ++i) {
+    SDL_RenderDrawPoint(renderer, WIDTH_CELLS * CELL_SIZE - i - 1, 1);
+  }
 }
 
 void run_game(uint64_t seed) {
-  PixelGame game("JnB Sim", CELL_SIZE * WIDTH_CELLS, CELL_SIZE * HEIGHT_CELLS, 8, 60);
+  PixelGame game("JnB Sim", CELL_SIZE * WIDTH_CELLS, CELL_SIZE * HEIGHT_CELLS, 16, 60);
 
   std::shared_ptr<GameState> state = std::make_shared<GameState>(init(seed));
   std::shared_ptr<PlayerInput> p1_input = std::make_shared<PlayerInput>();
