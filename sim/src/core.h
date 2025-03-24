@@ -15,21 +15,24 @@ using Fixed4 = FixedPoint<int16_t, 4>;
 constexpr int CELL_SIZE = 8;
 constexpr int PLAYER_WIDTH = CELL_SIZE - 2;
 constexpr int PLAYER_HEIGHT = CELL_SIZE - 2;
-constexpr int PLAYER_HALF_HEIGHT = PLAYER_HEIGHT / 2;
+constexpr int PLAYER_KILL_HEIGHT = PLAYER_HEIGHT / 2;
 constexpr int WIDTH_CELLS = 10;
 constexpr int HEIGHT_CELLS = 10;
 
 constexpr int POINTS_PER_COIN = 3;
+constexpr int POINTS_PER_KILL = 1;
+constexpr int DEAD_TIMEOUT = 60; // in frames
 
 constexpr Fixed4 JUMP_VEL = Fixed4::from_raw(25);
 constexpr Fixed4 JUMP_MIDAIR_ACCEL = Fixed4::from_raw(1);
 constexpr Fixed4 SPRING_VEL = Fixed4::from_raw(38);
-constexpr Fixed4 MOVE_ACCEL = Fixed4::from_raw(4);
+constexpr Fixed4 MOVE_ACCEL = Fixed4::from_raw(3);
 constexpr Fixed4 MOVE_ACCEL_WATER = Fixed4::from_raw(2); // slower in water
 constexpr Fixed4 MOVE_ACCEL_ICE = Fixed4::from_raw(1);   // much slower on ice
 constexpr Fixed4 MOVE_MAX_VEL = Fixed4::from_raw(10);
 constexpr Fixed4 GRAVITY = Fixed4::from_raw(-2);
 constexpr Fixed4 GRAVITY_WATER = Fixed4::from_raw(-1);
+constexpr Fixed4 FALL_MAX_VEL = Fixed4::from_raw(-20);
 
 struct TilePos {
   uint8_t x;
@@ -88,9 +91,9 @@ constexpr Tile read_base_map(int x, int y) {
 // for FPGA implementation, this can be cached
 constexpr int count_coin_spawns() {
   int count = 0;
-  for (uint8_t y = 0; y < HEIGHT_CELLS-1; ++y) { // exclude top row
+  for (uint8_t y = 0; y < HEIGHT_CELLS - 1; ++y) { // exclude top row
     for (uint8_t x = 0; x < WIDTH_CELLS; ++x) {
-      if (is_solid(static_cast<Tile>(read_base_map(x, y))) && read_base_map(x, y+1) == AIR) {
+      if (is_solid(static_cast<Tile>(read_base_map(x, y))) && read_base_map(x, y + 1) == AIR) {
         ++count;
       }
     }
@@ -105,7 +108,7 @@ template <int Count> constexpr auto get_coin_spawns() {
 
   for (uint8_t y = 1; y < HEIGHT_CELLS; ++y) {
     for (uint8_t x = 0; x < WIDTH_CELLS; ++x) {
-      if (is_solid(static_cast<Tile>(read_base_map(x, y))) && read_base_map(x, y+1) == AIR) {
+      if (is_solid(static_cast<Tile>(read_base_map(x, y))) && read_base_map(x, y + 1) == AIR) {
         positions[index] = {x, static_cast<uint8_t>(y + 1)};
         ++index;
       }
@@ -126,6 +129,7 @@ struct Player {
   Fixed4 x_vel = Fixed4::from_raw(0);
   Fixed4 y_vel = Fixed4::from_raw(0);
   int score{0};
+  int dead_timeout{0};
 };
 
 struct GameState {

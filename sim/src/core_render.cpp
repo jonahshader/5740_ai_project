@@ -35,18 +35,23 @@ void render(const GameState &state, SDL_Renderer *renderer,
 
   // draw players
   // p1 is light red
-  SDL_SetRenderDrawColor(renderer, 255, 80, 80, 255);
-  int x1 = state.p1.x.to_integer_floor();
-  int y1 = HEIGHT_CELLS * CELL_SIZE - state.p1.y.to_integer_floor() - PLAYER_HEIGHT;
-  SDL_Rect r{x1, y1, PLAYER_WIDTH, PLAYER_HEIGHT};
-  SDL_RenderFillRect(renderer, &r);
+  if (state.p1.dead_timeout == 0) {
+    SDL_SetRenderDrawColor(renderer, 255, 80, 80, 255);
+    int x1 = state.p1.x.to_integer_floor();
+    int y1 = HEIGHT_CELLS * CELL_SIZE - state.p1.y.to_integer_floor() - PLAYER_HEIGHT;
+    SDL_Rect r{x1, y1, PLAYER_WIDTH, PLAYER_HEIGHT};
+    SDL_RenderFillRect(renderer, &r);
+  }
+
   // p2 is light blue
-  SDL_SetRenderDrawColor(renderer, 80, 80, 255, 255);
-  x1 = state.p2.x.to_integer_floor();
-  y1 = HEIGHT_CELLS * CELL_SIZE - state.p2.y.to_integer_floor() - PLAYER_HEIGHT;
-  r.x = x1;
-  r.y = y1;
-  SDL_RenderFillRect(renderer, &r);
+  if (state.p2.dead_timeout == 0) {
+    SDL_SetRenderDrawColor(renderer, 80, 80, 255, 255);
+    int x1 = state.p2.x.to_integer_floor();
+    int y1 = HEIGHT_CELLS * CELL_SIZE - state.p2.y.to_integer_floor() - PLAYER_HEIGHT;
+    SDL_Rect r{x1, y1, PLAYER_WIDTH, PLAYER_HEIGHT};
+    SDL_RenderFillRect(renderer, &r);
+  }
+
 
   // draw score
   SDL_SetRenderDrawColor(renderer, 255, 80, 80, 255);

@@ -8,7 +8,6 @@ namespace jnb {
 // out-of-bounds down, left, right returns GROUND.
 // out-of-bounds up returns AIR.
 
-
 TilePos get_random_spawn_pos(std::mt19937 &rng) {
   std::uniform_int_distribution<int> dist(0, COIN_SPAWN_COUNT - 1);
   auto coin_pos_index = dist(rng);
@@ -50,9 +49,25 @@ int get_tile_id(int pos) {
   }
 }
 
-void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
-                   bool &coin_collected) {
-  constexpr Fixed4 F3_ZERO = Fixed4::from_raw(0);
+void update_player(Player &p, const Player &other, std::mt19937 &rng, const PlayerInput &input,
+                   const TilePos &coin_pos, bool &coin_collected, bool &died) {
+  constexpr Fixed4 F4_ZERO = Fixed4::from_raw(0);
+  // early return if the player is dead, indicated by having time left in the timeout
+  if (p.dead_timeout > 1) {
+    --p.dead_timeout;
+    return;
+  } else if (p.dead_timeout == 1) {
+    p.dead_timeout = 0;
+    // respawn player
+    p.x_vel = F4_ZERO;
+    p.y_vel = F4_ZERO;
+    // pick random position for player
+    // TODO: this can't be concurrent with other logic. needs to occur after player update.
+    auto tile_pos = get_random_spawn_pos(rng);
+    p.x = Fixed4(static_cast<int16_t>(tile_pos.x * CELL_SIZE));
+    p.y = Fixed4(static_cast<int16_t>(tile_pos.y * CELL_SIZE));
+    return;
+  }
 
   const int x_low = p.x.to_integer_floor();
   const int x_high = p.x.to_integer_ceil();
@@ -101,41 +116,69 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
     if (input.jump) {
       p.y_vel += JUMP_MIDAIR_ACCEL;
     }
+    // limit y_vel
+    if (p.y_vel < FALL_MAX_VEL) {
+      p.y_vel = FALL_MAX_VEL;
+    }
   }
 
   // accelerate x_vel based on input
   if (input.left && !input.right) {
     // accel left
     p.x_vel -= move_accel;
-    // limit
-    if (p.x_vel < -MOVE_MAX_VEL) {
-      p.x_vel = -MOVE_MAX_VEL;
-    }
   } else if (input.right && !input.left) {
     // accel right
     p.x_vel += move_accel;
-    // limit
-    if (p.x_vel > MOVE_MAX_VEL) {
-      p.x_vel = MOVE_MAX_VEL;
-    }
   } else {
     // decelerate towards zero if grounded and not on ice
     if (grounded && !on_ice) {
-      if (p.x_vel > F3_ZERO) {
+      if (p.x_vel > F4_ZERO) {
         // check if we have room to do the full speed reduction
         if (p.x_vel >= move_accel) {
           p.x_vel -= move_accel;
         } else {
           // we are too slow to do the full speed reduction
-          p.x_vel = F3_ZERO;
+          p.x_vel = F4_ZERO;
         }
-      } else if (p.x_vel < F3_ZERO) {
+      } else if (p.x_vel < F4_ZERO) {
         // check if we have room to do the full speed reduction
         if (p.x_vel <= -move_accel) {
           p.x_vel += move_accel;
         } else {
           // we are too slow to do the full speed reduction
-          p.x_vel = F3_ZERO;
+          p.x_vel = F4_ZERO;
+        }
+      }
+    }
+  }
+
+  // limit
+  if (p.x_vel < -MOVE_MAX_VEL) {
+    p.x_vel = -MOVE_MAX_VEL;
+  }
+  // limit
+  if (p.x_vel > MOVE_MAX_VEL) {
+    p.x_vel = MOVE_MAX_VEL;
+  }
+
+  // accelerate based on collision with other player
+  // just push away in the horizontal axis during collision
+  if (other.dead_timeout == 0) { // only run if opponent is alive
+    if ((p.y - other.y).abs() < Fixed4(static_cast<int16_t>(PLAYER_HEIGHT))) {
+      if ((p.x - other.x).abs() <= Fixed4(static_cast<int16_t>(PLAYER_WIDTH))) {
+        if (p.x > other.x) {
+          p.x_vel -= (p.x - other.x - Fixed4(static_cast<int16_t>(PLAYER_WIDTH)));
+        } else if (p.x < other.x) {
+          p.x_vel -= p.x - other.x + Fixed4(static_cast<int16_t>(PLAYER_WIDTH));
+        }
+
+        // if other player is significantly above this one, die
+        if (other.y >= p.y + Fixed4(static_cast<int16_t>(PLAYER_KILL_HEIGHT))) {
+          died = true;
+        }
+        // if the opposite is true, gain a point
+        else if (p.y >= other.y + Fixed4(static_cast<int16_t>(PLAYER_KILL_HEIGHT))) {
+          p.score += POINTS_PER_KILL;
         }
       }
     }
@@ -157,7 +200,7 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
   const int yn_tile_up = get_tile_id(yn_high + PLAYER_HEIGHT - 1);
 
   // handle left right collisions
-  if (p.x_vel < F3_ZERO) {
+  if (p.x_vel < F4_ZERO) {
     // going left. check left side
     const Tile left_1 = read_base_map(xn_tile_left, y_tile_down);
     const Tile left_2 = read_base_map(xn_tile_left, y_tile_up);
@@ -165,9 +208,9 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
       // make flush with wall
       p.x = Fixed4(static_cast<int16_t>((xn_tile_left + 1) * CELL_SIZE));
       // cancel velocity
-      p.x_vel = F3_ZERO;
+      p.x_vel = F4_ZERO;
     }
-  } else if (p.x_vel > F3_ZERO) {
+  } else if (p.x_vel > F4_ZERO) {
     // going right. check right side
     const Tile right_1 = read_base_map(xn_tile_right, y_tile_down);
     const Tile right_2 = read_base_map(xn_tile_right, y_tile_up);
@@ -175,10 +218,10 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
       // make flush with wall
       p.x = Fixed4(static_cast<int16_t>(xn_tile_right * CELL_SIZE - PLAYER_WIDTH));
       // cancel velocity
-      p.x_vel = F3_ZERO;
+      p.x_vel = F4_ZERO;
     }
   }
-  if (p.y_vel < F3_ZERO) {
+  if (p.y_vel < F4_ZERO) {
     // going down. check bottom
     const Tile down_1 = read_base_map(x_tile_left, yn_tile_down);
     const Tile down_2 = read_base_map(x_tile_right, yn_tile_down);
@@ -186,16 +229,16 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
       // make flush with floor
       p.y = Fixed4(static_cast<int16_t>((yn_tile_down + 1) * CELL_SIZE));
       // cancel velocity
-      p.y_vel = F3_ZERO;
+      p.y_vel = F4_ZERO;
     }
-  } else if (p.y_vel > F3_ZERO) {
+  } else if (p.y_vel > F4_ZERO) {
     // going up. check top
     const Tile top_1 = read_base_map(x_tile_left, yn_tile_up);
     const Tile top_2 = read_base_map(x_tile_right, yn_tile_up);
     if (is_solid(top_1) || is_solid(top_2)) {
       p.y = Fixed4(static_cast<int16_t>(yn_tile_up * CELL_SIZE - PLAYER_HEIGHT));
       // cancel velocity
-      p.y_vel = F3_ZERO;
+      p.y_vel = F4_ZERO;
     }
   }
 
@@ -216,10 +259,21 @@ void update_player(Player &p, const PlayerInput &input, const TilePos &coin_pos,
 
 void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2) {
   // updating can happen in parallel in FPGA
-  bool p1_coin_collected;
-  bool p2_coin_collected;
-  update_player(state.p1, in1, state.coin_pos, p1_coin_collected);
-  update_player(state.p2, in2, state.coin_pos, p2_coin_collected);
+  bool p1_coin_collected = false;
+  bool p2_coin_collected = false;
+  bool p1_died = false;
+  bool p2_died = false;
+  update_player(state.p1, state.p2, state.rng, in1, state.coin_pos, p1_coin_collected, p1_died);
+  update_player(state.p2, state.p1, state.rng, in2, state.coin_pos, p2_coin_collected, p2_died);
+
+  // TODO: maybe break update_player into multiple phases that can run concurrently?
+  // this would go into the last phase
+  if (p1_died) {
+    state.p1.dead_timeout = DEAD_TIMEOUT;
+  }
+  if (p2_died) {
+    state.p2.dead_timeout = DEAD_TIMEOUT;
+  }
 
   // TODO: handle player-player collision.
   // the intent is to make it so that jumping on another player kills them,
