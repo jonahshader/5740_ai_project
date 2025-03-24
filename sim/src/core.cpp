@@ -62,14 +62,12 @@ std::vector<std::function<void(Player &, const Player &, const PlayerInput &, bo
 make_player_phases(const Player &_p, GameState &state) {
   // these values will be computed combinatorially on FPGA
   const int x_low = _p.x.to_integer_floor();
-  const int x_high = _p.x.to_integer_ceil();
   const int y_low = _p.y.to_integer_floor();
-  const int y_high = _p.y.to_integer_ceil();
 
   const int x_tile_left = get_tile_id(x_low);
-  const int x_tile_right = get_tile_id(x_high + PLAYER_WIDTH - 1);
+  const int x_tile_right = get_tile_id(x_low + PLAYER_WIDTH - 1);
   const int y_tile_down = get_tile_id(y_low);
-  const int y_tile_up = get_tile_id(y_high + PLAYER_HEIGHT - 1);
+  const int y_tile_up = get_tile_id(y_low + PLAYER_HEIGHT - 1);
 
   // get the tiles the player is standing on
   const Tile down_left_tile = state.map.read_map(x_tile_left, y_tile_down - 1);
@@ -207,14 +205,12 @@ make_player_phases(const Player &_p, GameState &state) {
 
     // handle collisions against solid tiles
     const int xn_low = p.x.to_integer_floor();
-    const int xn_high = p.x.to_integer_ceil();
     const int yn_low = p.y.to_integer_floor();
-    const int yn_high = p.y.to_integer_ceil();
 
     const int xn_tile_left = get_tile_id(xn_low);
-    const int xn_tile_right = get_tile_id(xn_high + PLAYER_WIDTH - 1);
+    const int xn_tile_right = get_tile_id(xn_low + PLAYER_WIDTH - 1);
     const int yn_tile_down = get_tile_id(yn_low);
-    const int yn_tile_up = get_tile_id(yn_high + PLAYER_HEIGHT - 1);
+    const int yn_tile_up = get_tile_id(yn_low + PLAYER_HEIGHT - 1);
 
     // handle left right collisions
     if (p.x_vel < F4_ZERO) {

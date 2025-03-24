@@ -71,7 +71,7 @@ void run_game(const std::string &map_filename, uint64_t seed) {
   std::shared_ptr<PlayerInput> p1_input = std::make_shared<PlayerInput>();
   std::shared_ptr<PlayerInput> p2_input = std::make_shared<PlayerInput>();
 
-  PixelGame game("JnB Sim", CELL_SIZE * state->map.width, CELL_SIZE * state->map.height, 4, 60);
+  PixelGame game("JnB Sim", CELL_SIZE * state->map.width, CELL_SIZE * state->map.height, 8, 60);
 
   std::vector<uint8_t> spritesheet;
   uint32_t w, h;
