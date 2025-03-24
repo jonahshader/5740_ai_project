@@ -10,31 +10,33 @@ namespace jnb {
 // out-of-bounds down, left, right returns GROUND.
 // out-of-bounds up returns AIR.
 
-TilePos get_random_spawn_pos(std::mt19937 &rng) {
-  std::uniform_int_distribution<int> dist(0, COIN_SPAWN_COUNT - 1);
+TilePos get_random_spawn_pos(std::mt19937 &rng, const TileMap &map) {
+  std::uniform_int_distribution<int> dist(0, map.spawns.size() - 1);
   auto coin_pos_index = dist(rng);
-  return COIN_SPAWN_POSITIONS[coin_pos_index];
+  return map.spawns[coin_pos_index];
 }
 
-GameState init(uint64_t seed) {
+GameState init(const std::string &map_filename, uint64_t seed) {
   GameState state{};
   // create rng from seed
   state.rng = std::mt19937(seed);
+  // load map
+  state.map.load_from_file(map_filename);
   // pick random position for coin
-  state.coin_pos = get_random_spawn_pos(state.rng);
+  state.coin_pos = get_random_spawn_pos(state.rng, state.map);
   // pick random positions for p1, p2
-  std::uniform_int_distribution<int> spawn_index_dist(0, COIN_SPAWN_COUNT - 1);
+  std::uniform_int_distribution<int> spawn_index_dist(0, state.map.spawns.size() - 1);
   auto spawn_index = spawn_index_dist(state.rng);
-  auto spawn = COIN_SPAWN_POSITIONS[spawn_index];
+  auto spawn = state.map.spawns[spawn_index];
   state.p1.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
   state.p1.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
   auto spawn_index_2 = spawn_index_dist(state.rng);
   // ensure ps2 doesn't spawn on p1
   // TODO: extend to coin logic? or is this needlessly complicated for FPGA impl?
   if (spawn_index_2 == spawn_index) {
-    spawn_index_2 = (spawn_index + 1) % COIN_SPAWN_COUNT;
+    spawn_index_2 = (spawn_index + 1) % state.map.spawns.size();
   }
-  spawn = COIN_SPAWN_POSITIONS[spawn_index_2];
+  spawn = state.map.spawns[spawn_index_2];
   state.p2.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
   state.p2.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
 
@@ -70,10 +72,10 @@ make_player_phases(const Player &_p, GameState &state) {
   const int y_tile_up = get_tile_id(y_high + PLAYER_HEIGHT - 1);
 
   // get the tiles the player is standing on
-  const Tile down_left_tile = read_base_map(x_tile_left, y_tile_down - 1);
-  const Tile down_right_tile = read_base_map(x_tile_right, y_tile_down - 1);
-  const Tile left_tile = read_base_map(x_tile_left, y_tile_down);
-  const Tile right_tile = read_base_map(x_tile_right, y_tile_down);
+  const Tile down_left_tile = state.map.read_map(x_tile_left, y_tile_down - 1);
+  const Tile down_right_tile = state.map.read_map(x_tile_right, y_tile_down - 1);
+  const Tile left_tile = state.map.read_map(x_tile_left, y_tile_down);
+  const Tile right_tile = state.map.read_map(x_tile_right, y_tile_down);
 
   auto phase1 = [=, &state](Player &p, const Player &other, const PlayerInput &input,
                             bool &coin_collected) {
@@ -192,7 +194,7 @@ make_player_phases(const Player &_p, GameState &state) {
     } else if (p.dead_timeout == 1) {
       p.dead_timeout--;
       // respawn
-      auto tile_pos = get_random_spawn_pos(state.rng);
+      auto tile_pos = get_random_spawn_pos(state.rng, state.map);
       p.x = F4(static_cast<int16_t>(tile_pos.x * CELL_SIZE));
       p.y = F4(static_cast<int16_t>(tile_pos.y * CELL_SIZE));
       p.x_vel = F4_ZERO;
@@ -217,8 +219,8 @@ make_player_phases(const Player &_p, GameState &state) {
     // handle left right collisions
     if (p.x_vel < F4_ZERO) {
       // going left. check left side
-      const Tile left_1 = read_base_map(xn_tile_left, y_tile_down);
-      const Tile left_2 = read_base_map(xn_tile_left, y_tile_up);
+      const Tile left_1 = state.map.read_map(xn_tile_left, y_tile_down);
+      const Tile left_2 = state.map.read_map(xn_tile_left, y_tile_up);
       if (is_solid(left_1) || is_solid(left_2)) {
         // make flush with wall
         p.x = F4(static_cast<int16_t>((xn_tile_left + 1) * CELL_SIZE));
@@ -227,8 +229,8 @@ make_player_phases(const Player &_p, GameState &state) {
       }
     } else if (p.x_vel > F4_ZERO) {
       // going right. check right side
-      const Tile right_1 = read_base_map(xn_tile_right, y_tile_down);
-      const Tile right_2 = read_base_map(xn_tile_right, y_tile_up);
+      const Tile right_1 = state.map.read_map(xn_tile_right, y_tile_down);
+      const Tile right_2 = state.map.read_map(xn_tile_right, y_tile_up);
       if (is_solid(right_1) || is_solid(right_2)) {
         // make flush with wall
         p.x = F4(static_cast<int16_t>(xn_tile_right * CELL_SIZE - PLAYER_WIDTH));
@@ -238,8 +240,8 @@ make_player_phases(const Player &_p, GameState &state) {
     }
     if (p.y_vel < F4_ZERO) {
       // going down. check bottom
-      const Tile down_1 = read_base_map(x_tile_left, yn_tile_down);
-      const Tile down_2 = read_base_map(x_tile_right, yn_tile_down);
+      const Tile down_1 = state.map.read_map(x_tile_left, yn_tile_down);
+      const Tile down_2 = state.map.read_map(x_tile_right, yn_tile_down);
       if (is_solid(down_1) || is_solid(down_2)) {
         // make flush with floor
         p.y = F4(static_cast<int16_t>((yn_tile_down + 1) * CELL_SIZE));
@@ -248,8 +250,8 @@ make_player_phases(const Player &_p, GameState &state) {
       }
     } else if (p.y_vel > F4_ZERO) {
       // going up. check top
-      const Tile top_1 = read_base_map(x_tile_left, yn_tile_up);
-      const Tile top_2 = read_base_map(x_tile_right, yn_tile_up);
+      const Tile top_1 = state.map.read_map(x_tile_left, yn_tile_up);
+      const Tile top_2 = state.map.read_map(x_tile_right, yn_tile_up);
       if (is_solid(top_1) || is_solid(top_2)) {
         p.y = F4(static_cast<int16_t>(yn_tile_up * CELL_SIZE - PLAYER_HEIGHT));
         // cancel velocity
@@ -308,7 +310,7 @@ void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2) {
   // pick a new location from the valid coin spawn locations randomly.
   // this must happen on a new cycle, so the number of cycles on fpga is phases.size() + 1
   if (p1_coin_collected || p2_coin_collected) {
-    state.coin_pos = get_random_spawn_pos(state.rng);
+    state.coin_pos = get_random_spawn_pos(state.rng, state.map);
   }
   ++state.age;
 }

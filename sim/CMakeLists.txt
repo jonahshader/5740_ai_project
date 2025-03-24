@@ -37,6 +37,7 @@ add_executable(sim
   src/core.h
   src/fixed_point.h
   src/main.cpp
+  src/parse_map.h
   src/pixel_game.cpp
   src/pixel_game.h
   ${lodepng_SOURCE_DIR}/lodepng.cpp

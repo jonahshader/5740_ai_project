@@ -22,15 +22,15 @@ void blit_tile(SDL_Renderer *renderer, const std::vector<uint8_t> &spritesheet, 
 void render(const GameState &state, SDL_Renderer *renderer,
             const std::vector<uint8_t> &spritesheet) {
   // draw background
-  for (int y_tile = 0; y_tile < HEIGHT_CELLS; ++y_tile) {
-    for (int x_tile = 0; x_tile < WIDTH_CELLS; ++x_tile) {
-      const uint8_t t_id = base_map[y_tile][x_tile] - 1;
+  for (int y_tile = 0; y_tile < state.map.height; ++y_tile) {
+    for (int x_tile = 0; x_tile < state.map.width; ++x_tile) {
+      const uint8_t t_id = state.map.tiles[y_tile][x_tile] - 1;
       blit_tile(renderer, spritesheet, x_tile, y_tile, t_id);
     }
   }
 
   // draw coin
-  blit_tile(renderer, spritesheet, state.coin_pos.x, HEIGHT_CELLS - state.coin_pos.y - 1,
+  blit_tile(renderer, spritesheet, state.coin_pos.x, state.map.height - state.coin_pos.y - 1,
             static_cast<int>(Tile::COIN) - 1);
 
   // draw players
@@ -38,7 +38,7 @@ void render(const GameState &state, SDL_Renderer *renderer,
   if (state.p1.dead_timeout == 0) {
     SDL_SetRenderDrawColor(renderer, 255, 80, 80, 255);
     int x1 = state.p1.x.to_integer_floor();
-    int y1 = HEIGHT_CELLS * CELL_SIZE - state.p1.y.to_integer_floor() - PLAYER_HEIGHT;
+    int y1 = state.map.height * CELL_SIZE - state.p1.y.to_integer_floor() - PLAYER_HEIGHT;
     SDL_Rect r{x1, y1, PLAYER_WIDTH, PLAYER_HEIGHT};
     SDL_RenderFillRect(renderer, &r);
   }
@@ -47,7 +47,7 @@ void render(const GameState &state, SDL_Renderer *renderer,
   if (state.p2.dead_timeout == 0) {
     SDL_SetRenderDrawColor(renderer, 80, 80, 255, 255);
     int x1 = state.p2.x.to_integer_floor();
-    int y1 = HEIGHT_CELLS * CELL_SIZE - state.p2.y.to_integer_floor() - PLAYER_HEIGHT;
+    int y1 = state.map.height * CELL_SIZE - state.p2.y.to_integer_floor() - PLAYER_HEIGHT;
     SDL_Rect r{x1, y1, PLAYER_WIDTH, PLAYER_HEIGHT};
     SDL_RenderFillRect(renderer, &r);
   }
@@ -60,16 +60,18 @@ void render(const GameState &state, SDL_Renderer *renderer,
   }
   SDL_SetRenderDrawColor(renderer, 80, 80, 255, 255);
   for (int i = 0; i < state.p2.score; ++i) {
-    SDL_RenderDrawPoint(renderer, WIDTH_CELLS * CELL_SIZE - i - 1, 1);
+    SDL_RenderDrawPoint(renderer, state.map.width * CELL_SIZE - i - 1, 1);
   }
 }
 
-void run_game(uint64_t seed) {
-  PixelGame game("JnB Sim", CELL_SIZE * WIDTH_CELLS, CELL_SIZE * HEIGHT_CELLS, 16, 60);
-
-  std::shared_ptr<GameState> state = std::make_shared<GameState>(init(seed));
+void run_game(const std::string &map_filename, uint64_t seed) {
+  // initialize game state
+  std::shared_ptr<GameState> state = std::make_shared<GameState>(init(map_filename, seed));
+  // initialize player input states
   std::shared_ptr<PlayerInput> p1_input = std::make_shared<PlayerInput>();
   std::shared_ptr<PlayerInput> p2_input = std::make_shared<PlayerInput>();
+
+  PixelGame game("JnB Sim", CELL_SIZE * state->map.width, CELL_SIZE * state->map.height, 4, 60);
 
   std::vector<uint8_t> spritesheet;
   uint32_t w, h;
