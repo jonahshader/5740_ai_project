@@ -141,7 +141,7 @@ struct TileMap {
 
     // populate the list of potential spawn locations
     spawns.clear();
-    for (int y = 1; y < height; ++y) {
+    for (int y = 0; y < height - 1; ++y) {
       for (int x = 0; x < width; ++x) {
         if (is_solid(static_cast<Tile>(read_map(x, y))) && read_map(x, y + 1) == AIR) {
           spawns.emplace_back(TilePos(x, static_cast<uint8_t>(y + 1)));
