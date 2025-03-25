@@ -37,10 +37,12 @@ PixelGame::PixelGame(const std::string &title, int internal_width, int internal_
   if (window == nullptr) {
     std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
     return;
+  } else {
+    std::cout << "Window created successfully!" << std::endl;
   }
 
-  // Create renderer with hardware acceleration and vsync
-  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+  // Create software renderer
+  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC);
   if (renderer == nullptr) {
     std::cerr << "Renderer could not be created! SDL_Error: " << SDL_GetError() << std::endl;
     return;

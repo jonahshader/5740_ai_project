@@ -7,13 +7,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Include FetchContent for downloading dependencies
 include(FetchContent)
 
-# SDL2
-FetchContent_Declare(
-  SDL2
-  URL https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-2.30.3.tar.gz
-  URL_HASH SHA256=820440072f8f5b50188c1dae104f2ad25984de268785be40c41a099a510f0aec
-)
-FetchContent_MakeAvailable(SDL2)
+# Try to find system SDL2 first
+find_package(SDL2 QUIET)
+
+if(NOT SDL2_FOUND)
+  # If system SDL2 is not found, fetch it
+  FetchContent_Declare(
+    SDL2
+    URL https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-2.30.3.tar.gz
+    URL_HASH SHA256=820440072f8f5b50188c1dae104f2ad25984de268785be40c41a099a510f0aec
+  )
+  
+  # Enable X11 support explicitly
+  set(SDL_X11 ON CACHE BOOL "Enable X11 support" FORCE)
+  set(SDL_X11_SHARED ON CACHE BOOL "Use shared X11 libraries" FORCE)
+  
+  FetchContent_MakeAvailable(SDL2)
+endif()
 
 # lodepng
 FetchContent_Declare(
