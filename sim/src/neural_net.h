@@ -4,7 +4,7 @@
 
 namespace jnb {
 
-// a staticly allocated neural network which is 
+// a staticly allocated neural network with a generic parameter type
 template <typename T, int inputs, int outputs> struct Layer {
   T weights[outputs][inputs];
   T bias[outputs];
@@ -32,6 +32,26 @@ template <typename T, int inputs, int outputs> struct Layer {
         output[i] = std::max(static_cast<T>(0), output[i]);
     }
   }
+
+  void mutate(std::mt19937 &rng, float mutation_rate) {
+    // calculate the initial standard deviation used during initialization
+    constexpr float init_stddev = std::sqrt(2.0f / (inputs + outputs));
+
+    // scale mutation rate by the initial stddev
+    float scaled_mutation_rate = mutation_rate * init_stddev;
+
+    // create distribution for mutations
+    std::normal_distribution<float> dist(0.0f, scaled_mutation_rate);
+
+    // mutate weights
+    for (int i = 0; i < outputs; ++i) {
+      for (int j = 0; j < inputs; ++j) {
+        weights[i][j] += dist(rng);
+      }
+      // mutate bias
+      bias[i] += dist(rng);
+    }
+  }
 };
 
 template <typename T, int inputs, int hidden_size, int hidden_count, int outputs> struct NeuralNet {
@@ -40,6 +60,15 @@ template <typename T, int inputs, int hidden_size, int hidden_count, int outputs
   Layer<T, inputs, hidden_size> input_layer;
   Layer<T, hidden_size, hidden_size> hidden_layers[hidden_count - 1];
   Layer<T, hidden_size, outputs> output_layer;
+
+  void init(std::mt19937 &rng) {
+    // just init each layer individually
+    input_layer.init(rng);
+    for (int i = 0; i < hidden_count - 1; ++i) {
+      hidden_layers[i].init(rng);
+    }
+    output_layer.init(rng);
+  }
 
   void forward(T *input, T *output) {
     // allocate buffers with maximum required size
@@ -62,6 +91,15 @@ template <typename T, int inputs, int hidden_size, int hidden_count, int outputs
 
     // forward through output layer directly to the provided output, with no activation
     output_layer.forward(current, output, false);
+  }
+
+  void mutate(std::mt19937 &rng, float mutation_rate) {
+    // mutate all layers
+    input_layer.mutate(rng, mutation_rate);
+    for (int i = 0; i < hidden_count - 1; ++i) {
+      hidden_layers[i].mutate(rng, mutation_rate);
+    }
+    output_layer.mutate(rng, mutation_rate);
   }
 
   constexpr int get_input_size() const {

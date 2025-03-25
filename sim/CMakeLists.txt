@@ -25,15 +25,15 @@ if(NOT SDL2_FOUND)
   FetchContent_MakeAvailable(SDL2)
 endif()
 
-# Eigen library
-FetchContent_Declare(
-  eigen
-  URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
-  # No hash for safety, as the exact URL might change
-)
-# We only need the headers, so we don't need to build Eigen's tests
-set(BUILD_TESTING OFF CACHE BOOL "Build Eigen tests" FORCE)
-FetchContent_MakeAvailable(eigen)
+# # Eigen library
+# FetchContent_Declare(
+#   eigen
+#   URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+#   # No hash for safety, as the exact URL might change
+# )
+# # We only need the headers, so we don't need to build Eigen's tests
+# set(BUILD_TESTING OFF CACHE BOOL "Build Eigen tests" FORCE)
+# FetchContent_MakeAvailable(eigen)
 
 # lodepng
 FetchContent_Declare(
@@ -51,12 +51,16 @@ find_package(OpenMP REQUIRED)
 
 # Create main executable
 add_executable(sim
+  src/models/human.cpp
+  src/models/human.h
   src/core_render.cpp
   src/core_render.h
   src/core.cpp
   src/core.h
   src/fixed_point.h
+  src/interfaces.h
   src/main.cpp
+  src/neural_net.h
   src/parse_map.h
   src/pixel_game.cpp
   src/pixel_game.h
@@ -72,8 +76,9 @@ target_link_libraries(sim PRIVATE
 # Include headers
 target_include_directories(sim PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/models
   ${lodepng_SOURCE_DIR}
-  ${eigen_SOURCE_DIR}
+  # ${eigen_SOURCE_DIR}
 )
 
 # Platform-specific configurations
