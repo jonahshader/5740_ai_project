@@ -11,7 +11,7 @@ template <typename T, int inputs, int outputs> struct Layer {
 
   void init(std::mt19937 &rng) {
     // xavier/glorot initialization
-    constexpr float stddev = std::sqrt(2.0f / (inputs + outputs));
+    float stddev = std::sqrt(2.0f / (inputs + outputs));
     std::normal_distribution<float> dist(0.0f, stddev);
     for (int i = 0; i < outputs; ++i) {
       for (int j = 0; j < inputs; ++j) {
@@ -35,7 +35,7 @@ template <typename T, int inputs, int outputs> struct Layer {
 
   void mutate(std::mt19937 &rng, float mutation_rate) {
     // calculate the initial standard deviation used during initialization
-    constexpr float init_stddev = std::sqrt(2.0f / (inputs + outputs));
+    float init_stddev = std::sqrt(2.0f / (inputs + outputs));
 
     // scale mutation rate by the initial stddev
     float scaled_mutation_rate = mutation_rate * init_stddev;
