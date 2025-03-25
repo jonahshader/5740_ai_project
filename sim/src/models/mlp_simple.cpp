@@ -38,4 +38,12 @@ void SimpleMLPModel::mutate(std::mt19937 &rng, float mutation_rate) {
   net.mutate(rng, mutation_rate);
 }
 
+void SimpleMLPModel::reset() {
+  // nothing to reset. this model is not stateful
+}
+
+std::shared_ptr<Model> SimpleMLPModel::clone() const {
+  return std::make_shared<SimpleMLPModel>(*this);
+}
+
 } // namespace jnb

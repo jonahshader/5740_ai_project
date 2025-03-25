@@ -72,7 +72,11 @@
     "mutex": "cpp",
     "random": "cpp",
     "unordered_set": "cpp",
-    "fstream": "cpp"
+    "fstream": "cpp",
+    "deque": "cpp",
+    "queue": "cpp",
+    "ranges": "cpp",
+    "span": "cpp"
   },
   "cmake.ignoreCMakeListsMissing": true
 }

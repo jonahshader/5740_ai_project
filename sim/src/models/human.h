@@ -15,6 +15,8 @@ public:
 
   PlayerInput forward(const GameState &state, bool p1_perspective) override;
   void mutate(std::mt19937 &rng, float mutation_rate) override;
+  void reset() override;
+  std::shared_ptr<Model> clone() const override;
 
   std::function<void(SDL_Event &)> get_input_handler(SDL_KeyCode left, SDL_KeyCode right, SDL_KeyCode jump);
 

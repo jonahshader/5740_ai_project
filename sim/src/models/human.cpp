@@ -10,6 +10,15 @@ PlayerInput HumanModel::forward(const GameState &state, bool p1_perspective) {
 
 void HumanModel::mutate(std::mt19937 &rng, float mutation_rate) {}
 
+void HumanModel::reset() {
+  // not necessary at all...
+  input = PlayerInput{};
+}
+
+std::shared_ptr<Model> HumanModel::clone() const {
+  return std::make_shared<HumanModel>(*this);
+}
+
 std::function<void(SDL_Event &)> HumanModel::get_input_handler(SDL_KeyCode left, SDL_KeyCode right,
                                                                SDL_KeyCode jump) {
   auto handle_input_lambda = [left, right, jump, &input = input](SDL_Event &event) {
