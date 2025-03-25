@@ -18,10 +18,21 @@ TilePos get_random_spawn_pos(std::mt19937 &rng, const TileMap &map) {
 
 GameState init(const std::string &map_filename, uint64_t seed) {
   GameState state{};
-  // create rng from seed
-  state.rng = std::mt19937(seed);
   // load map
   state.map.load_from_file(map_filename);
+  // init the rest of state
+  reinit(state, seed);
+  return state;
+}
+
+void reinit(GameState &state, uint64_t seed) {
+  // clear some things
+  state.p1 = {};
+  state.p2 = {};
+  state.age = 0;
+
+  // create rng from seed
+  state.rng = std::mt19937(seed);
   // pick random position for coin
   state.coin_pos = get_random_spawn_pos(state.rng, state.map);
   // pick random positions for p1, p2
@@ -31,7 +42,7 @@ GameState init(const std::string &map_filename, uint64_t seed) {
   state.p1.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
   state.p1.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
   auto spawn_index_2 = spawn_index_dist(state.rng);
-  // ensure ps2 doesn't spawn on p1
+  // ensure p2 doesn't spawn on p1
   // TODO: extend to coin logic? or is this needlessly complicated for FPGA impl?
   if (spawn_index_2 == spawn_index) {
     spawn_index_2 = (spawn_index + 1) % state.map.spawns.size();
@@ -39,8 +50,6 @@ GameState init(const std::string &map_filename, uint64_t seed) {
   spawn = state.map.spawns[spawn_index_2];
   state.p2.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
   state.p2.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
-
-  return state;
 }
 
 int get_tile_id(int pos) {
@@ -309,6 +318,38 @@ void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2) {
     state.coin_pos = get_random_spawn_pos(state.rng, state.map);
   }
   ++state.age;
+}
+
+void observe_state_simple(const GameState &state, std::vector<F4> &observation,
+                          bool p1_perspective) {
+  observation.resize(SIMPLE_INPUT_COUNT);
+  size_t index = 0;
+  // coin pos
+  observation[index++] = F4(static_cast<int16_t>(state.coin_pos.x * CELL_SIZE));
+  observation[index++] = F4(static_cast<int16_t>(state.coin_pos.y * CELL_SIZE));
+  // determine player state order based on who's observing (p1_perspective)
+  const Player &first = p1_perspective ? state.p1 : state.p2;
+  const Player &second = p1_perspective ? state.p2 : state.p1;
+  // first player pos
+  observation[index++] = first.x;
+  observation[index++] = first.y;
+  // first player vel
+  observation[index++] = first.x_vel;
+  observation[index++] = first.y_vel;
+  // second player pos
+  observation[index++] = second.x;
+  observation[index++] = second.y;
+  // second player vel
+  observation[index++] = second.x_vel;
+  observation[index++] = second.y_vel;
+}
+
+int get_fitness(const GameState &state, bool p1_perspective) {
+  if (p1_perspective) {
+    return state.p1.score - state.p2.score;
+  } else {
+    return state.p2.score - state.p1.score;
+  }
 }
 
 } // namespace jnb
