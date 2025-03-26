@@ -4,7 +4,6 @@
 #include <memory>
 #include <optional>
 #include <random>
-#include <queue>
 #include <utility>
 #include <vector>
 
@@ -15,7 +14,7 @@ namespace jnb {
 
 struct Solution {
   std::shared_ptr<Model> model{nullptr};
-  std::optional<int> fitness{std::nullopt};
+  int fitness{};
 };
 
 using Population = std::vector<Solution>;
@@ -23,9 +22,10 @@ using Population = std::vector<Solution>;
 struct GAState {
   Population current{};
   Population next{};
-  std::queue<std::shared_ptr<Model>> prior_best{};
+  std::vector<std::shared_ptr<Model>> prior_best{};
   int gen{0};
   std::mt19937 rng{};
+  TileMap map{};
 };
 
 struct EvalConfig {
@@ -47,9 +47,6 @@ struct GAConfig {
 GAState init_state(const GAConfig &config,
                    const std::function<std::shared_ptr<Model>(std::mt19937 &)> &model_builder);
 
-void ga_step_simple(GAState &state, const GAConfig &config);
-
-int evaluate(const TileMap &map, const EvalConfig &config, std::shared_ptr<Model> model,
-               std::shared_ptr<Model> opponent);
+void ga_step_simple(GAState &state, const GAConfig &config, const EvalConfig &eval_config);
 
 } // namespace jnb
