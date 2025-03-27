@@ -31,20 +31,20 @@ struct GAState {
 };
 
 struct EvalConfig {
-  std::vector<uint64_t> seeds{0, 1, 5, 1337, 24, 25, 26, 27, 28, 29};
-  int frame_limit{250}; // about 4.5 seconds
+  std::vector<uint64_t> seeds{0, 1, 5, 1337, 24};
+  int frame_limit{400};
 };
 
 struct GAConfig {
   float mutation_rate{0.5f};
   bool taper_mutation_rate{true};
-  int max_gen{64};
-  int population_size{32};
-  int model_history_size{2};
-  int model_history_interval{1};
+  int max_gen{128};
+  int population_size{64};
+  int model_history_size{5};
+  int model_history_interval{5};
   uint64_t seed{0};
-  int reference_count{10};
-  int eval_interval{1};
+  int reference_count{5};
+  int eval_interval{4};
 };
 
 using ModelBuilder = std::function<std::shared_ptr<Model>(std::mt19937 &)>;

@@ -56,8 +56,8 @@ int main(int argc, char *argv[]) {
     jnb::ga_simple(ga_state, config, eval_config);
 
     // play against it
-    // auto p1 = std::make_shared<jnb::HumanModel>();
-    auto p1 = ga_state.current[0].model->clone();
+    auto p1 = std::make_shared<jnb::HumanModel>();
+    // auto p1 = ga_state.current[0].model->clone();
     auto p2 = ga_state.current[0].model->clone(); // grab a copy of the best model
 
     jnb::run_game_with_models(map_file, 0, p1, p2);

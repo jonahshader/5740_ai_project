@@ -4,7 +4,8 @@
 
 namespace jnb {
 
-void init_state(GAState &state, const TileMap &map, const GAConfig &config, const ModelBuilder &model_builder) {
+void init_state(GAState &state, const TileMap &map, const GAConfig &config,
+                const ModelBuilder &model_builder) {
   // set map
   state.map = map;
 
@@ -87,13 +88,22 @@ int evaluate(const TileMap &map, const EvalConfig &config, std::shared_ptr<Model
 }
 
 void eval_pop(GAState &state, const EvalConfig &eval_config) {
-  // TODO: try openmp accel:
-  #pragma omp parallel for
+#pragma omp parallel for
   for (int sol_i = 0; sol_i < state.current.size(); ++sol_i) {
     auto &sol = state.current[sol_i];
     sol.fitness = 0;
     for (int opponent_i = 0; opponent_i < state.prior_best.size(); ++opponent_i) {
       auto &opponent = state.prior_best[opponent_i];
+
+      sol.fitness += evaluate(state.map, eval_config, sol.model, opponent);
+    }
+  }
+
+#pragma omp parallel for
+  for (int sol_i = 0; sol_i < state.current.size(); ++sol_i) {
+    auto &sol = state.current[sol_i];
+    for (int opponent_i = 0; opponent_i < state.references.size(); ++opponent_i) {
+      auto &opponent = state.references[opponent_i];
 
       sol.fitness += evaluate(state.map, eval_config, sol.model, opponent);
     }
