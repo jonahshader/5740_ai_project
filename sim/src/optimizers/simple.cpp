@@ -4,9 +4,9 @@
 
 namespace jnb {
 
-GAState init_state(const GAConfig &config,
-                   const std::function<std::shared_ptr<Model>(std::mt19937 &)> &model_builder) {
-  GAState state;
+void init_state(GAState &state, const TileMap &map, const GAConfig &config, const ModelBuilder &model_builder) {
+  // set map
+  state.map = map;
 
   // init rng
   state.rng.seed(config.seed);
@@ -18,8 +18,16 @@ GAState init_state(const GAConfig &config,
   }
 
   // prior_best starts off with random models
-  for (int i = 0; i < config.history_size; ++i) {
+  for (int i = 0; i < config.model_history_size; ++i) {
     state.prior_best.emplace_back(model_builder(state.rng));
+  }
+
+  // // references are randomly initialized models for the purpose of global evaluation
+  // for (int i = 0; i < config.reference_count; ++i) {
+  //   state.references.emplace_back(model_builder(state.rng));
+  // }
+  for (int i = 0; i < state.prior_best.size(); ++i) {
+    state.references.emplace_back(state.prior_best[i]);
   }
 
   // next should be clear
@@ -27,8 +35,8 @@ GAState init_state(const GAConfig &config,
 }
 
 int evaluate_single(GameState &state_with_map, uint64_t seed, const EvalConfig &config,
-                      std::shared_ptr<Model> model, std::shared_ptr<Model> opponent,
-                      bool flip_player_initial_position) {
+                    std::shared_ptr<Model> model, std::shared_ptr<Model> opponent,
+                    bool flip_player_initial_position) {
   // reset models
   model->reset();
   opponent->reset();
@@ -54,7 +62,7 @@ int evaluate_single(GameState &state_with_map, uint64_t seed, const EvalConfig &
 }
 
 int evaluate(const TileMap &map, const EvalConfig &config, std::shared_ptr<Model> model,
-               std::shared_ptr<Model> opponent) {
+             std::shared_ptr<Model> opponent) {
   // if opponent is model, we know the outcome will be symmetric,
   // so just early return 0 fitness
   if (model == opponent) {
@@ -74,11 +82,13 @@ int evaluate(const TileMap &map, const EvalConfig &config, std::shared_ptr<Model
     total_fitness += evaluate_single(state, seed, config, model, opponent, false);
     total_fitness += evaluate_single(state, seed, config, model, opponent, true);
   }
+
+  return total_fitness;
 }
 
 void eval_pop(GAState &state, const EvalConfig &eval_config) {
   // TODO: try openmp accel:
-  // #pragma omp parallel for
+  #pragma omp parallel for
   for (int sol_i = 0; sol_i < state.current.size(); ++sol_i) {
     auto &sol = state.current[sol_i];
     sol.fitness = 0;
@@ -115,7 +125,7 @@ void ga_step_simple(GAState &state, const GAConfig &config, const EvalConfig &ev
   for (int i = 1; i < config.population_size; ++i) {
     float mutation_rate = config.mutation_rate;
     if (config.taper_mutation_rate)
-      mutation_rate *= static_cast<float>(i) / (config.population_size-1);
+      mutation_rate *= static_cast<float>(i) / (config.population_size - 1);
     state.next[i].model->mutate(state.rng, mutation_rate);
   }
 
@@ -129,7 +139,7 @@ void ga_step_simple(GAState &state, const GAConfig &config, const EvalConfig &ev
   // mutation rate.
 
   // add to prior best
-  if (state.gen % config.history_interval == 0) {
+  if (state.gen % config.model_history_interval == 0) {
     state.prior_best.push_back(best.model);
     state.prior_best.erase(state.prior_best.begin());
   }
@@ -138,6 +148,33 @@ void ga_step_simple(GAState &state, const GAConfig &config, const EvalConfig &ev
   std::swap(state.current, state.next);
 
   ++state.gen;
+}
+
+void ga_simple(GAState &state, const GAConfig &config, const EvalConfig &eval_config) {
+  while (true) {
+    ga_step_simple(state, config, eval_config);
+
+    if (state.gen % config.eval_interval == 0) {
+      // evaluate the best against every reference model
+      auto &best = state.current[0];
+      int best_fitness = 0;
+      for (int i = 0; i < state.references.size(); ++i) {
+        auto &reference = state.references[i];
+        best_fitness += evaluate(state.map, eval_config, best.model, reference);
+      }
+
+      // record the fitness
+      state.reference_fitness.push_back(best_fitness);
+
+      std::cout << "Generation " << state.gen << ": "
+                << "Reference fitness: " << best_fitness << std::endl;
+    }
+
+    if (state.gen >= config.max_gen) {
+      std::cout << "GA finished after " << state.gen << " generations." << std::endl;
+      break;
+    }
+  }
 }
 
 } // namespace jnb

@@ -55,6 +55,8 @@ add_executable(sim
   src/models/human.h
   src/models/mlp_simple.cpp
   src/models/mlp_simple.h
+  src/optimizers/simple.cpp
+  src/optimizers/simple.h
   src/core_render.cpp
   src/core_render.h
   src/core.cpp
