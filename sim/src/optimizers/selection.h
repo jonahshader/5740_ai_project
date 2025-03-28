@@ -21,5 +21,7 @@ const Selection select_best = [](const Population &current, Population &next, st
   }
 };
 
+Selection make_tournament(int tournament_size);
+
 
 } // namespace jnb
