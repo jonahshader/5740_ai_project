@@ -17,8 +17,6 @@ public:
   // some way.
   virtual void reset() = 0;
   virtual std::shared_ptr<Model> clone() const = 0;
-
-  // TODO: serialize, identify, deserialize
 };
 
 } // namespace jnb

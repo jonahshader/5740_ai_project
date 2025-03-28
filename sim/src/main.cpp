@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
     // train a model, then play against it
     jnb::GAConfig config{};
     config.seed = 1;
+    config.select_fun = jnb::make_tournament(2);
     jnb::EvalConfig eval_config{};
 
     // lambda that spits out a randomly init model

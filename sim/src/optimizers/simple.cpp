@@ -4,6 +4,29 @@
 
 namespace jnb {
 
+Selection make_tournament(int tournament_size) {
+  return [tournament_size](const Population &current, Population &next, std::mt19937 &rng) {
+    // clear out next and populate from tournament victors
+    next.clear();
+
+    // dist for individual selection
+    std::uniform_int_distribution<int> t_sel(0, current.size() - 1);
+    for (int i = 0; i < current.size(); ++i) {
+      // tourney
+      auto best = current[t_sel(rng)];
+      for (int j = 1; j < tournament_size; ++j) {
+        auto &sol = current[t_sel(rng)];
+        if (sol.fitness > best.fitness) {
+          best = sol;
+        }
+      }
+
+      // we have a victor. add it
+      next.emplace_back(Solution{best.model->clone(), 0});
+    }
+  };
+}
+
 void init_state(GAState &state, const TileMap &map, const GAConfig &config,
                 const ModelBuilder &model_builder) {
   // set map
@@ -114,22 +137,25 @@ void ga_step_simple(GAState &state, const GAConfig &config, const EvalConfig &ev
   // evaluate the current population
   eval_pop(state, eval_config);
 
-  // for now, just grab the best
-  auto best = state.current[0];
+  // // for now, just grab the best
+  // auto best = state.current[0];
 
-  for (int i = 1; i < state.current.size(); ++i) {
-    auto &sol = state.current[i];
-    if (sol.fitness > best.fitness) {
-      best = sol;
-    }
-  }
+  // for (int i = 1; i < state.current.size(); ++i) {
+  //   auto &sol = state.current[i];
+  //   if (sol.fitness > best.fitness) {
+  //     best = sol;
+  //   }
+  // }
 
-  // clone best into next
-  // TODO: make this modular?
-  state.next.clear();
-  for (int i = 0; i < config.population_size; ++i) {
-    state.next.emplace_back(Solution{best.model->clone(), 0});
-  }
+  // // clone best into next
+  // // TODO: make this modular?
+  // state.next.clear();
+  // for (int i = 0; i < config.population_size; ++i) {
+  //   state.next.emplace_back(Solution{best.model->clone(), 0});
+  // }
+
+  // run selection
+  config.select_fun(state.current, state.next, state.rng);
 
   // mutate
   for (int i = 1; i < config.population_size; ++i) {
@@ -150,6 +176,15 @@ void ga_step_simple(GAState &state, const GAConfig &config, const EvalConfig &ev
 
   // add to prior best
   if (state.gen % config.model_history_interval == 0) {
+    // identify best
+    auto &best = state.current[0];
+    for (int i = 1; i < state.current.size(); ++i) {
+      auto &sol = state.current[i];
+      if (sol.fitness > best.fitness) {
+        best = sol;
+      }
+    }
+    // push best, pop oldest
     state.prior_best.push_back(best.model);
     state.prior_best.erase(state.prior_best.begin());
   }
