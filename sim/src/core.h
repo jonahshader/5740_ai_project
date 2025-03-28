@@ -35,6 +35,20 @@ constexpr F4 GRAVITY = F4::from_raw(-2);
 constexpr F4 GRAVITY_WATER = F4::from_raw(-1);
 constexpr F4 FALL_MAX_VEL = F4::from_raw(-20);
 
+// number of inputs produced by simple observation
+// {coin_pos, p1_pos, p1_ve, p2_pos, p2_vel)
+constexpr int SIMPLE_INPUT_COUNT = 2 + 2 + 2 + 2 + 2;
+
+// simplest output configuration:
+// output 1:
+//   (-infinity, -1]: left
+//   (-1, 1):         none
+//   [1, infinity):   right
+// output 2:
+//   (-infinity, 0]:  none
+//   (0, infinity):   jump
+constexpr int SIMPLE_OUTPUT_COUNT = 2;
+
 struct Player {
   F4 x = F4::from_raw(0);
   F4 y = F4::from_raw(0);
@@ -60,9 +74,15 @@ struct PlayerInput {
   bool jump{false};
 };
 
+// create and instantiate a GameState instance
 GameState init(const std::string &map_filename, uint64_t seed);
+// take an existing GameState and re-init all but the map
+void reinit(GameState &state, uint64_t seed);
 void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2);
-void observe_state_simple(const GameState &state, std::vector<F4> &observation);
-void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);
+
+void observe_state_simple(const GameState &state, std::vector<F4> &observation,
+                          bool p1_perspective);
+int get_fitness(const GameState &state, bool p1_perspective);
+// void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);
 
 } // namespace jnb

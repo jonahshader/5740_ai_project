@@ -5,6 +5,9 @@
 
 #include "lodepng.h"
 
+#include "interfaces.h"
+#include "models/human.h"
+
 // constexpr int asdf = 0;
 
 namespace jnb {
@@ -52,7 +55,6 @@ void render(const GameState &state, SDL_Renderer *renderer,
     SDL_RenderFillRect(renderer, &r);
   }
 
-
   // draw score
   SDL_SetRenderDrawColor(renderer, 255, 80, 80, 255);
   for (int i = 0; i < state.p1.score; ++i) {
@@ -83,60 +85,109 @@ void run_game(const std::string &map_filename, uint64_t seed) {
   std::cout << "Loaded tiles.png" << std::endl;
   std::cout << "Width: " << w << ", Height: " << h << std::endl;
 
-  auto update_lambda = [=]() {
-    update(*state, *p1_input, *p2_input);
-  };
+  auto update_lambda = [=]() { update(*state, *p1_input, *p2_input); };
 
   auto handle_input_lambda = [=](SDL_Event &event) {
     if (event.type == SDL_KEYDOWN) {
       switch (event.key.keysym.sym) {
-      case SDLK_LEFT:
-        p1_input->left = true;
-        break;
-      case SDLK_RIGHT:
-        p1_input->right = true;
-        break;
-      case SDLK_UP:
-        p1_input->jump = true;
-        break;
-      case SDLK_a:
-        p2_input->left = true;
-        break;
-      case SDLK_d:
-        p2_input->right = true;
-        break;
-      case SDLK_w:
-        p2_input->jump = true;
-        break;
+        case SDLK_LEFT:
+          p1_input->left = true;
+          break;
+        case SDLK_RIGHT:
+          p1_input->right = true;
+          break;
+        case SDLK_UP:
+          p1_input->jump = true;
+          break;
+        case SDLK_a:
+          p2_input->left = true;
+          break;
+        case SDLK_d:
+          p2_input->right = true;
+          break;
+        case SDLK_w:
+          p2_input->jump = true;
+          break;
       }
     } else if (event.type == SDL_KEYUP) {
       switch (event.key.keysym.sym) {
-      case SDLK_LEFT:
-        p1_input->left = false;
-        break;
-      case SDLK_RIGHT:
-        p1_input->right = false;
-        break;
-      case SDLK_UP:
-        p1_input->jump = false;
-        break;
-      case SDLK_a:
-        p2_input->left = false;
-        break;
-      case SDLK_d:
-        p2_input->right = false;
-        break;
-      case SDLK_w:
-        p2_input->jump = false;
-        break;
+        case SDLK_LEFT:
+          p1_input->left = false;
+          break;
+        case SDLK_RIGHT:
+          p1_input->right = false;
+          break;
+        case SDLK_UP:
+          p1_input->jump = false;
+          break;
+        case SDLK_a:
+          p2_input->left = false;
+          break;
+        case SDLK_d:
+          p2_input->right = false;
+          break;
+        case SDLK_w:
+          p2_input->jump = false;
+          break;
       }
     }
   };
 
-  auto render_lambda = [=](SDL_Renderer *renderer) {
-    render(*state, renderer, spritesheet);
+  auto render_lambda = [=](SDL_Renderer *renderer) { render(*state, renderer, spritesheet); };
+
+  game.run(update_lambda, render_lambda, handle_input_lambda);
+}
+
+void run_game_with_models(const std::string &map_filename, uint64_t seed, std::shared_ptr<Model> model1, std::shared_ptr<Model> model2) {
+  // initialize game state
+  GameState state = init(map_filename, seed);
+
+  PixelGame game("JnB Sim", CELL_SIZE * state.map.width, CELL_SIZE * state.map.height, 8, 60);
+
+  std::vector<uint8_t> spritesheet;
+  uint32_t w, h;
+  auto error = lodepng::decode(spritesheet, w, h, "tiles.png"); // TODO: move path to constexpr
+  if (error) {
+    std::cerr << "Error loading spritesheet: " << lodepng_error_text(error) << std::endl;
+    throw std::runtime_error("Failed to load spritesheet");
+  }
+  std::cout << "Loaded tiles.png" << std::endl;
+  std::cout << "Width: " << w << ", Height: " << h << std::endl;
+
+  auto update_lambda = [&state, model1, model2]() {
+    auto p1_input = model1->forward(state, true);
+    auto p2_input = model2->forward(state, false);
+    update(state, p1_input, p2_input);
+  };
+
+  auto render_lambda = [&state, &spritesheet](SDL_Renderer *renderer) {
+    render(state, renderer, spritesheet);
+  };
+
+  std::vector<std::function<void(SDL_Event &)>> input_handlers;
+
+  // try downcasting each model to HumanModel.
+  // if we can, then grab it's input handler
+  // and add it to the input_handlers vector
+  auto human_model1 = std::dynamic_pointer_cast<HumanModel>(model1);
+  if (human_model1) {
+    auto handle_input_lambda = human_model1->get_input_handler(SDLK_LEFT, SDLK_RIGHT, SDLK_UP);
+    input_handlers.push_back(handle_input_lambda);
+  }
+  auto human_model2 = std::dynamic_pointer_cast<HumanModel>(model2);
+  if (human_model2) {
+    auto handle_input_lambda = human_model2->get_input_handler(SDLK_a, SDLK_d, SDLK_w);
+    input_handlers.push_back(handle_input_lambda);
+  }
+
+  auto handle_input_lambda = [&](SDL_Event &event) {
+    // run all input handlers
+    for (auto &handler : input_handlers) {
+      handler(event);
+    }
   };
 
   game.run(update_lambda, render_lambda, handle_input_lambda);
 }
+
 } // namespace jnb
