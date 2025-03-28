@@ -19,6 +19,10 @@ struct Solution {
 
 using Population = std::vector<Solution>;
 
+// selection function takes refs to the current evaluated populaiton, next population, and rng.
+// populates next based on current.
+using Selection = std::function<void(const Population &, Population &, std::mt19937 &)>;
+
 struct GAState {
   Population current{};
   Population next{};
