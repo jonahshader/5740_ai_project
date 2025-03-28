@@ -6,6 +6,7 @@
 #include "core_render.h"
 #include "models/human.h"
 #include "models/mlp_simple.h"
+#include "models/mlp_map_lut.h"
 #include "optimizers/simple.h"
 
 int main(int argc, char *argv[]) {
@@ -22,33 +23,52 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // {
-  //   // human vs randomly init model
-  //   std::mt19937 rng(0);
+  // load map
+  jnb::TileMap map;
+  map.load_from_file(map_file);
 
-  //   auto p1 = std::make_shared<jnb::HumanModel>();
-  //   // auto p2 = std::make_shared<jnb::HumanModel>();
-  //   auto p2 = std::make_shared<jnb::SimpleMLPModel>(rng);
+  {
+    // human vs randomly init model
+    std::mt19937 rng(0);
 
-  //   // jnb::run_game(map_file.c_str(), 0);
-  //   jnb::run_game_with_models(map_file, 0, p1, p2);
-  // }
+    auto p1 = std::make_shared<jnb::HumanModel>();
+    // auto p2 = std::make_shared<jnb::HumanModel>();
+    // auto p2 = std::make_shared<jnb::SimpleMLPModel>(rng);
+    auto p2 = std::make_shared<jnb::MLPMapLutModel>(rng, map.width, map.height);
+
+    // jnb::run_game(map_file.c_str(), 0);
+    jnb::run_game_with_models(map_file, 0, p1, p2);
+  }
 
   {
     // train a model, then play against it
     jnb::GAConfig config{};
     config.seed = 1;
     config.select_fun = jnb::make_tournament(2);
+    config.reference_count = 2;
+    config.model_history_size = 2;
+    config.population_size = 64;
     jnb::EvalConfig eval_config{};
+    eval_config.frame_limit = 450;
+    config.mutation_rate = 0.5;
 
     // lambda that spits out a randomly init model
-    auto model_builder = [](std::mt19937 &rng) {
-      return std::make_shared<jnb::SimpleMLPModel>(rng);
-    };
+    auto model_builder = [width = map.width, height = map.height](std::mt19937 &rng) -> std::shared_ptr<jnb::Model>{
+      static int model_type = 0;
 
-    // load map
-    jnb::TileMap map;
-    map.load_from_file(map_file);
+      model_type = (model_type + 1) % 2;
+      switch (model_type) {
+        case 0:
+          return std::make_shared<jnb::SimpleMLPModel>(rng);
+          break;
+        case 1:
+          return std::make_shared<jnb::MLPMapLutModel>(rng, width, height);
+          break;
+        default:
+          return std::make_shared<jnb::SimpleMLPModel>(rng);
+          break;
+      }
+    };
 
     jnb::GAState ga_state;
     jnb::init_state(ga_state, map, config, model_builder);

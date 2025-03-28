@@ -16,9 +16,10 @@ public:
   void mutate(std::mt19937 &rng, float mutation_rate) override;
   void reset() override;
   std::shared_ptr<Model> clone() const override;
+  std::string get_name() const override;
 
 private:
-  NeuralNet<float, SIMPLE_INPUT_COUNT, 32, 2, SIMPLE_OUTPUT_COUNT> net{};
+  StaticNeuralNet<float, SIMPLE_INPUT_COUNT, 32, 2, SIMPLE_OUTPUT_COUNT> net{};
 };
 
 } // namespace jnb

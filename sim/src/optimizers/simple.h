@@ -54,7 +54,7 @@ struct GAState {
 };
 
 struct EvalConfig {
-  std::vector<uint64_t> seeds{0, 1, 5, 1337, 24};
+  int seed_count{3};
   int frame_limit{400};
 };
 

@@ -19,6 +19,10 @@ std::shared_ptr<Model> HumanModel::clone() const {
   return std::make_shared<HumanModel>(*this);
 }
 
+std::string HumanModel::get_name() const {
+  return "HumanModel";
+}
+
 std::function<void(SDL_Event &)> HumanModel::get_input_handler(SDL_KeyCode left, SDL_KeyCode right,
                                                                SDL_KeyCode jump) {
   auto handle_input_lambda = [left, right, jump, &input = input](SDL_Event &event) {

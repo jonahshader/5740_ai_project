@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <random>
+#include <string>
 
 #include "core.h"
 
@@ -17,6 +18,7 @@ public:
   // some way.
   virtual void reset() = 0;
   virtual std::shared_ptr<Model> clone() const = 0;
+  virtual std::string get_name() const = 0;
 };
 
 } // namespace jnb

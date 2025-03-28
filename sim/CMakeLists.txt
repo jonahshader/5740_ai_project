@@ -53,6 +53,8 @@ find_package(OpenMP REQUIRED)
 add_executable(sim
   src/models/human.cpp
   src/models/human.h
+  src/models/mlp_map_lut.cpp
+  src/models/mlp_map_lut.h
   src/models/mlp_simple.cpp
   src/models/mlp_simple.h
   src/optimizers/simple.cpp

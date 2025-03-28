@@ -1,6 +1,7 @@
 #include "simple.h"
 
 #include <iostream>
+#include <unordered_map>
 
 namespace jnb {
 
@@ -86,7 +87,7 @@ int evaluate_single(GameState &state_with_map, uint64_t seed, const EvalConfig &
 }
 
 int evaluate(const TileMap &map, const EvalConfig &config, std::shared_ptr<Model> model,
-             std::shared_ptr<Model> opponent) {
+             std::shared_ptr<Model> opponent, const std::vector<uint64_t> &seeds) {
   // if opponent is model, we know the outcome will be symmetric,
   // so just early return 0 fitness
   if (model == opponent) {
@@ -100,7 +101,7 @@ int evaluate(const TileMap &map, const EvalConfig &config, std::shared_ptr<Model
 
   int total_fitness = 0;
   // run an eval per seed
-  for (auto seed : config.seeds) {
+  for (const auto &seed : seeds) {
     // run twice: once normally, and again with the initial player positions swapped.
     // this ensure symmetry for when the same model is used for both p1 and p2.
     total_fitness += evaluate_single(state, seed, config, model, opponent, false);
@@ -111,6 +112,12 @@ int evaluate(const TileMap &map, const EvalConfig &config, std::shared_ptr<Model
 }
 
 void eval_pop(GAState &state, const EvalConfig &eval_config) {
+  // generate new seeds for this generation
+  std::vector<uint64_t> seeds;
+  std::uniform_int_distribution<uint64_t> seed_dist(0, UINT64_MAX);
+  for (int i = 0; i < eval_config.seed_count; ++i) {
+    seeds.push_back(seed_dist(state.rng));
+  }
 #pragma omp parallel for
   for (int sol_i = 0; sol_i < state.current.size(); ++sol_i) {
     auto &sol = state.current[sol_i];
@@ -118,7 +125,7 @@ void eval_pop(GAState &state, const EvalConfig &eval_config) {
     for (int opponent_i = 0; opponent_i < state.prior_best.size(); ++opponent_i) {
       auto &opponent = state.prior_best[opponent_i];
 
-      sol.fitness += evaluate(state.map, eval_config, sol.model, opponent);
+      sol.fitness += evaluate(state.map, eval_config, sol.model, opponent, seeds);
     }
   }
 
@@ -128,7 +135,7 @@ void eval_pop(GAState &state, const EvalConfig &eval_config) {
     for (int opponent_i = 0; opponent_i < state.references.size(); ++opponent_i) {
       auto &opponent = state.references[opponent_i];
 
-      sol.fitness += evaluate(state.map, eval_config, sol.model, opponent);
+      sol.fitness += evaluate(state.map, eval_config, sol.model, opponent, seeds);
     }
   }
 }
@@ -196,6 +203,12 @@ void ga_step_simple(GAState &state, const GAConfig &config, const EvalConfig &ev
 }
 
 void ga_simple(GAState &state, const GAConfig &config, const EvalConfig &eval_config) {
+  // ref seeds should be fixed, so we can just populate by counting
+  std::vector<uint64_t> ref_seeds;
+  for (int i = 0; i < eval_config.seed_count; ++i) {
+    ref_seeds.push_back(i);
+  }
+
   while (true) {
     ga_step_simple(state, config, eval_config);
 
@@ -205,7 +218,7 @@ void ga_simple(GAState &state, const GAConfig &config, const EvalConfig &eval_co
       int best_fitness = 0;
       for (int i = 0; i < state.references.size(); ++i) {
         auto &reference = state.references[i];
-        best_fitness += evaluate(state.map, eval_config, best.model, reference);
+        best_fitness += evaluate(state.map, eval_config, best.model, reference, ref_seeds);
       }
 
       // record the fitness
@@ -213,6 +226,22 @@ void ga_simple(GAState &state, const GAConfig &config, const EvalConfig &eval_co
 
       std::cout << "Generation " << state.gen << ": "
                 << "Reference fitness: " << best_fitness << std::endl;
+
+      // count the instance names
+      std::unordered_map<std::string, int> instance_count;
+      for (const auto &sol : state.current) {
+        instance_count[sol.model->get_name()]++;
+      }
+
+      // print the instance counts sorted by name
+      std::cout << "Instance counts:" << std::endl;
+      std::vector<std::pair<std::string, int>> sorted_counts(instance_count.begin(),
+                                                             instance_count.end());
+      std::sort(sorted_counts.begin(), sorted_counts.end(),
+                [](const auto &a, const auto &b) { return a.first < b.first; });
+      for (const auto &pair : sorted_counts) {
+        std::cout << pair.first << ": " << pair.second << std::endl;
+      }
     }
 
     if (state.gen >= config.max_gen) {

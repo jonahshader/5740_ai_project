@@ -46,4 +46,8 @@ std::shared_ptr<Model> SimpleMLPModel::clone() const {
   return std::make_shared<SimpleMLPModel>(*this);
 }
 
+std::string SimpleMLPModel::get_name() const {
+  return "SimpleMLPModel";
+}
+
 } // namespace jnb
