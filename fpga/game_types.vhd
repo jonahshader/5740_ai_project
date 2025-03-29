@@ -17,10 +17,6 @@ package game_types is
   -- main fixed point format used in game logic
   subtype f4_t is sfixed(F4_UPPER downto -F4_LOWER);
 
-  -- TODO: use xormix: https://github.com/MaartenBaert/xormix
-  -- probably will want to pull out state
-  subtype rng_t is unsigned(31 downto 0);
-
   -- player type describes the state for one player
   type player_t is record
     x            : f4_t;
@@ -40,11 +36,12 @@ package game_types is
   function default_tilepos_t return tilepos_t;
 
   -- game state encompasses everything but the map
+  -- note: game logic module includes rng. i suppose this info doesn't need to be
+  -- transferred to PS, so its fine that it isn't included here.
   type gamestate_t is record
     p1       : player_t;
     p2       : player_t;
     coin_pos : tilepos_t;
-    rng      : rng_t;
     age      : unsigned(15 downto 0);
   end record gamestate_t;
   function default_gamestate_t return gamestate_t;
@@ -110,7 +107,6 @@ package body game_types is
                                     p1 => default_player_t,
                                    p2 => default_player_t,
                                    coin_pos => default_tilepos_t,
-                                   rng => (others => '0'),
                                     age => (others => '0')
                                   );
   begin
