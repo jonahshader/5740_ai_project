@@ -7,10 +7,18 @@ use ieee.math_real.ceil;
 
 package game_types is
 
-  -- main fixed point format used in game logic
-  subtype f4_t is sfixed(13 downto -4);
+  -- constants
+  constant MAP_SIZE_BITS      : integer := 8;
+  constant MAP_MAX_SIZE_TILES : integer := 2 ** MAP_SIZE_BITS;
 
-  -- TODO: probably gonna implement xorshift32
+  constant F4_UPPER : integer := 13;
+  constant F4_LOWER : integer := 4;
+
+  -- main fixed point format used in game logic
+  subtype f4_t is sfixed(F4_UPPER downto -F4_LOWER);
+
+  -- TODO: use xormix: https://github.com/MaartenBaert/xormix
+  -- probably will want to pull out state
   subtype rng_t is unsigned(31 downto 0);
 
   -- player type describes the state for one player
@@ -25,27 +33,26 @@ package game_types is
   function default_player_t return player_t;
 
   type tilepos_t is record
-    -- TODO: used signed because I think some math might require it,
-    -- but I might be able to do unsigned.
-    x : signed(7 downto 0);
-    y : signed(7 downto 0);
+    -- spans the max map size
+    x : unsigned(MAP_SIZE_BITS - 1 downto 0);
+    y : unsigned(MAP_SIZE_BITS - 1 downto 0);
   end record tilepos_t;
   function default_tilepos_t return tilepos_t;
 
   -- game state encompasses everything but the map
   type gamestate_t is record
-    p1 : player_t;
-    p2 : player_t;
+    p1       : player_t;
+    p2       : player_t;
     coin_pos : tilepos_t;
-    rng : rng_t;
-    age : unsigned(15 downto 0);
+    rng      : rng_t;
+    age      : unsigned(15 downto 0);
   end record gamestate_t;
   function default_gamestate_t return gamestate_t;
 
   type playerinput_t is record
-    left : boolean;
+    left  : boolean;
     right : boolean;
-    jump : boolean;
+    jump  : boolean;
   end record playerinput_t;
   function default_playerinput_t return playerinput_t;
 
@@ -67,51 +74,55 @@ package game_types is
   function tile_is_solid(tile : tile_t) return boolean;
   function tile_is_water(tile : tile_t) return boolean;
 
+  -- 2d array to store a max-size map
+  type map_t is array (0 to MAP_MAX_SIZE_TILES - 1, 0 to MAP_MAX_SIZE_TILES - 1) of tile_t;
+
 end package game_types;
 
 package body game_types is
+
   -- function implementations
   -- defaults
   function default_player_t return player_t is
     variable val : player_t := (
-      x            => to_sfixed(0.0, 13, -4),
-      y            => to_sfixed(0.0, 13, -4),
-      x_vel        => to_sfixed(0.0, 13, -4),
-      y_vel        => to_sfixed(0.0, 13, -4),
-      score        => (others => '0'),
-      dead_timeout => (others => '0')
-    );
+                                 x            => to_sfixed(0.0, F4_UPPER, -F4_LOWER),
+                                 y            => to_sfixed(0.0, F4_UPPER, -F4_LOWER),
+                                 x_vel        => to_sfixed(0.0, F4_UPPER, -F4_LOWER),
+                                 y_vel        => to_sfixed(0.0, F4_UPPER, -F4_LOWER),
+                                 score        => (others => '0'),
+                                 dead_timeout => (others => '0')
+                               );
   begin
     return val;
   end function default_player_t;
 
   function default_tilepos_t return tilepos_t is
     variable val : tilepos_t := (
-      x => (others => '0'),
-      y => (others => '0')
-    );
+                                  x => (others => '0'),
+                                  y => (others => '0')
+                                );
   begin
     return val;
   end function default_tilepos_t;
 
   function default_gamestate_t return gamestate_t is
     variable val : gamestate_t := (
-      p1 => default_player_t,
-      p2 => default_player_t,
-      coin_pos => default_tilepos_t,
-      rng => (others => '0'),
-      age => (others => '0')
-    );
+                                    p1 => default_player_t,
+                                   p2 => default_player_t,
+                                   coin_pos => default_tilepos_t,
+                                   rng => (others => '0'),
+                                    age => (others => '0')
+                                  );
   begin
     return val;
   end function default_gamestate_t;
 
   function default_playerinput_t return playerinput_t is
     variable val : playerinput_t := (
-      left => false,
-      right => false,
-      jump => false
-    );
+                                      left => false,
+                                     right => false,
+                                     jump => false
+                                   );
   begin
     return val;
   end function default_playerinput_t;
