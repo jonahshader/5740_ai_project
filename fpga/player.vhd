@@ -5,12 +5,13 @@ use work.game_types.all;
 
 entity player is
   port (
-    clk : in std_logic
+    clk : in std_logic;
+    m : in tilemap_t
   );
 end entity player;
 
 architecture player_arch of player is
-
+  
 begin
 
 end architecture player_arch;
