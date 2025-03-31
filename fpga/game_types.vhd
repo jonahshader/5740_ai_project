@@ -9,13 +9,14 @@ use ieee.math_real.ceil;
 package game_types is
 
   -- constants
-  constant MAP_TILES_BITS       : integer := 8;
-  constant MAP_MAX_SIZE_TILES   : integer := 2 ** MAP_TILES_BITS;
-  constant TILE_PX_BITS         : integer := 3;
-  constant TILE_PX              : integer := 2 ** TILE_PX_BITS;
-  constant MAP_MAX_SIZE_PX_BITS : integer := MAP_TILES_BITS + TILE_PX_BITS;
-  constant MAP_MAX_SIZE_PX      : integer := 2 ** MAP_MAX_SIZE_PX_BITS;
+  constant MAP_TILES_BITS       : integer := 8;                             -- bits needed to describe tile position
+  constant MAP_MAX_SIZE_TILES   : integer := 2 ** MAP_TILES_BITS;           -- map max size (width height) in tiles
+  constant TILE_PX_BITS         : integer := 3;                             -- bits needed to describe PX position within tile
+  constant TILE_PX              : integer := 2 ** TILE_PX_BITS;             -- tile size (width height) in pixels
+  constant MAP_MAX_SIZE_PX_BITS : integer := MAP_TILES_BITS + TILE_PX_BITS; -- bits needed to describe pixel position within the full map
+  constant MAP_MAX_SIZE_PX      : integer := 2 ** MAP_MAX_SIZE_PX_BITS;     -- map max size (width height) in pixels
 
+  -- upper and lower bits for fixed point format
   constant F4_UPPER : integer := 11;
   constant F4_LOWER : integer := 4;
 
@@ -30,8 +31,8 @@ package game_types is
 
   -- player type describes the state for one player
   type player_t is record
-    pos : f4_vec_t;
-    vel : f4_vec_t;
+    pos          : f4_vec_t;
+    vel          : f4_vec_t;
     score        : signed(15 downto 0);
     dead_timeout : unsigned(7 downto 0);
   end record player_t;
@@ -52,6 +53,7 @@ package game_types is
     p2       : player_t;
     coin_pos : tilepos_t;
     age      : unsigned(15 downto 0);
+  -- seed     : std_logic_vector(31 downto 0);
   end record gamestate_t;
   function default_gamestate_t return gamestate_t;
 
@@ -81,25 +83,30 @@ package game_types is
   function default_map_t return map_t;
 
   -- 1d array for spawn tile spawn locations
-  type spawn_t is array (0 to MAP_MAX_SIZE_TILES - 1) of tile_t;
+  type spawn_t is array (0 to MAP_MAX_SIZE_TILES - 1) of tilepos_t;
   function default_spawn_t return spawn_t;
 
   -- a tilemap contains a map_t, spawn_t, width and height
   type tilemap_t is record
-    m      : map_t;
-    spawn  : spawn_t;
-    width  : unsigned(MAP_TILES_BITS downto 0);
-    height : unsigned(MAP_TILES_BITS downto 0);
+    m              : map_t;
+    spawn          : spawn_t;
+    num_spawn      : unsigned(MAP_TILES_BITS - 1 downto 0);
+    num_spawn_bits : unsigned(3 downto 0);
+    width          : unsigned(MAP_TILES_BITS downto 0); -- in tiles
+    height         : unsigned(MAP_TILES_BITS downto 0); -- in tiles
   end record tilemap_t;
   function default_tilemap_t return tilemap_t;
 
-  subtype s_coord_t is signed(MAP_MAX_SIZE_PX_BITS downto 0);
+  subtype s_pixelcoord_t is signed(MAP_MAX_SIZE_PX_BITS downto 0);
 
   -- helper functions on tiles
   function tile_is_solid(tile : tile_t) return boolean;
   function tile_is_water(tile : tile_t) return boolean;
   function get_tile(m : tilemap_t; pos : f4_vec_t) return tile_t;
-  function get_tile(m : tilemap_t; pixel_x : s_coord_t; pixel_y : s_coord_t) return tile_t;
+  function get_tile(m : tilemap_t; pixel_x : s_pixelcoord_t; pixel_y : s_pixelcoord_t) return tile_t;
+
+  function sample_spawn(m : tilemap_t; rng : std_logic_vector(31 downto 0)) return tilepos_t;
+  function to_f4_vec(pos : tilepos_t) return f4_vec_t;
 
 end package game_types;
 
@@ -167,7 +174,7 @@ package body game_types is
 
   function default_spawn_t return spawn_t is
     variable val : spawn_t := (
-      (others => TILE_NOTHING)
+      (others => default_tilepos_t)
     );
   begin
     return val;
@@ -230,7 +237,7 @@ package body game_types is
     return m.m(to_integer(m.height) - 1 - tile_y, tile_x);
   end function;
 
-  function get_tile(m : tilemap_t; pixel_x : s_coord_t; pixel_y : s_coord_t) return tile_t is
+  function get_tile(m : tilemap_t; pixel_x : s_pixelcoord_t; pixel_y : s_pixelcoord_t) return tile_t is
     variable tile_x : integer;
     variable tile_y : integer;
   begin
@@ -240,7 +247,7 @@ package body game_types is
     tile_y := to_integer(shift_right(pixel_y, TILE_PX_BITS));
 
     -- apply bounds checking
-    if (tile_x < 0) or (tile_y < 0) or (tile_x >= to_integer(m.width)) then
+    if tile_x < 0 or tile_y < 0 or tile_x >= to_integer(m.width) then
       return TILE_GROUND;
     end if;
 
@@ -250,6 +257,36 @@ package body game_types is
 
     -- access the map, flipping y-coordinate for y-up ordering
     return m.m(to_integer(m.height) - 1 - tile_y, tile_x);
+  end function;
+
+  function sample_spawn(m : tilemap_t; rng : std_logic_vector(31 downto 0)) return tilepos_t is
+    variable index : unsigned(MAP_TILES_BITS - 1 downto 0);
+  begin
+    -- grab num_spawn_bits number of bits form rng
+    -- index := shift_right(unsigned(rng), to_integer(32 - m.num_spawn_bits));
+    index := resize(unsigned(rng), MAP_TILES_BITS);
+
+    -- reduce it if its over the max
+    if index >= m.num_spawn then
+      index := index - m.num_spawn;
+    end if;
+
+    -- return the spawn tile
+    return m.spawn(to_integer(index));
+  end function;
+
+  function to_f4_vec(pos : tilepos_t) return f4_vec_t is
+    variable vec     : f4_vec_t;
+    variable pixel_x : unsigned(MAP_MAX_SIZE_PX_BITS - 1 downto 0);
+    variable pixel_y : unsigned(MAP_MAX_SIZE_PX_BITS - 1 downto 0);
+  begin
+    -- convert pos from tile space to pixel space
+    pixel_x := shift_left(pos.x, TILE_PX_BITS);
+    pixel_y := shift_left(pos.y, TILE_PX_BITS);
+    -- convert from unsigned to sfixed
+    vec.x := to_sfixed(to_integer(pixel_x), F4_UPPER, -F4_LOWER);
+    vec.y := to_sfixed(to_integer(pixel_y), F4_UPPER, -F4_LOWER);
+    return vec;
   end function;
 
 end package body game_types;

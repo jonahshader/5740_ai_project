@@ -70,19 +70,21 @@ int get_tile_id(int pos) {
 std::vector<std::function<void(Player &, const Player &, const PlayerInput &, bool &)>>
 make_player_phases(const Player &_p, GameState &state) {
   // these values will be computed combinatorially on FPGA
+
+  // x_low and y_low is the bottom left of the player, in pixels
   const int x_low = _p.x.to_integer_floor();
   const int y_low = _p.y.to_integer_floor();
 
-  const int x_tile_left = get_tile_id(x_low);
-  const int x_tile_right = get_tile_id(x_low + PLAYER_WIDTH - 1);
-  const int y_tile_down = get_tile_id(y_low);
-  const int y_tile_up = get_tile_id(y_low + PLAYER_HEIGHT - 1);
+  const int x_tile_left = get_tile_id(x_low); // tile x coord containing left side of player
+  const int x_tile_right = get_tile_id(x_low + PLAYER_WIDTH - 1); // tile y coord containing right side of player
+  const int y_tile_down = get_tile_id(y_low); // tile y coord containing bottom of player
+  const int y_tile_up = get_tile_id(y_low + PLAYER_HEIGHT - 1); // tile y coord containing top of player
 
-  // get the tiles the player is standing on
-  const Tile down_left_tile = state.map.read_map(x_tile_left, y_tile_down - 1);
-  const Tile down_right_tile = state.map.read_map(x_tile_right, y_tile_down - 1);
-  const Tile left_tile = state.map.read_map(x_tile_left, y_tile_down);
-  const Tile right_tile = state.map.read_map(x_tile_right, y_tile_down);
+  // have the tile coordinates, now we can retrieve the tiles we care about
+  const Tile left_tile = state.map.read_map(x_tile_left, y_tile_down); // tile our left foot is in
+  const Tile right_tile = state.map.read_map(x_tile_right, y_tile_down); // tile our right foot is in
+  const Tile down_left_tile = state.map.read_map(x_tile_left, y_tile_down - 1); // tile below left_tile
+  const Tile down_right_tile = state.map.read_map(x_tile_right, y_tile_down - 1); // tile below right_tile
 
   auto phase1 = [=, &state](Player &p, const Player &other, const PlayerInput &input,
                             bool &coin_collected) {
@@ -288,18 +290,14 @@ make_player_phases(const Player &_p, GameState &state) {
   return {phase1, phase2};
 }
 
-void update_player_phase2(Player &p, const int x_tile_left, const int x_tile_right,
-                          const int y_tile_up, const int y_tile_down, const TilePos &coin_pos,
-                          bool &coin_collected) {}
-
 void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2) {
   // updating can happen in parallel in FPGA
-  bool p1_coin_collected = false;
-  bool p2_coin_collected = false;
   auto p1_phases = make_player_phases(state.p1, state);
   auto p2_phases = make_player_phases(state.p2, state);
 
   // run each phase for each player
+  bool p1_coin_collected = false;
+  bool p2_coin_collected = false;
   for (int i = 0; i < p1_phases.size(); ++i) {
     // these can be concurrent on FPGA
     p1_phases[i](state.p1, state.p2, in1, p1_coin_collected);
