@@ -11,7 +11,7 @@ package game_types is
   constant MAP_SIZE_BITS      : integer := 8;
   constant MAP_MAX_SIZE_TILES : integer := 2 ** MAP_SIZE_BITS;
 
-  constant F4_UPPER : integer := 13;
+  constant F4_UPPER : integer := 11;
   constant F4_LOWER : integer := 4;
 
   -- main fixed point format used in game logic
@@ -73,6 +73,20 @@ package game_types is
 
   -- 2d array to store a max-size map
   type map_t is array (0 to MAP_MAX_SIZE_TILES - 1, 0 to MAP_MAX_SIZE_TILES - 1) of tile_t;
+  function default_map_t return map_t;
+
+  -- 1d array for spawn tile spawn locations
+  type spawn_t is array (0 to MAP_MAX_SIZE_TILES - 1) of tile_t;
+  function default_spawn_t return spawn_t;
+
+  -- a tilemap contains a map_t, spawn_t, width and height
+  type tilemap_t is record
+    m      : map_t;
+    spawn  : spawn_t;
+    width  : unsigned(MAP_SIZE_BITS - 1 downto 0);
+    height : unsigned(MAP_SIZE_BITS - 1 downto 0);
+  end record tilemap_t;
+  function default_tilemap_t return tilemap_t;
 
 end package game_types;
 
@@ -107,7 +121,7 @@ package body game_types is
                                     p1 => default_player_t,
                                    p2 => default_player_t,
                                    coin_pos => default_tilepos_t,
-                                    age => (others => '0')
+                                   age => (others => '0')
                                   );
   begin
     return val;
@@ -122,5 +136,42 @@ package body game_types is
   begin
     return val;
   end function default_playerinput_t;
+
+  function tile_is_solid(tile : tile_t) return boolean is
+  begin
+    return tile = TILE_GROUND or tile = TILE_SPRING or tile = TILE_ICE;
+  end function tile_is_solid;
+
+  function tile_is_water(tile : tile_t) return boolean is
+  begin
+    return tile = TILE_WATER_BODY or tile = TILE_WATER_TOP;
+  end function tile_is_water;
+
+  function default_map_t return map_t is
+    variable val : map_t := (
+                              (others => (others => TILE_NOTHING))
+                            );
+  begin
+    return val;
+  end function default_map_t;
+
+  function default_spawn_t return spawn_t is
+    variable val : spawn_t := (
+                                (others => TILE_NOTHING)
+                              );
+  begin
+    return val;
+  end function default_spawn_t;
+
+  function default_tilemap_t return tilemap_t is
+    variable val : tilemap_t := (
+                                  m      => default_map_t,
+                                  spawn  => default_spawn_t,
+                                  width  => (others => '0'),
+                                  height => (others => '0')
+                                );
+  begin
+    return val;
+  end function default_tilemap_t;
 
 end package body game_types;
