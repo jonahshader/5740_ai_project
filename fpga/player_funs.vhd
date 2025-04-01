@@ -59,8 +59,8 @@ package body player_funs is
 
     left_tile       := get_tile(m, x_tile_left, y_tile_down);
     right_tile      := get_tile(m, x_tile_right, y_tile_down);
-    down_left_tile  := get_tile(m, x_tile_left, y_tile_up - 1);
-    down_right_tile := get_tile(m, x_tile_right, y_tile_up - 1);
+    down_left_tile  := get_tile(m, x_tile_left, y_tile_down - 1);
+    down_right_tile := get_tile(m, x_tile_right, y_tile_down - 1);
 
     -- early return if dead
     if pn.dead_timeout > 0 then
@@ -81,8 +81,8 @@ package body player_funs is
     on_ice   := down_left_tile = TILE_ICE or down_right_tile = TILE_ICE;
 
     -- determine acceleration based on context
-    grav     := GRAVITY_WATER when in_water else gravity;
-    move_acc := MOVE_ACCEL_ICE when on_ice else MOVE_ACCEL_WATER when in_water else move_accel;
+    grav     := GRAVITY_WATER when in_water else GRAVITY;
+    move_acc := MOVE_ACCEL_ICE when on_ice else MOVE_ACCEL_WATER when in_water else MOVE_ACCEL;
 
     -- jump logic
     if grounded then

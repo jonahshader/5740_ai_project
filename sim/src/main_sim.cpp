@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   vgame_test->p2_input_right = 0;
   vgame_test->p2_input_jump = 0;
   vgame_test->go = 0;
-  vgame_test->seed = 3;
+  vgame_test->seed = 5;
   std::cout << "before first eval" << std::endl;
   vgame_test->eval();
   std::cout << "after first eval" << std::endl;

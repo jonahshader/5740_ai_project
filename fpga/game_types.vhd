@@ -39,6 +39,7 @@ package game_types is
   constant JUMP_MIDAIR_ACCEL : f4_t := from_raw(1);
   constant SPRING_VEL        : f4_t := from_raw(38);
   constant MOVE_ACCEL        : f4_t := from_raw(3);
+  -- constant MOVE_ACCEL : f4_t := "0000000000000000";
   constant MOVE_ACCEL_WATER  : f4_t := from_raw(2); -- slower in water
   constant MOVE_ACCEL_ICE    : f4_t := from_raw(1); -- much slower on ice
   constant MOVE_MAX_VEL      : f4_t := from_raw(10);
@@ -130,6 +131,7 @@ package game_types is
   function get_tile(m : tilemap_t; pixel_x : s_pixelcoord_t; pixel_y : s_pixelcoord_t) return tile_t;
   function get_tile(m : tilemap_t; tile_x : integer; tile_y : integer) return tile_t;
   function get_tile_id(pixels : integer) return integer;
+  function set_tile(m : tilemap_t; tile_pos : tilepos_t; tile : tile_t) return tilemap_t;
   function tile_to_pixel(tile : integer) return integer;
   function integer_to_f4(pixels : integer) return f4_t;
 
@@ -142,7 +144,7 @@ package body game_types is
 
   function from_raw(value : integer) return f4_t is
   begin
-    return resize(scalb(to_sfixed(value, F4_UPPER, 0), -F4_LOWER), F4_UPPER, -F4_LOWER);
+    return resize(scalb(to_sfixed(value, F4_UPPER, -F4_LOWER), -F4_LOWER), F4_UPPER, -F4_LOWER);
   end function;
 
   function default_f4_vec_t return f4_vec_t is
@@ -311,6 +313,14 @@ package body game_types is
     return to_integer(shift_right(to_signed(pixels, 32), TILE_PX_BITS));
   end function;
 
+  function set_tile(m : tilemap_t; tile_pos : tilepos_t; tile : tile_t) return tilemap_t is
+    variable nm : tilemap_t;
+  begin
+    nm := m;
+    nm.m(to_integer(m.height) - 1 - to_integer(tile_pos.y), to_integer(tile_pos.x)) := tile;
+    return nm;
+  end function;
+
   function tile_to_pixel(tile : integer) return integer is
   begin
     return to_integer(shift_left(to_signed(tile, 32), TILE_PX_BITS));
@@ -322,19 +332,19 @@ package body game_types is
   end function;
 
   function sample_spawn(m : tilemap_t; rng : std_logic_vector(31 downto 0)) return tilepos_t is
-    variable index : unsigned(MAP_TILES_BITS - 1 downto 0);
+    variable index : integer;
   begin
     -- grab num_spawn_bits number of bits form rng
     -- index := shift_right(unsigned(rng), to_integer(32 - m.num_spawn_bits));
-    index := resize(unsigned(rng), MAP_TILES_BITS);
+    index := to_integer(resize(unsigned(rng), m.num_spawn_bits));
 
     -- reduce it if its over the max
     if index >= m.num_spawn then
-      index := index - m.num_spawn;
+      index := index - to_integer(m.num_spawn);
     end if;
 
     -- return the spawn tile
-    return m.spawn(to_integer(index));
+    return m.spawn(index);
   end function;
 
   function to_f4_vec(pos : tilepos_t) return f4_vec_t is

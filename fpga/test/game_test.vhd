@@ -43,36 +43,36 @@ architecture game_test_arch of game_test is
     -- loop through and set them all to TILE_AIR
     for x in 0 to 7 loop
       for y in 0 to 7 loop
-        m.m(x, y) := TILE_AIR;
+        m.m(y, x) := TILE_AIR;
       end loop;
     end loop;
 
     -- set the ground to TILE_GROUND
     -- note: this is in y-down, so the ground is at y = 7
     for x in 0 to 7 loop
-      m.m(x, 7) := TILE_GROUND;
+      m.m(7, x) := TILE_GROUND;
     end loop;
 
     -- make a floating platform
     for x in 3 to 5 loop
-      m.m(x, 4) := TILE_GROUND;
+      m.m(4, x) := TILE_GROUND;
     end loop;
 
     -- extend with ice
-    m.m(6, 4) := TILE_ICE;
+    m.m(4, 6) := TILE_ICE;
 
     -- replace a ground tile with TILE_SPRING
-    m.m(0, 7) := TILE_SPRING;
+    m.m(7, 0) := TILE_SPRING;
 
     -- replace the next ground tile with TILE_WATER_TOP
-    m.m(1, 7) := TILE_WATER_TOP;
+    m.m(7, 1) := TILE_WATER_TOP;
 
     -- set spawns, which are the 6 remaining ground tiles
     for i in 2 to 7 loop
       m.spawn(i - 2) :=
       (
         x => to_unsigned(i, m.spawn(0).x'length),
-        y => to_unsigned(7, m.spawn(0).y'length)
+        y => to_unsigned(1, m.spawn(0).y'length)
       );
     end loop;
     -- set the number of spawns
@@ -87,7 +87,7 @@ architecture game_test_arch of game_test is
   end function;
 
   signal gamestate : gamestate_t;
--- signal m         : tilemap_t := init_map;
+  signal m         : tilemap_t := init_map;
 
 begin
 
@@ -106,12 +106,19 @@ begin
       init       => init,
       swap_start => swap_start,
       seed       => seed,
-      m          => init_map,
+      m          => m,
       p1_input   => p1_input,
       p2_input   => p2_input,
       go         => go,
       done       => done,
       gamestate  => gamestate
     );
+
+  m_set_proc : process (clk) is
+  begin
+    if rising_edge(clk) then
+      m <= init_map;
+    end if;
+  end process;
 
 end architecture game_test_arch;
