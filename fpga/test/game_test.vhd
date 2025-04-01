@@ -58,11 +58,14 @@ architecture game_test_arch of game_test is
       m.m(x, 4) := TILE_GROUND;
     end loop;
 
+    -- extend with ice
+    m.m(6, 4) := TILE_ICE;
+
     -- replace a ground tile with TILE_SPRING
-    m.m(1, 7) := TILE_SPRING;
+    m.m(0, 7) := TILE_SPRING;
 
     -- replace the next ground tile with TILE_WATER_TOP
-    m.m(2, 7) := TILE_WATER_TOP;
+    m.m(1, 7) := TILE_WATER_TOP;
 
     -- set spawns, which are the 6 remaining ground tiles
     for i in 2 to 7 loop

@@ -38,7 +38,7 @@ architecture game_arch of game is
   signal p1_input_r   : playerinput_t;
   signal p2_input_r   : playerinput_t;
 
-  signal init_counter : unsigned(2 downto 0) := to_unsigned(INIT_CYCLES, 3);
+  signal init_counter : unsigned(3 downto 0) := to_unsigned(INIT_CYCLES, 4);
 
   type   state_t is (IDLE_S, INIT_S, PHASE1_S, PHASE2_S);
   signal state : state_t := IDLE_S;
@@ -82,7 +82,7 @@ begin
       if init then
         state        <= INIT_S;
         swap_start_r <= swap_start;
-        init_counter <= to_unsigned(INIT_CYCLES, 3);
+        init_counter <= to_unsigned(INIT_CYCLES, init_counter'length);
       else
         -- state machine
         case state is
