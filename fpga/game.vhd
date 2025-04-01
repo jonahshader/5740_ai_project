@@ -34,9 +34,13 @@ architecture game_arch of game is
   signal   p2_spawn_tile   : tilepos_t;
   signal   coin_spawn_tile : tilepos_t;
 
+  signal swap_start_r : boolean;
+  signal p1_input_r   : playerinput_t;
+  signal p2_input_r   : playerinput_t;
+
   signal init_counter : unsigned(2 downto 0) := to_unsigned(INIT_CYCLES, 3);
 
-  type   state_t is (IDLE_S, INIT_S, PHASE1_S, PHASE2_S, RESPAWN_S);
+  type   state_t is (IDLE_S, INIT_S, PHASE1_S, PHASE2_S);
   signal state : state_t := IDLE_S;
 
   -- gs contains all the game state
@@ -70,42 +74,54 @@ begin
       result => result_rng
     );
 
-  -- state machine
   state_proc : process (clk) is
   begin
     if rising_edge(clk) then
       -- always go straight to init state when init is true
       if init then
         state        <= INIT_S;
+        swap_start_r <= swap_start;
         init_counter <= to_unsigned(INIT_CYCLES, 3);
-
-      -- TODO: initialize stuff
       else
-        --
+        -- state machine
         case state is
           when IDLE_S =>
             if go then
-              state <= PHASE1_S;
+              state      <= PHASE1_S;
+              p1_input_r <= p1_input;
+              p2_input_r <= p2_input;
             end if;
           when INIT_S =>
             if init_counter = 0 then
               -- done initializing, go back to idle
               state <= IDLE_S;
               -- set starting positions
-              gs        <= default_gamestate_t;
-              gs.p1.pos <= to_f4_vec(p1_spawn_tile);
+              gs <= default_gamestate_t;
+              if swap_start_r then
+                -- init to swapped positions
+                gs.p1.pos <= to_f4_vec(p2_spawn_tile);
+                gs.p2.pos <= to_f4_vec(p1_spawn_tile);
+              else
+                -- init to normal positions
+                gs.p1.pos <= to_f4_vec(p1_spawn_tile);
+                gs.p2.pos <= to_f4_vec(p2_spawn_tile);
+              end if;
+              gs.coin_pos <= coin_spawn_tile;
             end if;
             init_counter <= init_counter - 1;
-            if to_std_logic(go) = '1' then
-              state <= PHASE1_S;
-            end if;
           when PHASE1_S =>
-            -- player1 <= phase_1(m, p1_input, p2_input, p1_spawn_tile, p2_spawn_tile, coin_spawn_tile, gamestate);
+            gs.p1 <= phase_1(gs.p1, gs.p2, p1_input_r, m);
+            gs.p2 <= phase_1(gs.p2, gs.p1, p2_input_r, m);
             state <= PHASE2_S;
           when PHASE2_S =>
-            state <= RESPAWN_S;
-          when RESPAWN_S =>
-          -- gamestate <= state <= IDLE_S;
+            gs.p1 <= phase_2(gs.p1, p1_spawn_tile, gs.coin_pos, m);
+            gs.p2 <= phase_2(gs.p2, p2_spawn_tile, gs.coin_pos, m);
+            -- coin respawn from collision
+            if is_touching_coin(gs.p1, gs.coin_pos) or is_touching_coin(gs.p2, gs.coin_pos) then
+              -- respawn coin
+              gs.coin_pos <= coin_spawn_tile;
+            end if;
+            state <= IDLE_S;
           when others =>
             null;
         end case;

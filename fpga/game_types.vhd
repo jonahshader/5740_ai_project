@@ -16,12 +16,35 @@ package game_types is
   constant MAP_MAX_SIZE_PX_BITS : integer := MAP_TILES_BITS + TILE_PX_BITS; -- bits needed to describe pixel position within the full map
   constant MAP_MAX_SIZE_PX      : integer := 2 ** MAP_MAX_SIZE_PX_BITS;     -- map max size (width height) in pixels
 
+  constant PLAYER_WIDTH       : integer := TILE_PX - 2;
+  constant PLAYER_HEIGHT      : integer := TILE_PX - 2;
+  constant PLAYER_KILL_HEIGHT : integer := PLAYER_HEIGHT / 2; -- height at which player is killed
+
+  constant POINTS_PER_COIN : integer := 3;
+  constant POINTS_PER_KILL : integer := 1;
+  constant DEAD_TIMEOUT    : integer := 60;
+
   -- upper and lower bits for fixed point format
   constant F4_UPPER : integer := 11;
   constant F4_LOWER : integer := 4;
 
   -- main fixed point format used in game logic
   subtype f4_t is sfixed(F4_UPPER downto -F4_LOWER);
+
+  -- helper function to simplify the conversion from raw integer to fixed point
+  function from_raw(value : integer) return sfixed;
+
+  -- gravity and acceleration constants
+  constant JUMP_VEL          : f4_t := from_raw(25);
+  constant JUMP_MIDAIR_ACCEL : f4_t := from_raw(1);
+  constant SPRING_VEL        : f4_t := from_raw(38);
+  constant MOVE_ACCEL        : f4_t := from_raw(3);
+  constant MOVE_ACCEL_WATER  : f4_t := from_raw(2); -- slower in water
+  constant MOVE_ACCEL_ICE    : f4_t := from_raw(1); -- much slower on ice
+  constant MOVE_MAX_VEL      : f4_t := from_raw(10);
+  constant GRAVITY           : f4_t := from_raw(-2);
+  constant GRAVITY_WATER     : f4_t := from_raw(-1);
+  constant FALL_MAX_VEL      : f4_t := from_raw(-20);
 
   type f4_vec_t is record
     x : f4_t;
@@ -68,7 +91,8 @@ package game_types is
   -- TODO: I think this could be an enum type, but then the
   -- bit patterns are not explicitly known.
 
-  subtype  tile_t is std_logic_vector(2 downto 0);
+  subtype tile_t is std_logic_vector(2 downto 0);
+
   constant TILE_NOTHING    : tile_t := "000";
   constant TILE_GROUND     : tile_t := "001";
   constant TILE_AIR        : tile_t := "010";
@@ -100,10 +124,14 @@ package game_types is
   subtype s_pixelcoord_t is signed(MAP_MAX_SIZE_PX_BITS downto 0);
 
   -- helper functions on tiles
-  function tile_is_solid(tile : tile_t) return boolean;
-  function tile_is_water(tile : tile_t) return boolean;
+  function is_solid(tile : tile_t) return boolean;
+  function is_water(tile : tile_t) return boolean;
   function get_tile(m : tilemap_t; pos : f4_vec_t) return tile_t;
   function get_tile(m : tilemap_t; pixel_x : s_pixelcoord_t; pixel_y : s_pixelcoord_t) return tile_t;
+  function get_tile(m : tilemap_t; tile_x : integer; tile_y : integer) return tile_t;
+  function get_tile_id(pixels : integer) return integer;
+  function tile_to_pixel(tile : integer) return integer;
+  function integer_to_f4(pixels : integer) return f4_t;
 
   function sample_spawn(m : tilemap_t; rng : std_logic_vector(31 downto 0)) return tilepos_t;
   function to_f4_vec(pos : tilepos_t) return f4_vec_t;
@@ -111,6 +139,11 @@ package game_types is
 end package game_types;
 
 package body game_types is
+
+  function from_raw(value : integer) return f4_t is
+  begin
+    return resize(scalb(to_sfixed(value, F4_UPPER, 0), -F4_LOWER), F4_UPPER, -F4_LOWER);
+  end function;
 
   function default_f4_vec_t return f4_vec_t is
     variable val : f4_vec_t := (
@@ -184,6 +217,8 @@ package body game_types is
     variable val : tilemap_t := (
       m      => default_map_t,
       spawn  => default_spawn_t,
+      num_spawn      => (others => '0'),
+      num_spawn_bits => (others => '0'),
       width  => (others => '0'),
       height => (others => '0')
     );
@@ -192,37 +227,31 @@ package body game_types is
   end function;
 
   -- helper functions
-  function tile_is_solid(tile : tile_t) return boolean is
+  function is_solid(tile : tile_t) return boolean is
   begin
     return tile = TILE_GROUND or tile = TILE_SPRING or tile = TILE_ICE;
   end function;
 
-  function tile_is_water(tile : tile_t) return boolean is
+  function is_water(tile : tile_t) return boolean is
   begin
     return tile = TILE_WATER_BODY or tile = TILE_WATER_TOP;
   end function;
 
   function get_tile(m : tilemap_t; pos : f4_vec_t) return tile_t is
-    variable pixel_x        : integer;
-    variable pixel_y        : integer;
-    variable tile_x         : integer;
-    variable tile_y         : integer;
-    variable signed_pixel_x : signed(31 downto 0);  -- using 32 bits to safely handle shifts (probably not necessary)
-    variable signed_pixel_y : signed(31 downto 0);
+    variable pixel_x : integer;
+    variable pixel_y : integer;
+    variable tile_x  : integer;
+    variable tile_y  : integer;
   begin
     -- convert fixed-point coordinates to integers (pixels)
     -- use truncate (no rounding) and wrap behavior, no need for rounding here
     pixel_x := to_integer(pos.x, fixed_wrap, fixed_truncate);
     pixel_y := to_integer(pos.y, fixed_wrap, fixed_truncate);
 
-    -- convert pixel coordinates to signed values for shift operation
-    signed_pixel_x := to_signed(pixel_x, 32);
-    signed_pixel_y := to_signed(pixel_y, 32);
-
     -- convert from pixels to tiles by right-shifting
     -- this is equivalent to division by TILE_PX (which is 2^TILE_PX_BITS)
-    tile_x := to_integer(shift_right(signed_pixel_x, TILE_PX_BITS));
-    tile_y := to_integer(shift_right(signed_pixel_y, TILE_PX_BITS));
+    tile_x := to_integer(shift_right(to_signed(pixel_x, 32), TILE_PX_BITS));
+    tile_y := to_integer(shift_right(to_signed(pixel_y, 32), TILE_PX_BITS));
 
     -- apply bounds checking
     if (tile_x < 0) or (tile_y < 0) or (tile_x >= to_integer(m.width)) then
@@ -257,6 +286,35 @@ package body game_types is
 
     -- access the map, flipping y-coordinate for y-up ordering
     return m.m(to_integer(m.height) - 1 - tile_y, tile_x);
+  end function;
+
+  function get_tile(m : tilemap_t; tile_x : integer; tile_y : integer) return tile_t is
+  begin
+    if tile_x < 0 or tile_y > 0 or tile_x >= to_integer(m.width) then
+      return TILE_GROUND;
+    end if;
+
+    if tile_y >= to_integer(m.height) then
+      return TILE_AIR;
+    end if;
+
+    -- access the map, flipping y-coordinate for y-up ordering
+    return m.m(to_integer(m.height) - 1 - tile_y, tile_x);
+  end function;
+
+  function get_tile_id(pixels : integer) return integer is
+  begin
+    return to_integer(shift_right(to_signed(pixels, 32), TILE_PX_BITS));
+  end function;
+
+  function tile_to_pixel(tile : integer) return integer is
+  begin
+    return to_integer(shift_left(to_signed(tile, 32), TILE_PX_BITS));
+  end function;
+
+  function integer_to_f4(pixels : integer) return f4_t is
+  begin
+    return to_sfixed(pixels, F4_UPPER, -F4_LOWER);
   end function;
 
   function sample_spawn(m : tilemap_t; rng : std_logic_vector(31 downto 0)) return tilepos_t is

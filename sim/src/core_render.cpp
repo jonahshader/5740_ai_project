@@ -138,7 +138,8 @@ void run_game(const std::string &map_filename, uint64_t seed) {
   game.run(update_lambda, render_lambda, handle_input_lambda);
 }
 
-void run_game_with_models(const std::string &map_filename, uint64_t seed, std::shared_ptr<Model> model1, std::shared_ptr<Model> model2) {
+void run_game_with_models(const std::string &map_filename, uint64_t seed,
+                          std::shared_ptr<Model> model1, std::shared_ptr<Model> model2) {
   // initialize game state
   GameState state = init(map_filename, seed);
 
@@ -179,6 +180,14 @@ void run_game_with_models(const std::string &map_filename, uint64_t seed, std::s
     auto handle_input_lambda = human_model2->get_input_handler(SDLK_a, SDLK_d, SDLK_w);
     input_handlers.push_back(handle_input_lambda);
   }
+  input_handlers.push_back([&state, &seed](SDL_Event &event) {
+    auto k = event.key.keysym.sym;
+    if (event.type == SDL_KEYDOWN) {
+      if (k == SDLK_r) {
+        reinit(state, ++seed);
+      }
+    }
+  });
 
   auto handle_input_lambda = [&](SDL_Event &event) {
     // run all input handlers

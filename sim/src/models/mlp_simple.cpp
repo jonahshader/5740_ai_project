@@ -8,15 +8,9 @@ SimpleMLPModel::SimpleMLPModel(std::mt19937 &rng) {
 
 PlayerInput SimpleMLPModel::forward(const GameState &state, bool p1_perspective) {
   // get an observation from the game state
-  std::vector<F4> observation;
-  observe_state_simple(state, observation, p1_perspective);
-
-  // convert observation to a float vector, for neural net compatibility
   std::vector<float> observation_f;
-  observation_f.reserve(observation.size());
-  for (auto o : observation) {
-    observation_f.push_back(o.to_float());
-  }
+  observe_state_simple(state, observation_f, p1_perspective);
+
   // net neural net output
   float output[SIMPLE_OUTPUT_COUNT];
   net.forward(observation_f.data(), output);

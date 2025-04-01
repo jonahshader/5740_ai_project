@@ -76,15 +76,20 @@ make_player_phases(const Player &_p, GameState &state) {
   const int y_low = _p.y.to_integer_floor();
 
   const int x_tile_left = get_tile_id(x_low); // tile x coord containing left side of player
-  const int x_tile_right = get_tile_id(x_low + PLAYER_WIDTH - 1); // tile y coord containing right side of player
+  const int x_tile_right =
+      get_tile_id(x_low + PLAYER_WIDTH - 1);  // tile y coord containing right side of player
   const int y_tile_down = get_tile_id(y_low); // tile y coord containing bottom of player
-  const int y_tile_up = get_tile_id(y_low + PLAYER_HEIGHT - 1); // tile y coord containing top of player
+  const int y_tile_up =
+      get_tile_id(y_low + PLAYER_HEIGHT - 1); // tile y coord containing top of player
 
   // have the tile coordinates, now we can retrieve the tiles we care about
   const Tile left_tile = state.map.read_map(x_tile_left, y_tile_down); // tile our left foot is in
-  const Tile right_tile = state.map.read_map(x_tile_right, y_tile_down); // tile our right foot is in
-  const Tile down_left_tile = state.map.read_map(x_tile_left, y_tile_down - 1); // tile below left_tile
-  const Tile down_right_tile = state.map.read_map(x_tile_right, y_tile_down - 1); // tile below right_tile
+  const Tile right_tile =
+      state.map.read_map(x_tile_right, y_tile_down); // tile our right foot is in
+  const Tile down_left_tile =
+      state.map.read_map(x_tile_left, y_tile_down - 1); // tile below left_tile
+  const Tile down_right_tile =
+      state.map.read_map(x_tile_right, y_tile_down - 1); // tile below right_tile
 
   auto phase1 = [=, &state](Player &p, const Player &other, const PlayerInput &input,
                             bool &coin_collected) {
@@ -158,11 +163,10 @@ make_player_phases(const Player &_p, GameState &state) {
       }
     }
 
-    // limit
+    // limit x velocity
     if (p.x_vel < -MOVE_MAX_VEL) {
       p.x_vel = -MOVE_MAX_VEL;
     }
-    // limit
     if (p.x_vel > MOVE_MAX_VEL) {
       p.x_vel = MOVE_MAX_VEL;
     }
@@ -175,12 +179,7 @@ make_player_phases(const Player &_p, GameState &state) {
     if (other.dead_timeout == 0) { // only run if opponent is alive
       if ((p.y - other.y).abs() < F4(static_cast<int16_t>(PLAYER_HEIGHT))) {
         if ((p.x - other.x).abs() <= F4(static_cast<int16_t>(PLAYER_WIDTH))) {
-          if (p.x > other.x) {
-            p.x_vel -= (p.x - other.x - F4(static_cast<int16_t>(PLAYER_WIDTH)));
-          } else if (p.x < other.x) {
-            p.x_vel -= p.x - other.x + F4(static_cast<int16_t>(PLAYER_WIDTH));
-          }
-
+          bool accel = true;
           // if other player is significantly above this one, die
           if (other.y >= p.y + F4(static_cast<int16_t>(PLAYER_KILL_HEIGHT))) {
             p.queue_dead = true;
@@ -188,6 +187,14 @@ make_player_phases(const Player &_p, GameState &state) {
           // if the opposite is true, gain a point
           else if (p.y >= other.y + F4(static_cast<int16_t>(PLAYER_KILL_HEIGHT))) {
             p.score += POINTS_PER_KILL;
+            accel = false;
+          }
+          if (accel) {
+            if (p.x > other.x) {
+              p.x_vel -= (p.x - other.x - F4(static_cast<int16_t>(PLAYER_WIDTH)));
+            } else if (p.x < other.x) {
+              p.x_vel -= p.x - other.x + F4(static_cast<int16_t>(PLAYER_WIDTH));
+            }
           }
         }
       }
@@ -334,12 +341,47 @@ void observe_state_simple(const GameState &state, std::vector<F4> &observation,
   // first player vel
   observation[index++] = first.x_vel;
   observation[index++] = first.y_vel;
+  // players dead
+  observation[index++] = first.dead_timeout > 0 ? F4(1.0f) : F4(-1.0f);
+  observation[index++] = second.dead_timeout > 0 ? F4(1.0f) : F4(-1.0f);
   // second player pos
   observation[index++] = second.x;
   observation[index++] = second.y;
   // second player vel
   observation[index++] = second.x_vel;
   observation[index++] = second.y_vel;
+}
+
+void observe_state_simple(const GameState &state, std::vector<float> &observation,
+                          bool p1_perspective) {
+  const float x_norm = 1.0f / (state.map.width * CELL_SIZE);
+  const float y_norm = 1.0f / (state.map.height * CELL_SIZE);
+  const float x_vel_norm = 1.0f / (MOVE_MAX_VEL.to_float());
+  const float y_vel_norm = 1.0f / (-FALL_MAX_VEL.to_float());
+
+  observation.resize(SIMPLE_INPUT_COUNT);
+  size_t index = 0;
+  // coin pos
+  observation[index++] = F4(static_cast<int16_t>(state.coin_pos.x * CELL_SIZE)).to_float() * x_norm;
+  observation[index++] = F4(static_cast<int16_t>(state.coin_pos.y * CELL_SIZE)).to_float() * y_norm;
+  // determine player state order based on who's observing (p1_perspective)
+  const Player &first = p1_perspective ? state.p1 : state.p2;
+  const Player &second = p1_perspective ? state.p2 : state.p1;
+  // first player pos
+  observation[index++] = first.x.to_float() * x_norm;
+  observation[index++] = first.y.to_float() * y_norm;
+  // first player vel
+  observation[index++] = first.x_vel.to_float() * x_vel_norm;
+  observation[index++] = first.y_vel.to_float() * y_vel_norm;
+  // players dead
+  observation[index++] = first.dead_timeout > 0 ? 1000.0f : 0.0f;
+  observation[index++] = second.dead_timeout > 0 ? 1000.0f : 0.0f;
+  // second player pos
+  observation[index++] = second.x.to_float() * x_norm;
+  observation[index++] = second.y.to_float() * y_norm;
+  // second player vel
+  observation[index++] = second.x_vel.to_float() * x_vel_norm;
+  observation[index++] = second.y_vel.to_float() * y_vel_norm;
 }
 
 int get_fitness(const GameState &state, bool p1_perspective) {
