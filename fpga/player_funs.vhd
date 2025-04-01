@@ -94,10 +94,10 @@ package body player_funs is
         pn.vel.y := JUMP_VEL;
       end if;
     else -- not grounded. accelerate due to gravity
-      pn.vel.y := pn.vel.y + grav;
+      pn.vel.y := resize(pn.vel.y + grav, pn.vel.y'high, pn.vel.y'low);
       if input.jump then
         -- if jump is held, also accelerate up a little to 'float'
-        pn.vel.y := pn.vel.y + JUMP_MIDAIR_ACCEL;
+        pn.vel.y := resize(pn.vel.y + JUMP_MIDAIR_ACCEL, pn.vel.y'high, pn.vel.y'low);
       end if;
       -- limit y_vel
       -- TODO: might save circuits to pull this out of the if statement
@@ -109,17 +109,17 @@ package body player_funs is
     -- accelerate x_vel based on input
     if input.left and not input.right then
       -- accel left
-      pn.vel.x := pn.vel.x - move_acc;
+      pn.vel.x := resize(pn.vel.x - move_acc, pn.vel.x'high, pn.vel.x'low);
     elsif input.right and not input.left then
       -- accel right
-      pn.vel.x := pn.vel.x + move_acc;
+      pn.vel.x := resize(pn.vel.x + move_acc, pn.vel.x'high, pn.vel.x'low);
     else
       -- decelerate towards zero if grounded and not on ice
       if grounded and not on_ice then
         if pn.vel.x > 0 then
           -- check if we have room to do the full speed reduction
           if pn.vel.x >= move_acc then
-            pn.vel.x := pn.vel.x - move_acc;
+            pn.vel.x := resize(pn.vel.x - move_acc, pn.vel.x'high, pn.vel.x'low);
           else
             -- we are too slow to do the full speed reduction
             pn.vel.x := integer_to_f4(0);
@@ -127,7 +127,7 @@ package body player_funs is
         elsif pn.vel.x < 0 then
           -- check if we have room to do the full speed reduction
           if pn.vel.x <= -move_acc then
-            pn.vel.x := pn.vel.x + move_acc;
+            pn.vel.x := resize(pn.vel.x + move_acc, pn.vel.x'high, pn.vel.x'low);
           else
             -- we are too slow to do the full speed reduction
             pn.vel.x := integer_to_f4(0);
@@ -138,7 +138,7 @@ package body player_funs is
 
     -- limit x_vel
     if pn.vel.x < -MOVE_MAX_VEL then
-      pn.vel.x := -MOVE_MAX_VEL;
+      pn.vel.x := resize(-MOVE_MAX_VEL, pn.vel.x'high, pn.vel.x'low);
     end if;
     if pn.vel.x > MOVE_MAX_VEL then
       pn.vel.x := MOVE_MAX_VEL;
@@ -159,9 +159,9 @@ package body player_funs is
 
           if accel then
             if pn.pos.x > other_p.pos.x then
-              pn.vel.x := pn.pos.x - (pn.pos.x - other_p.pos.x - PLAYER_WIDTH);
+              pn.vel.x := resize(pn.pos.x - (pn.pos.x - other_p.pos.x - PLAYER_WIDTH), pn.vel.x'high, pn.vel.x'low);
             elsif pn.pos.x < other_p.pos.x then
-              pn.vel.x := pn.pos.x - (pn.pos.x - other_p.pos.x + PLAYER_WIDTH);
+              pn.vel.x := resize(pn.pos.x - (pn.pos.x - other_p.pos.x + PLAYER_WIDTH), pn.vel.x'high, pn.vel.x'low);
             end if;
           end if;
         end if;
@@ -230,8 +230,8 @@ package body player_funs is
     y_tile_up    := get_tile_id(y_low + PLAYER_HEIGHT - 1); -- tile y coord containing top of player
 
     -- integrate velocity
-    pn.pos.x := pn.pos.x + pn.vel.x;
-    pn.pos.y := pn.pos.y + pn.vel.y;
+    pn.pos.x := resize(pn.pos.x + pn.vel.x, pn.pos.x'high, pn.pos.x'low);
+    pn.pos.y := resize(pn.pos.y + pn.vel.y, pn.pos.y'high, pn.pos.y'low);
 
     -- save tile coords after integrating velocity
     xn_low := to_integer(pn.pos.x, fixed_wrap, fixed_truncate);

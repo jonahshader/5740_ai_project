@@ -54,6 +54,7 @@ begin
   coin_spawn_tile <= sample_spawn(m, result_rng(95 downto 64));
   enable_rng      <= state = INIT_S or state = PHASE1_S;
   done            <= state = IDLE_S;
+  gamestate       <= gs;
 
   -- instantiate
   rng : entity work.xormix32

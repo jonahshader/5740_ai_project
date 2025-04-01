@@ -1,2 +1,7 @@
 build-debug
 build-release
+ghdl_out
+obj_dir
+*.o
+*.v
+game_test

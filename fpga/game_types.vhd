@@ -9,7 +9,7 @@ use ieee.math_real.ceil;
 package game_types is
 
   -- constants
-  constant MAP_TILES_BITS       : integer := 8;                             -- bits needed to describe tile position
+  constant MAP_TILES_BITS       : integer := 6;                             -- bits needed to describe tile position
   constant MAP_MAX_SIZE_TILES   : integer := 2 ** MAP_TILES_BITS;           -- map max size (width height) in tiles
   constant TILE_PX_BITS         : integer := 3;                             -- bits needed to describe PX position within tile
   constant TILE_PX              : integer := 2 ** TILE_PX_BITS;             -- tile size (width height) in pixels
@@ -32,7 +32,7 @@ package game_types is
   subtype f4_t is sfixed(F4_UPPER downto -F4_LOWER);
 
   -- helper function to simplify the conversion from raw integer to fixed point
-  function from_raw(value : integer) return sfixed;
+  function from_raw(value : integer) return f4_t;
 
   -- gravity and acceleration constants
   constant JUMP_VEL          : f4_t := from_raw(25);
@@ -147,9 +147,9 @@ package body game_types is
 
   function default_f4_vec_t return f4_vec_t is
     variable val : f4_vec_t := (
-      x => to_sfixed(0.0, F4_UPPER, -F4_LOWER),
-      y => to_sfixed(0.0, F4_UPPER, -F4_LOWER)
-    );
+                                 x => to_sfixed(0.0, F4_UPPER, -F4_LOWER),
+                                 y => to_sfixed(0.0, F4_UPPER, -F4_LOWER)
+                               );
   begin
     return val;
   end function;
@@ -158,70 +158,74 @@ package body game_types is
   -- defaults
   function default_player_t return player_t is
     variable val : player_t := (
-      pos          => default_f4_vec_t,
-      vel          => default_f4_vec_t,
-      score        => (others => '0'),
-      dead_timeout => (others => '0')
-    );
+                                 pos          => default_f4_vec_t,
+                                vel          => default_f4_vec_t,
+                                score        => (others => '0'),
+                                 dead_timeout => (others => '0')
+                               );
   begin
     return val;
   end function;
 
   function default_tilepos_t return tilepos_t is
     variable val : tilepos_t := (
-      x => (others => '0'),
-      y => (others => '0')
-    );
+                                  x => (others => '0'),
+                                  y => (others => '0')
+                                );
   begin
     return val;
   end function;
 
   function default_gamestate_t return gamestate_t is
     variable val : gamestate_t := (
-      p1 => default_player_t,
-      p2 => default_player_t,
-      coin_pos => default_tilepos_t,
-      age => (others => '0')
-    );
+                                    p1 => default_player_t,
+                                   p2 => default_player_t,
+                                   coin_pos => default_tilepos_t,
+                                   age => (others => '0')
+                                  );
   begin
     return val;
   end function;
 
   function default_playerinput_t return playerinput_t is
     variable val : playerinput_t := (
-      left => false,
-      right => false,
-      jump => false
-    );
+                                      left => false,
+                                     right => false,
+                                     jump => false
+                                   );
   begin
     return val;
   end function;
 
   function default_map_t return map_t is
-    variable val : map_t := (
-      (others => (others => TILE_NOTHING))
-    );
+    variable val : map_t;
   begin
+    for i in 0 to MAP_MAX_SIZE_TILES - 1 loop
+      for j in 0 to MAP_MAX_SIZE_TILES - 1 loop
+        val(i, j) := TILE_NOTHING;
+      end loop;
+    end loop;
     return val;
   end function;
 
   function default_spawn_t return spawn_t is
-    variable val : spawn_t := (
-      (others => default_tilepos_t)
-    );
+    variable val : spawn_t;
   begin
+    for i in 0 to MAP_MAX_SIZE_TILES - 1 loop
+      val(i) := default_tilepos_t;
+    end loop;
     return val;
   end function;
 
   function default_tilemap_t return tilemap_t is
     variable val : tilemap_t := (
-      m      => default_map_t,
-      spawn  => default_spawn_t,
-      num_spawn      => (others => '0'),
-      num_spawn_bits => (others => '0'),
-      width  => (others => '0'),
-      height => (others => '0')
-    );
+                                  m      => default_map_t,
+                                 spawn  => default_spawn_t,
+                                 num_spawn      => (others => '0'),
+                                  num_spawn_bits => (others => '0'),
+                                  width  => (others => '0'),
+                                  height => (others => '0')
+                                );
   begin
     return val;
   end function;
@@ -338,9 +342,10 @@ package body game_types is
     variable pixel_x : unsigned(MAP_MAX_SIZE_PX_BITS - 1 downto 0);
     variable pixel_y : unsigned(MAP_MAX_SIZE_PX_BITS - 1 downto 0);
   begin
-    -- convert pos from tile space to pixel space
-    pixel_x := shift_left(pos.x, TILE_PX_BITS);
-    pixel_y := shift_left(pos.y, TILE_PX_BITS);
+    -- resize pos.x and pos.y to match the target size before shifting
+    pixel_x := resize(shift_left(resize(pos.x, MAP_MAX_SIZE_PX_BITS), TILE_PX_BITS), MAP_MAX_SIZE_PX_BITS);
+    pixel_y := resize(shift_left(resize(pos.y, MAP_MAX_SIZE_PX_BITS), TILE_PX_BITS), MAP_MAX_SIZE_PX_BITS);
+
     -- convert from unsigned to sfixed
     vec.x := to_sfixed(to_integer(pixel_x), F4_UPPER, -F4_LOWER);
     vec.y := to_sfixed(to_integer(pixel_y), F4_UPPER, -F4_LOWER);
