@@ -101,7 +101,7 @@ package body player_funs is
       end if;
       -- limit y_vel
       -- TODO: might save circuits to pull this out of the if statement
-      if pn.vel.y > FALL_MAX_VEL then
+      if pn.vel.y < FALL_MAX_VEL then
         pn.vel.y := FALL_MAX_VEL;
       end if;
     end if;
@@ -159,9 +159,9 @@ package body player_funs is
 
           if accel then
             if pn.pos.x > other_p.pos.x then
-              pn.vel.x := resize(pn.pos.x - (pn.pos.x - other_p.pos.x - PLAYER_WIDTH), pn.vel.x'high, pn.vel.x'low);
+              pn.vel.x := resize(pn.pos.x - (pn.pos.x - other_p.pos.x - integer_to_f4(PLAYER_WIDTH)), pn.vel.x'high, pn.vel.x'low);
             elsif pn.pos.x < other_p.pos.x then
-              pn.vel.x := resize(pn.pos.x - (pn.pos.x - other_p.pos.x + PLAYER_WIDTH), pn.vel.x'high, pn.vel.x'low);
+              pn.vel.x := resize(pn.pos.x - (pn.pos.x - other_p.pos.x + integer_to_f4(PLAYER_WIDTH)), pn.vel.x'high, pn.vel.x'low);
             end if;
           end if;
         end if;

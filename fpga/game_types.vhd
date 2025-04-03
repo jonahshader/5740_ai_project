@@ -296,7 +296,7 @@ package body game_types is
 
   function get_tile(m : tilemap_t; tile_x : integer; tile_y : integer) return tile_t is
   begin
-    if tile_x < 0 or tile_y > 0 or tile_x >= to_integer(m.width) then
+    if tile_x < 0 or tile_y < 0 or tile_x >= to_integer(m.width) then
       return TILE_GROUND;
     end if;
 
