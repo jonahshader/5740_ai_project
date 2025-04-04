@@ -159,10 +159,11 @@ package body player_funs is
 
           if accel then
             if pn.pos.x > other_p.pos.x then
-              pn.vel.x := resize(pn.pos.x - (pn.pos.x - other_p.pos.x - integer_to_f4(PLAYER_WIDTH)), pn.vel.x'high, pn.vel.x'low);
+              pn.vel.x := resize(pn.vel.x + other_p.pos.x - pn.pos.x + integer_to_f4(PLAYER_WIDTH), pn.vel.x'high, pn.vel.x'low);
             elsif pn.pos.x < other_p.pos.x then
-              pn.vel.x := resize(pn.pos.x - (pn.pos.x - other_p.pos.x + integer_to_f4(PLAYER_WIDTH)), pn.vel.x'high, pn.vel.x'low);
+              pn.vel.x := resize(pn.vel.x + other_p.pos.x - pn.pos.x - integer_to_f4(PLAYER_WIDTH), pn.vel.x'high, pn.vel.x'low);
             end if;
+
           end if;
         end if;
       end if;

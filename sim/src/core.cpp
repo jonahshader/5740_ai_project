@@ -191,9 +191,9 @@ make_player_phases(const Player &_p, GameState &state) {
           }
           if (accel) {
             if (p.x > other.x) {
-              p.x_vel -= (p.x - other.x - F4(static_cast<int16_t>(PLAYER_WIDTH)));
+              p.x_vel += (other.x - p.x + F4(static_cast<int16_t>(PLAYER_WIDTH)));
             } else if (p.x < other.x) {
-              p.x_vel -= p.x - other.x + F4(static_cast<int16_t>(PLAYER_WIDTH));
+              p.x_vel += (other.x - p.x - F4(static_cast<int16_t>(PLAYER_WIDTH)));
             }
           }
         }
