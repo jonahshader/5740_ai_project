@@ -115,7 +115,7 @@ package game_types is
   type tilemap_t is record
     m              : map_t;
     spawn          : spawn_t;
-    num_spawn      : unsigned(MAP_TILES_BITS - 1 downto 0);
+    num_spawn      : unsigned(7 downto 0);
     num_spawn_bits : unsigned(3 downto 0);
     width          : unsigned(MAP_TILES_BITS downto 0); -- in tiles
     height         : unsigned(MAP_TILES_BITS downto 0); -- in tiles

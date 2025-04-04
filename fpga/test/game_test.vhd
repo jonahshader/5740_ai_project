@@ -87,7 +87,7 @@ architecture game_test_arch of game_test is
   end function;
 
   signal gamestate : gamestate_t;
-  signal m         : tilemap_t := init_map;
+  -- signal m         : tilemap_t := init_map;
 
 begin
 
@@ -106,19 +106,12 @@ begin
       init       => init,
       swap_start => swap_start,
       seed       => seed,
-      m          => m,
+      m          => init_map,
       p1_input   => p1_input,
       p2_input   => p2_input,
       go         => go,
       done       => done,
       gamestate  => gamestate
     );
-
-  m_set_proc : process (clk) is
-  begin
-    if rising_edge(clk) then
-      m <= init_map;
-    end if;
-  end process;
 
 end architecture game_test_arch;
