@@ -13,21 +13,14 @@ MLPMapLutModel::MLPMapLutModel(std::mt19937 &rng, int map_width_tiles, int map_h
 
 PlayerInput MLPMapLutModel::forward(const GameState &state, bool p1_perspective) {
   // get an observation from the game state
-  std::vector<F4> observation;
-  observe_state_simple(state, observation, p1_perspective);
-
-  // convert observation to a float vector, for neural net compatibility
   std::vector<float> observation_f;
-  observation_f.reserve(INPUTS);
-  for (auto o : observation) {
-    observation_f.push_back(o.to_float());
-  }
+  observe_state_simple(state, observation_f, p1_perspective);
 
   // read embeddings
-  int p1_x = (state.p1.x.to_integer_floor() / CELL_SIZE) + CELL_SIZE/2;
-  int p1_y = (state.p1.y.to_integer_floor() / CELL_SIZE) + CELL_SIZE/2;
-  int p2_x = (state.p2.x.to_integer_floor() / CELL_SIZE) + CELL_SIZE/2;
-  int p2_y = (state.p2.y.to_integer_floor() / CELL_SIZE) + CELL_SIZE/2;
+  int p1_x = (state.p1.x.to_integer_floor() / CELL_SIZE) + CELL_SIZE / 2;
+  int p1_y = (state.p1.y.to_integer_floor() / CELL_SIZE) + CELL_SIZE / 2;
+  int p2_x = (state.p2.x.to_integer_floor() / CELL_SIZE) + CELL_SIZE / 2;
+  int p2_y = (state.p2.y.to_integer_floor() / CELL_SIZE) + CELL_SIZE / 2;
 
   // order depends on perspective
   if (p1_perspective) {
@@ -68,7 +61,7 @@ void MLPMapLutModel::reset() {
   // nothing to reset. this model is not stateful
 }
 
-std::shared_ptr<Model> MLPMapLutModel::clone() const{
+std::shared_ptr<Model> MLPMapLutModel::clone() const {
   return std::make_shared<MLPMapLutModel>(*this);
 }
 

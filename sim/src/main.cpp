@@ -8,6 +8,8 @@
 #include "models/mlp_simple.h"
 #include "models/mlp_map_lut.h"
 #include "optimizers/simple.h"
+#include "pixel_game.h"
+#include "lodepng.h"
 
 int main(int argc, char *argv[]) {
   std::string map_file = "jnb_map_simplest.tmx"; // default map file
@@ -40,20 +42,24 @@ int main(int argc, char *argv[]) {
     jnb::run_game_with_models(map_file, 0, p1, p2);
   }
 
+  std::shared_ptr<jnb::Model> trained;
   {
     // train a model, then play against it
     jnb::GAConfig config{};
-    config.seed = 1;
+    config.seed = 2;
     config.select_fun = jnb::make_tournament(2);
     config.reference_count = 2;
-    config.model_history_size = 2;
+    config.model_history_size = 4;
+    config.model_history_interval = 10;
     config.population_size = 64;
     jnb::EvalConfig eval_config{};
-    eval_config.frame_limit = 450;
-    config.mutation_rate = 0.5;
+    eval_config.frame_limit = 360;
+    config.mutation_rate = 0.2;
+    config.max_gen = 64;
 
     // lambda that spits out a randomly init model
-    auto model_builder = [width = map.width, height = map.height](std::mt19937 &rng) -> std::shared_ptr<jnb::Model>{
+    auto model_builder = [width = map.width,
+                          height = map.height](std::mt19937 &rng) -> std::shared_ptr<jnb::Model> {
       static int model_type = 0;
 
       model_type = (model_type + 1) % 2;
@@ -79,9 +85,16 @@ int main(int argc, char *argv[]) {
     // play against it
     auto p1 = std::make_shared<jnb::HumanModel>();
     // auto p1 = ga_state.current[0].model->clone();
-    auto p2 = ga_state.current[0].model->clone(); // grab a copy of the best model
+    trained = ga_state.current[0].model->clone(); // grab a copy of the best model
 
-    jnb::run_game_with_models(map_file, 0, p1, p2);
+    jnb::run_game_with_models(map_file, 0, p1, trained);
+  }
+
+  {
+    // have it play against itself
+    auto p2 = trained->clone();
+
+    jnb::run_game_with_models(map_file, 0, trained, p2);
   }
 
   return 0;

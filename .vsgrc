@@ -1,0 +1,205 @@
+rule:
+  global:
+    indent_size: 2
+
+  assert_002:
+    disable: true # Don't force report onto its own line.
+  assert_003:
+    disable: true # Don't force report onto its own line.
+  assert_004:
+    disable: true # Don't force severity onto its own line.
+
+  case_007:
+    disable: true # Don't force blank lines above 'case'
+  case_009:
+    disable: true # Don't force blank lines above 'end case'
+  case_010:
+    disable: true # Don't force blank lines after 'end case'
+  case_200:
+    style: 'no_blank_line' # Remove blank lines below '=>' in case statements
+  case_201:
+    style: 'no_blank_line' # Remove blank lines above 'when' in case statements
+
+  choice_500:
+    case: 'lower' # Force OTHERS keyword to lower-case
+
+  component_019:  # This is a sane rule, but unfortunately not useful when documenting Xilinx IP
+    disable: true # usage. Leaving disabled so as to not remove comments in component declarations.
+
+  conditional_waveforms_001:
+    allow_single_line: true # Allow single-line concurrent statements
+
+  constant_004:
+    case: 'upper' # Force constants to upper-case
+  constant_012:
+    align_left: 'yes' # Left-align multi-line constants rather than on assignment operator.
+  constant_014:
+    align_left: true   # Align to left (plus standard indent), rather than to assignment operator.
+    align_paren: false # Open paren won't add to indent level.
+  constant_016:
+    first_paren_new_line: 'no' # Keep first paren on same line
+
+  context_ref_001:
+    indent_size: 0 # Don't indent 'context' keyword
+
+  entity_003:
+    style: 'allow_comment' # Above 'entity': force a blank line with an optional comment line.
+
+  function_006: # This rule is sane for function bodies, but annoying for declarations.
+    disable: true # Don't force blank lines above 'function'.
+  function_019:
+    interface_element: 'ignore' # Don't force interface elements onto their own lines.
+    ignore_single_line: 'yes'   # Allow single-line functions.
+  function_020:
+    action: 'remove' # Remove the function designator in the closing of the function specification.
+  # Ideally we could force a single space between 'function' and the function name,
+  # close parenthesis, 'return', return type and 'is', while also forcing no space between
+  # the function name and the open parenthesis.
+  # Next-best, you would think we could set 'number_of_spaces<=1' to get rid of extra spaces.
+  # Unfortunately that throws an error for 0 spaces even though it is logically correct...
+  function_100:
+    disable: true
+    #number_of_spaces: '<=1'
+  generate_003:
+    disable: true # Don't force a blank line directly above 'generate'.
+  generate_004:
+    disable: true # Don't force a blank line directly below 'end generate'.
+
+  generic_007:
+    case: 'upper' # Force generic names to upper-case.
+
+  generic_map_002:
+    case: 'upper' # Force generic names to upper-case.
+
+  if_002:
+    parenthesis: 'remove' # Removes the parenthesis around the expression in 'if (expr) then'
+  if_030:
+    disable: true # Don't force blank lines after 'end if'
+  if_031:
+    disable: true # Don't force blank lines above 'if'
+
+  instantiation_004:
+    disable: true # Don't force blank lines before instantiation declarations
+  instantiation_019:
+    disable: true # Don't force blank lines after instantiation declarations
+  instantiation_034:
+    method: 'entity' # Force entity instantiation
+
+  length_001:
+    length: 120
+  library_003:
+    style: 'allow_comment' # Above 'library': force a blank line with an optional comment line.
+  library_007: # Don't add or remove lines above 'use' declarations...
+    disable: true # ...doesn't work nicely for 'use work.XXX' declarations.
+  library_008:
+    indent_size: 0 # Don't indent 'use' keyword
+  library_009:
+    indent_size: 0 # Don't indent comments above 'use'
+
+  logical_operator_500:
+    case: 'lower' # Force logical operators (AND, OR, XOR...) to lower-case
+
+  loop_statement_200:
+    disable: true # Don't force blank lines above 'loop'
+  loop_statement_201:
+    style: 'no_blank_line' # Remove blank lines after 'loop'
+  loop_statement_202:
+    style: 'no_blank_line' # Remove blank lines before 'end'
+  loop_statement_203:
+    disable: true # Don't force blank lines after 'end'
+
+  # These three rules force a number of spaces after the 'in' and 'out' keywords.
+  # Unfortunately there seems to be no way to force _alignment_ of the variable types instead.
+  # TODO: remove these rules and auto-format. Not doing now because it will cause massive change.
+  port_007:
+    disable: true
+  port_008:
+    disable: true
+  port_009:
+    disable: true
+
+  port_012:
+    disable: true # Don't error on default assignments in ports
+
+  procedure_013:
+    interface_element: 'ignore' # Don't force interface elements onto their own lines.
+    ignore_single_line: 'yes'   # Allow single-line procedures.
+  procedure_014:
+    action: 'remove' # Remove the procedure designator in the closing of the procedure specification.
+  procedure_200:
+    style: 'allow_comment' # Above 'procedure': force a blank line with an optional comment line.
+
+  process_016:
+    disable: true # Don't check for a label for process statements.
+  process_018:
+    disable: true # Don't check for a label for 'end process'.
+  process_022:
+    style: 'no_blank_line' # Remove blank lines after 'begin' in process
+  process_023:
+    style: 'no_blank_line' # Remove blank lines before 'end process'
+  process_026:
+    disable: true # Don't force blank lines above first declaration inside processes.
+  process_027:
+    disable: true # Don't force blank lines above begin inside processes.
+  process_034:
+    blank_line_ends_group: true # Blank lines reset alignment.
+  process_035:
+    compact_alignment: true     # Avoid placing comments ridiculously far to the right
+    blank_line_ends_group: true # Blank lines reset alignment.
+
+  range_constraint_500:
+    case: 'lower' # Force RANGE keyword to lower-case
+
+  selected_assignment_106:  # Ensure at least 1 space is after the 'when' in a selected assignment.
+    number_of_spaces: '>=1' # The default FORCES 1 space, which destroys manual alignment.
+
+  sequential_009: # Make simple array assignments more compact.
+    first_paren_new_line: 'no'
+    open_paren_new_line: 'no'
+    close_paren_new_line: 'no'
+  sequential_402:
+    align_left: 'yes'
+    align_paren: 'yes'
+
+  signal_007:
+    disable: true # Allow default assignments
+  signal_400:
+    align_left: true   # Align to left (plus standard indent), rather than to assignment operator.
+    align_paren: false # Open paren won't add to indent level.
+
+  subprogram_body_201:
+    disable: true # Don't force or remove blank lines after a function's 'is'
+  subprogram_body_202:
+    disable: true # Don't force or remove blank lines before a function's 'begin'
+  subprogram_body_203:
+    style: 'no_blank_line' # Remove blank lines after 'begin'
+  subprogram_body_204:
+    style: 'no_blank_line' # Remove blank lines before 'end'
+
+  subtype_201:
+    disable: true # Don't force blank lines above 'subtype'.
+  subtype_202:
+    disable: true # Don't force blank lines below 'subtype'.
+
+  type_010:
+    disable: true # Don't force blank lines above 'type'
+  type_011:
+    disable: true # Don't force blank lines below 'type'
+  type_500:
+    case: 'upper' # 'enum' types must be UPPER_CASE eg: type sm is (IDLE, DONE);
+
+  variable_007:
+    disable: true      # Allow default assignments in variable declarations.
+  variable_400:        # Alignment of multi-line constraints in variable declarations.
+    align_left: true   # Align to left (plus standard indent), rather than to assignment operator.
+    align_paren: false # Open paren won't add to indent level.
+
+  variable_assignment_004: # Alignment of multiline variable assignments
+    align_left: true       # Align to left (plus standard indent), rather than to assignment operator.
+    align_paren: false     # Open paren won't add to indent level.
+  variable_assignment_400: # Alignment of multi-line conditional assignments.
+    align_left: true       # Align to left (plus standard indent), rather than to assignment operator.
+    align_paren: false     # Open paren won't add to indent level.
+  variable_assignment_401: # Alignment of multi-line assignments with arrays.
+    align_left: true       # Align to left (plus standard indent), rather than to assignment operator.
+    align_paren: false     # Open paren won't add to indent level.

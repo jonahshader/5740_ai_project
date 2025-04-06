@@ -25,16 +25,6 @@ if(NOT SDL2_FOUND)
   FetchContent_MakeAvailable(SDL2)
 endif()
 
-# # Eigen library
-# FetchContent_Declare(
-#   eigen
-#   URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
-#   # No hash for safety, as the exact URL might change
-# )
-# # We only need the headers, so we don't need to build Eigen's tests
-# set(BUILD_TESTING OFF CACHE BOOL "Build Eigen tests" FORCE)
-# FetchContent_MakeAvailable(eigen)
-
 # lodepng
 FetchContent_Declare(
   lodepng
@@ -49,8 +39,8 @@ endif()
 # Find OpenMP
 find_package(OpenMP REQUIRED)
 
-# Create main executable
-add_executable(sim
+# Define common source files (excluding main.cpp)
+set(COMMON_SOURCES
   src/models/human.cpp
   src/models/human.h
   src/models/mlp_map_lut.cpp
@@ -65,7 +55,6 @@ add_executable(sim
   src/core.h
   src/fixed_point.h
   src/interfaces.h
-  src/main.cpp
   src/neural_net.h
   src/parse_map.h
   src/pixel_game.cpp
@@ -73,39 +62,79 @@ add_executable(sim
   ${lodepng_SOURCE_DIR}/lodepng.cpp
 )
 
-# Link libraries
-target_link_libraries(sim PRIVATE
+# Define common include directories
+set(COMMON_INCLUDE_DIRS
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/models
+  ${lodepng_SOURCE_DIR}
+)
+
+# Define common libraries
+set(COMMON_LIBRARIES
   SDL2::SDL2
   OpenMP::OpenMP_CXX
 )
 
-# Include headers
-target_include_directories(sim PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/models
-  ${lodepng_SOURCE_DIR}
-  # ${eigen_SOURCE_DIR}
+# Create main executable
+add_executable(sim
+  ${COMMON_SOURCES}
+  src/main.cpp
 )
+target_link_libraries(sim PRIVATE ${COMMON_LIBRARIES})
+target_include_directories(sim PRIVATE ${COMMON_INCLUDE_DIRS})
 
 # Platform-specific configurations
 if(WIN32)
   target_link_libraries(sim PRIVATE SDL2::SDL2main)
   if(MSVC)
-    # Add win_subsystem:windows to remove console window
     set_target_properties(sim PROPERTIES
       LINK_FLAGS "/SUBSYSTEM:WINDOWS"
       LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE"
       LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE"
     )
-
-    # Use the MultiThreaded DLL runtime library for both Debug and Release
     set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
   endif()
-
-  # Copy SDL2 DLL to output directory on Windows
   add_custom_command(TARGET sim POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     $<TARGET_FILE:SDL2::SDL2>
     $<TARGET_FILE_DIR:sim>
   )
+endif()
+
+# Verilator-based executable (Linux only)
+# if(NOT WIN32)
+#   find_package(verilator HINTS $ENV{VERILATOR_ROOT})
+#   if(verilator_FOUND)
+#     add_executable(verilog_sim
+#       ${COMMON_SOURCES}
+#       src/main_sim.cpp
+#       ${CMAKE_CURRENT_SOURCE_DIR}/obj_dir/Vgame_test.cpp
+#     )
+#     target_link_libraries(verilog_sim PRIVATE
+#       ${COMMON_LIBRARIES}
+#       verilator
+#     )
+#     target_include_directories(verilog_sim PRIVATE
+#       ${COMMON_INCLUDE_DIRS}
+#       ${VERILATOR_ROOT}/include
+#       ${CMAKE_CURRENT_SOURCE_DIR}/obj_dir
+#     )
+#   endif()
+# endif()
+
+if(NOT WIN32)
+  find_package(verilator HINTS $ENV{VERILATOR_ROOT})
+  add_executable(verilog_sim
+  ${COMMON_SOURCES}
+  src/main_sim.cpp
+  )
+  verilate(verilog_sim SOURCES game_test.v)
+
+  target_include_directories(verilog_sim PRIVATE
+    ${COMMON_INCLUDE_DIRS}
+    ${VERILATOR_ROOT}/include
+  )
+
+  # Link with common libraries
+  target_link_libraries(verilog_sim PRIVATE ${COMMON_LIBRARIES})
 endif()

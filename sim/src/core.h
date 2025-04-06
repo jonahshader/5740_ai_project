@@ -36,8 +36,8 @@ constexpr F4 GRAVITY_WATER = F4::from_raw(-1);
 constexpr F4 FALL_MAX_VEL = F4::from_raw(-20);
 
 // number of inputs produced by simple observation
-// {coin_pos, p1_pos, p1_ve, p2_pos, p2_vel)
-constexpr int SIMPLE_INPUT_COUNT = 2 + 2 + 2 + 2 + 2;
+// {coin_pos, p1_pos, p1_ve, p2_pos, p2_vel, is_dead)
+constexpr int SIMPLE_INPUT_COUNT = 2 + 2 + 2 + 2 + 2 + 2;
 
 // simplest output configuration:
 // output 1:
@@ -81,6 +81,8 @@ void reinit(GameState &state, uint64_t seed);
 void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2);
 
 void observe_state_simple(const GameState &state, std::vector<F4> &observation,
+                          bool p1_perspective);
+void observe_state_simple(const GameState &state, std::vector<float> &observation,
                           bool p1_perspective);
 int get_fitness(const GameState &state, bool p1_perspective);
 // void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);

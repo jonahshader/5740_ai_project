@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="8" height="8" tilewidth="8" tileheight="8" infinite="0" nextlayerid="2" nextobjectid="1">
+ <tileset firstgid="1" source="C:/Users/jonah/Documents/programming/5740_ai_project/sim/resources/jnb_tileset.tsx"/>
+ <layer id="1" name="Tile Layer 1" width="8" height="8">
+  <data encoding="csv">
+2,2,2,2,2,2,2,2,
+2,2,2,2,2,2,2,2,
+2,2,2,2,2,2,2,2,
+2,2,2,2,2,2,2,2,
+2,2,2,1,1,1,2,2,
+2,2,2,2,2,2,2,2,
+2,2,2,2,2,2,2,2,
+3,5,1,1,1,1,1,1
+</data>
+ </layer>
+</map>

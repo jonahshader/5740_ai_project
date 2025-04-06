@@ -76,7 +76,15 @@
     "deque": "cpp",
     "queue": "cpp",
     "ranges": "cpp",
-    "span": "cpp"
+    "span": "cpp",
+    "*.tcc": "cpp",
+    "cstdarg": "cpp",
+    "cwctype": "cpp",
+    "memory_resource": "cpp",
+    "numeric": "cpp",
+    "string_view": "cpp",
+    "numbers": "cpp",
+    "cinttypes": "cpp"
   },
   "cmake.ignoreCMakeListsMissing": true
 }
