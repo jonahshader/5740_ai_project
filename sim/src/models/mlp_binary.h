@@ -2,16 +2,16 @@
 
 #include <random>
 
-#include "core.h"
-#include "neural_net.h"
-#include "interfaces.h"
+#include "../core.h"
+#include "../binary_neural_net.h"
+#include "../interfaces.h"
 
 namespace jnb {
 
-class SimpleMLPModel : public Model {
+class BinaryMLPModel : public Model {
 public:
-  SimpleMLPModel(std::mt19937 &rng);
-  ~SimpleMLPModel() = default;
+BinaryMLPModel(std::mt19937 &rng);
+  ~BinaryMLPModel() = default;
   PlayerInput forward(const GameState &state, bool p1_perspective) override;
   void mutate(std::mt19937 &rng, float mutation_rate) override;
   void reset() override;
@@ -19,7 +19,8 @@ public:
   std::string get_name() const override;
 
 private:
-  StaticNeuralNet<float, SIMPLE_INPUT_COUNT, 16, 2, SIMPLE_OUTPUT_COUNT> net{};
+// x: 8, y: 8, other_x: 8, other_y: 8, 
+BinaryMLPModel<SIMPLE_INPUT_COUNT , 16, 2, 3> net{};
 };
 
 } // namespace jnb

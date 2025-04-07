@@ -41,6 +41,8 @@ void reinit(GameState &state, uint64_t seed) {
   auto spawn = state.map.spawns[spawn_index];
   state.p1.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
   state.p1.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
+
+
   auto spawn_index_2 = spawn_index_dist(state.rng);
   // ensure p2 doesn't spawn on p1
   // TODO: extend to coin logic? or is this needlessly complicated for FPGA impl?

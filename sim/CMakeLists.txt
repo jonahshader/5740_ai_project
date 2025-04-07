@@ -47,6 +47,8 @@ set(COMMON_SOURCES
   src/models/mlp_map_lut.h
   src/models/mlp_simple.cpp
   src/models/mlp_simple.h
+  src/models/mlp_tri.cpp
+  src/models/mlp_tri.h
   src/optimizers/simple.cpp
   src/optimizers/simple.h
   src/core_render.cpp

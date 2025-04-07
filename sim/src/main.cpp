@@ -7,6 +7,7 @@
 #include "models/human.h"
 #include "models/mlp_simple.h"
 #include "models/mlp_map_lut.h"
+#include "models/mlp_tri.h"
 #include "optimizers/simple.h"
 #include "pixel_game.h"
 #include "lodepng.h"
@@ -35,8 +36,9 @@ int main(int argc, char *argv[]) {
 
     auto p1 = std::make_shared<jnb::HumanModel>();
     // auto p2 = std::make_shared<jnb::HumanModel>();
-    // auto p2 = std::make_shared<jnb::SimpleMLPModel>(rng);
-    auto p2 = std::make_shared<jnb::MLPMapLutModel>(rng, map.width, map.height);
+    auto p2 = std::make_shared<jnb::MLPTriModel>(rng);
+    // auto p2 = std::make_shared<jnb::MLPMapLutModel>(rng, map.width, map.height);
+    // auto p2 = std::make_shared<jnb::BinaryMLPModel>(rng);
 
     // jnb::run_game(map_file.c_str(), 0);
     jnb::run_game_with_models(map_file, 0, p1, p2);
