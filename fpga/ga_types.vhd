@@ -19,7 +19,7 @@ package ga_types is
     max_gen                : unsigned(15 downto 0);
     run_until_stop_cmd     : boolean;
     tournament_size        : unsigned(7 downto 0);
-    population_size        : unsigned(7 downto 0);
+    population_size_exp    : unsigned(7 downto 0);
     model_history_size     : unsigned(7 downto 0);
     model_history_interval : unsigned(7 downto 0);
     seed                   : std_logic_vector(31 downto 0);
@@ -30,6 +30,9 @@ package ga_types is
     frame_limit : unsigned(15 downto 0);
   end record ga_config_t;
   function default_ga_config_t return ga_config_t;
+
+  type fitness_array_t is array(0 to MAX_POPULATION_SIZE - 1) of signed(16 - 1 downto 0);
+  type winner_counts_array_t is array(0 to MAX_POPULATION_SIZE - 1) of unsigned(8 - 1 downto 0);
 
 end package ga_types;
 
@@ -48,7 +51,7 @@ package body ga_types is
       max_gen => to_unsigned(0, 16),
       run_until_stop_cmd => false,
       tournament_size => to_unsigned(0, 8),
-      population_size => to_unsigned(0, 8),
+      population_size_exp => to_unsigned(0, 8),
       model_history_size => to_unsigned(0, 8),
       model_history_interval => to_unsigned(0, 8),
       seed => (others => '0'),
@@ -58,6 +61,18 @@ package body ga_types is
       seed_count => to_unsigned(0, 8),
       frame_limit => to_unsigned(0, 16)
     );
+  begin
+    return val;
+  end function;
+
+  function default_fitness_array_t return fitness_array_t is
+    variable val : fitness_array_t := (others => to_signed(0, 16));
+  begin
+    return val;
+  end function;
+
+  function default_winner_counts_array_t return winner_counts_array_t is
+    variable val : winner_counts_array_t := (others => to_unsigned(0, 8));
   begin
     return val;
   end function;
