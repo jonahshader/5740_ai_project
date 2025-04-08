@@ -124,19 +124,19 @@ endif()
 #   endif()
 # endif()
 
-if(NOT WIN32)
-  find_package(verilator HINTS $ENV{VERILATOR_ROOT})
-  add_executable(verilog_sim
-  ${COMMON_SOURCES}
-  src/main_sim.cpp
-  )
-  verilate(verilog_sim SOURCES game_test.v)
+# if(NOT WIN32)
+  # find_package(verilator HINTS $ENV{VERILATOR_ROOT})
+  # add_executable(verilog_sim
+  # ${COMMON_SOURCES}
+  # src/main_sim.cpp
+  # )
+  # verilate(verilog_sim SOURCES game_test.v)
 
-  target_include_directories(verilog_sim PRIVATE
-    ${COMMON_INCLUDE_DIRS}
-    ${VERILATOR_ROOT}/include
-  )
+  # target_include_directories(verilog_sim PRIVATE
+  #   ${COMMON_INCLUDE_DIRS}
+  #   # ${VERILATOR_ROOT}/include
+  # )
 
-  # Link with common libraries
-  target_link_libraries(verilog_sim PRIVATE ${COMMON_LIBRARIES})
-endif()
+  # # Link with common libraries
+  # target_link_libraries(verilog_sim PRIVATE ${COMMON_LIBRARIES})
+# endif()

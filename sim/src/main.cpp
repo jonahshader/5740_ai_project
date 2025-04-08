@@ -63,19 +63,20 @@ int main(int argc, char *argv[]) {
     auto model_builder = [width = map.width,
                           height = map.height](std::mt19937 &rng) -> std::shared_ptr<jnb::Model> {
       static int model_type = 0;
+      return std::make_shared<jnb::MLPTriModel>(rng);
 
-      model_type = (model_type + 1) % 2;
-      switch (model_type) {
-        case 0:
-          return std::make_shared<jnb::SimpleMLPModel>(rng);
-          break;
-        case 1:
-          return std::make_shared<jnb::MLPMapLutModel>(rng, width, height);
-          break;
-        default:
-          return std::make_shared<jnb::SimpleMLPModel>(rng);
-          break;
-      }
+      // model_type = (model_type + 1) % 2;
+      // switch (model_type) {
+      //   case 0:
+      //     return std::make_shared<jnb::SimpleMLPModel>(rng);
+      //     break;
+      //   case 1:
+      //     return std::make_shared<jnb::MLPMapLutModel>(rng, width, height);
+      //     break;
+      //   default:
+      //     return std::make_shared<jnb::SimpleMLPModel>(rng);
+      //     break;
+      // }
     };
 
     jnb::GAState ga_state;
