@@ -1,23 +1,29 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.all;
-entity Mux2to1 is
-    generic (N:integer);
-    port (
-        a: in STD_LOGIC_VECTOR(N-1 downto 0);
-        b: in STD_LOGIC_VECTOR(N-1 downto 0);
-        s: in STD_LOGIC;
-        y: out STD_LOGIC_VECTOR(N-1 downto 0)
-    );
-end Mux2to1;
-		 
-architecture Mux2to1 of Mux2to1 is
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity mux2to1 is
+  generic (
+    N : integer
+  );
+  port (
+    a : in std_logic_vector(N - 1 downto 0);
+    b : in std_logic_vector(N - 1 downto 0);
+    s : in std_logic;
+    y : out std_logic_vector(N - 1 downto 0)
+  );
+end entity mux2to1;
+
+architecture mux2to1 of mux2to1 is
+
 begin
-    process(a, b, s)
-  	begin
-  	   if s = '0' then
-  	      y <= a;
-  	   else
-  	      y <= b;
-  	   end if;
-  	end process;
-end Mux2to1;
+
+  process (a, b, s) is
+  begin
+    if s = '0' then
+      y <= a;
+    else
+      y <= b;
+    end if;
+  end process;
+
+end architecture mux2to1;
