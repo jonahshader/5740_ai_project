@@ -87,7 +87,7 @@ architecture game_test_arch of game_test is
   end function;
 
   signal gamestate : gamestate_t;
-  -- signal m         : tilemap_t := init_map;
+-- signal m         : tilemap_t := init_map;
 
 begin
 
