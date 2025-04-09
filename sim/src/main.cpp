@@ -49,15 +49,16 @@ int main(int argc, char *argv[]) {
     // train a model, then play against it
     jnb::GAConfig config{};
     config.seed = 2;
-    config.select_fun = jnb::make_tournament(2);
+    config.select_fun = jnb::make_tournament(3);
     config.reference_count = 2;
     config.model_history_size = 4;
     config.model_history_interval = 10;
     config.population_size = 64;
     jnb::EvalConfig eval_config{};
     eval_config.frame_limit = 360;
-    config.mutation_rate = 0.2;
-    config.max_gen = 64;
+    config.mutation_rate = 0.1;
+    config.taper_mutation_rate = true;
+    config.max_gen = 128;
 
     // lambda that spits out a randomly init model
     auto model_builder = [width = map.width,

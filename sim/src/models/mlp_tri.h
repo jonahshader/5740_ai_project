@@ -17,7 +17,7 @@ public:
     std::string get_name() const override;
 private:
     // Use your trinary neural net implementation
-    StaticNeuralNetTrinary<float, SIMPLE_INPUT_COUNT, 64, 2, SIMPLE_OUTPUT_COUNT> net{};
+    StaticNeuralNetTrinary<float, SIMPLE_INPUT_COUNT, 32, 2, SIMPLE_OUTPUT_COUNT> net{};
 };
 
 } // namespace jnb
