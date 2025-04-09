@@ -65,6 +65,7 @@ architecture comms_rx_arch of comms_rx is
   constant TILEMAP_MSG       : msg_t := x"01"; -- start tilemap transfer
   constant GA_CONFIG_MSG     : msg_t := x"02"; -- start ga_config transfer
   constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop the training early
+  constant PLAYER_INPUT_MSG : msg_t := x"04"; -- human player input transfer TODO implement
 
 begin
 
