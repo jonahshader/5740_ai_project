@@ -31,8 +31,10 @@ package ga_types is
   end record ga_config_t;
   function default_ga_config_t return ga_config_t;
 
-  type fitness_array_t is array(0 to MAX_POPULATION_SIZE - 1) of signed(16 - 1 downto 0);
-  type winner_counts_array_t is array(0 to MAX_POPULATION_SIZE - 1) of unsigned(8 - 1 downto 0);
+  type fitness_array_t is array(0 to MAX_POPULATION_SIZE - 1) of signed(15 downto 0);
+  function default_fitness_array_t return fitness_array_t;
+  type winner_counts_array_t is array(0 to MAX_POPULATION_SIZE - 1) of unsigned(7 downto 0);
+  function default_winner_counts_array_t return winner_counts_array_t;
 
 end package ga_types;
 
