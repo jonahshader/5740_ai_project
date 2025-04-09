@@ -1,0 +1,275 @@
+-- This houses the high level state machine, which is dictated
+-- from what is sent from PS to PL. This does not handle sending
+-- data from PL to PS. That is handled elsewhere.
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+use work.game_types.all;
+use work.ga_types.all;
+
+entity comms_rx is
+  port (
+    -- master clock, uart io
+    clk           : in std_logic;
+    uart_rx       : in std_logic_vector(7 downto 0);
+    uart_rx_valid : in std_logic;
+
+    -- system controls
+    training_go   : out boolean       := false;
+    training_stop : out boolean       := false;
+    inference_go  : out boolean       := false;
+    human_input   : out playerinput_t := default_playerinput_t;
+
+    -- configs
+    tilemap   : out tilemap_t   := default_tilemap_t;
+    ga_config : out ga_config_t := default_ga_config_t
+  );
+end entity comms_rx;
+
+architecture comms_rx_arch of comms_rx is
+
+  type state_t is (
+    -- waiting for command
+    IDLE_S,
+    -- tilemap transfers
+    TR_MAP_S,
+    TR_MAP_SPAWNS_S,
+    TR_MAP_NUM_SPAWN_S,
+    TR_MAP_NUM_SPAWN_BITS_S,
+    TR_MAP_WIDTH,
+    TR_MAP_HEIGHT,
+    -- ga config transfers
+    TR_GA_MUTATION_RATES,
+    TR_GA_MAX_GEN,
+    TR_GA_RUN_UNTIL_STOP_CMD,
+    TR_GA_TOURNAMENT_SIZE,
+    TR_GA_POPULATION_SIZE,
+    TR_GA_MODEL_HISTORY_SIZE,
+    TR_GA_MODEL_HISTORY_INTERVAL,
+    TR_GA_SEED,
+    TR_GA_REFERENCE_COUNT,
+    TR_GA_EVAL_INTERVAL,
+    TR_GA_SEED_COUNT,
+    TR_GA_FRAME_LIMIT
+  );
+
+  signal state : state_t := IDLE_S;
+
+  signal tr_counter : unsigned(15 downto 0) := to_unsigned(0, 16);
+
+  subtype msg_t is std_logic_vector(7 downto 0);
+  -- when idle, we wait for the following uart messages
+  -- to transition to other states
+  constant TILEMAP_MSG       : msg_t := x"01"; -- start tilemap transfer
+  constant GA_CONFIG_MSG     : msg_t := x"02"; -- start ga_config transfer
+  constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop the training early
+
+begin
+
+  state_proc : process (clk) is
+  begin
+    if rising_edge(clk) then
+      -- training stop is false by default. only goes
+      -- high when we get TRAINING_STOP_MSG from uart.
+      training_stop <= false;
+
+      -- we only do anything when we recieve a valid message
+      if uart_rx_valid = '1' then
+        case state is
+          -- message transitions
+          when IDLE_S =>
+            -- always safe to reset counter here
+            tr_counter <= to_unsigned(0, 16);
+            -- we are idling. handle messages
+            case uart_rx is
+              when TILEMAP_MSG =>
+                state <= TR_MAP_S;
+              when GA_CONFIG_MSG =>
+                state <= TR_GA_MUTATION_RATES;
+              when TRAINING_STOP_MSG =>
+                -- no state transition required here. we are just
+                -- passing it along through training_stop.
+                training_stop <= true;
+              when others =>
+                null;
+            end case;
+
+          -- data transfer transitions
+          -- tilemap transfer
+          when TR_MAP_S =>
+            -- populate map
+
+            -- map is 2d, but counter is 1d.
+            -- effectively doing modulus by grabbing different bit ranges:
+            tilemap.m(
+            -- TODO: might need to swap x and y here.
+            to_integer(tr_counter(MAP_TILES_BITS - 1 downto 0)),
+            to_integer(tr_counter(2 * MAP_TILES_BITS - 1 downto MAP_TILES_BITS))
+            -- TODO: uart_rx is 8 bits, but a tile is 3 bits. this auto-truncate is bad practice...
+            ) <= uart_rx;
+
+            if tr_counter = MAP_MAX_SIZE_TILES * MAP_MAX_SIZE_TILES - 1 then
+              -- go next
+              state      <= TR_MAP_SPAWNS_S;
+              tr_counter <= to_unsigned(0, 16);
+            else
+              -- still receiving data
+              tr_counter <= tr_counter + 1;
+            end if;
+          when TR_MAP_SPAWNS_S =>
+            -- populate spawn
+
+            -- spawns is 1d, but > 1 byte.
+            -- on even counts, populate x.
+            -- on odd counts, populate y.
+            if tr_counter(0) = '0' then
+              tilemap.spawn(to_integer(tr_counter(15 downto 1))).x <= unsigned(uart_rx);
+            else
+              tilemap.spawn(to_integer(tr_counter(15 downto 1))).y <= unsigned(uart_rx);
+            end if;
+
+            if tr_counter = MAP_MAX_SIZE_TILES - 1 then
+              -- go next
+              state      <= TR_MAP_NUM_SPAWN_S;
+              tr_counter <= to_unsigned(0, 16);
+            else
+              -- still receiving data
+              tr_counter <= tr_counter + 1;
+            end if;
+          when TR_MAP_NUM_SPAWN_S =>
+            -- num_spawn is just a byte
+            tilemap.num_spawn <= unsigned(uart_rx);
+            -- go next
+            state <= TR_MAP_NUM_SPAWN_BITS_S;
+          when TR_MAP_NUM_SPAWN_BITS_S =>
+            -- num_spawn_bits is just a byte
+            tilemap.num_spawn_bits <= unsigned(uart_rx);
+            -- go next
+            state <= TR_MAP_WIDTH;
+          when TR_MAP_WIDTH =>
+            -- map width is just a byte
+            tilemap.width <= unsigned(uart_rx);
+            -- go next
+            state <= TR_MAP_HEIGHT;
+          when TR_MAP_HEIGHT =>
+            -- map height is just a byte
+            tilemap.height <= unsigned(uart_rx);
+            -- go back to idle
+            state <= IDLE_S;
+
+          -- ga config transfer
+          when TR_GA_MUTATION_RATES =>
+            -- mutation rates is a 1d array of bytes
+            ga_config.mutation_rates(to_integer(tr_counter)) <= unsigned(uart_rx);
+
+            if tr_counter = MAX_POPULATION_SIZE - 1 then
+              -- go next
+              state      <= TR_GA_MAX_GEN;
+              tr_counter <= to_unsigned(0, 16);
+            else
+              -- still receiving data
+              tr_counter <= tr_counter + 1;
+            end if;
+          when TR_GA_MAX_GEN =>
+            -- max_get is 2 bytes
+            if tr_counter(0) = '0' then
+              ga_config.max_gen(15 downto 8) <= unsigned(uart_rx);
+            else
+              ga_config.max_gen(7 downto 0) <= unsigned(uart_rx);
+            end if;
+
+            if tr_counter = 1 then
+              -- go next
+              state      <= TR_GA_RUN_UNTIL_STOP_CMD;
+              tr_counter <= to_unsigned(0, 16);
+            else
+              -- still receiving data
+              tr_counter <= tr_counter + 1;
+            end if;
+          when TR_GA_RUN_UNTIL_STOP_CMD =>
+            -- run_until_stop_cmd is a bool
+            if tr_counter(0) = '0' then
+              ga_config.run_until_stop_cmd <= false;
+            else
+              ga_config.run_until_stop_cmd <= true;
+            end if;
+            -- go next
+            state <= TR_GA_TOURNAMENT_SIZE;
+          when TR_GA_TOURNAMENT_SIZE =>
+            -- tournament_size is a byte
+            ga_config.tournament_size <= unsigned(uart_rx);
+            -- go next
+            state <= TR_GA_POPULATION_SIZE;
+          when TR_GA_POPULATION_SIZE =>
+            -- population_size is a byte
+            ga_config.population_size <= unsigned(uart_rx);
+            -- go next
+            state <= TR_GA_MODEL_HISTORY_SIZE;
+          when TR_GA_MODEL_HISTORY_SIZE =>
+            -- model_history_size is a byte
+            ga_config.model_history_size <= unsigned(uart_rx);
+            -- go next
+            state <= TR_GA_MODEL_HISTORY_INTERVAL;
+          when TR_GA_MODEL_HISTORY_INTERVAL =>
+            -- model_history_interval is a byte
+            ga_config.model_history_interval <= unsigned(uart_rx);
+            -- go next
+            state <= TR_GA_SEED;
+          when TR_GA_SEED =>
+            -- seed is 4 bytes
+            if tr_counter = 0 then
+              ga_config.seed(31 downto 24) <= uart_rx;
+            elsif tr_counter = 1 then
+              ga_config.seed(23 downto 16) <= uart_rx;
+            elsif tr_counter = 2 then
+              ga_config.seed(15 downto 8) <= uart_rx;
+            else
+              ga_config.seed(7 downto 0) <= uart_rx;
+            end if;
+
+            if tr_counter = 3 then
+              -- go next
+              state      <= TR_GA_REFERENCE_COUNT;
+              tr_counter <= to_unsigned(0, 16);
+            else
+              -- still receiving data
+              tr_counter <= tr_counter + 1;
+            end if;
+          when TR_GA_REFERENCE_COUNT =>
+            -- reference_count is a byte
+            ga_config.reference_count <= unsigned(uart_rx);
+            -- go next
+            state <= TR_GA_EVAL_INTERVAL;
+          when TR_GA_EVAL_INTERVAL =>
+            -- eval_interval is a byte
+            ga_config.eval_interval <= unsigned(uart_rx);
+            -- go next
+            state <= TR_GA_SEED_COUNT;
+          when TR_GA_SEED_COUNT =>
+            -- seed_count is a byte
+            ga_config.seed_count <= unsigned(uart_rx);
+            -- go next
+            state <= TR_GA_FRAME_LIMIT;
+          when TR_GA_FRAME_LIMIT =>
+            -- frame_limit is 2 bytes
+            if tr_counter(0) = '0' then
+              ga_config.frame_limit(15 downto 8) <= unsigned(uart_rx);
+            else
+              ga_config.frame_limit(7 downto 0) <= unsigned(uart_rx);
+            end if;
+
+            if tr_counter = 1 then
+              -- go back to idle
+              state      <= IDLE_S;
+              tr_counter <= to_unsigned(0, 16);
+            end if;
+          when others =>
+            null;
+        end case;
+      end if;
+    end if;
+  end process;
+
+end architecture comms_rx_arch;
