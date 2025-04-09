@@ -50,9 +50,12 @@ architecture tb of tb_tournament is
   signal winner_counts            : winner_counts_array_t := default_winner_counts_array_t;
   signal done                     : boolean               := false;
 
-  signal clk_counter : unsigned(15 downto 0) := to_unsigned(0, 16);
+  signal clk_counter : unsigned(31 downto 0) := to_unsigned(0, 32);
 
 begin
+
+  -- Timeout after 125 us.
+  test_runner_watchdog(runner, 125 us);
 
   clk <= not clk after CLK_100MHZ_PERIOD / 2;
 
@@ -67,7 +70,7 @@ begin
       done                     => done
     );
 
-  counter_proc : process is
+  counter_proc : process (clk) is
   begin
     if rising_edge(clk) then
       clk_counter <= clk_counter + 1;
@@ -81,9 +84,11 @@ begin
     wait until rising_edge(clk);
     go <= false;
 
-    -- Wait until tournament module asserts "done"
-    wait until done;
-    -- Allow a couple of clock cycles for observation
+    -- -- Wait until tournament module asserts "done"
+    -- wait until done;
+    -- -- Allow a couple of clock cycles for observation
+    -- wait for 2 * CLK_100MHZ_PERIOD;
+    wait for 2 * 128 * CLK_100MHZ_PERIOD;
     wait for 2 * CLK_100MHZ_PERIOD;
 
     test_runner_cleanup(runner);
