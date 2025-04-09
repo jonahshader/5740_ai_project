@@ -17,10 +17,11 @@ entity comms_rx is
     uart_rx_valid : in std_logic;
 
     -- system controls
-    training_go   : out boolean       := false;
-    training_stop : out boolean       := false;
-    inference_go  : out boolean       := false;
-    human_input   : out playerinput_t := default_playerinput_t;
+    training_go       : out boolean       := false;
+    training_stop     : out boolean       := false;
+    inference_go      : out boolean       := false;
+    human_input       : out playerinput_t := default_playerinput_t;
+    human_input_valid : out boolean       := false;
 
     -- configs
     tilemap   : out tilemap_t   := default_tilemap_t;
@@ -52,7 +53,9 @@ architecture comms_rx_arch of comms_rx is
     TR_GA_REFERENCE_COUNT,
     TR_GA_EVAL_INTERVAL,
     TR_GA_SEED_COUNT,
-    TR_GA_FRAME_LIMIT
+    TR_GA_FRAME_LIMIT,
+    -- player input transfers
+    TR_PLAYER_INPUT
   );
 
   signal state : state_t := IDLE_S;
@@ -65,16 +68,20 @@ architecture comms_rx_arch of comms_rx is
   constant TILEMAP_MSG       : msg_t := x"01"; -- start tilemap transfer
   constant GA_CONFIG_MSG     : msg_t := x"02"; -- start ga_config transfer
   constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop the training early
-  constant PLAYER_INPUT_MSG : msg_t := x"04"; -- human player input transfer TODO implement
+  constant PLAYER_INPUT_MSG  : msg_t := x"04"; -- human player input transfer TODO implement
 
 begin
 
   state_proc : process (clk) is
   begin
     if rising_edge(clk) then
-      -- training stop is false by default. only goes
-      -- high when we get TRAINING_STOP_MSG from uart.
-      training_stop <= false;
+      -- these are related to system control.
+      -- they should be default until addressed via a message.
+      training_go       <= false;
+      training_stop     <= false;
+      inference_go      <= false;
+      human_input       <= default_playerinput_t;
+      human_input_valid <= false;
 
       -- we only do anything when we recieve a valid message
       if uart_rx_valid = '1' then
@@ -93,6 +100,8 @@ begin
                 -- no state transition required here. we are just
                 -- passing it along through training_stop.
                 training_stop <= true;
+              when PLAYER_INPUT_MSG =>
+                state <= TR_PLAYER_INPUT;
               when others =>
                 null;
             end case;
@@ -266,6 +275,16 @@ begin
               state      <= IDLE_S;
               tr_counter <= to_unsigned(0, 16);
             end if;
+
+          -- player input transfer
+          when TR_PLAYER_INPUT =>
+            -- three bools. just unpack from one byte.
+            human_input.left  <= uart_rx(0) = '1';
+            human_input.right <= uart_rx(1) = '1';
+            human_input.jump  <= uart_rx(2) = '1';
+            human_input_valid <= true;
+
+            state <= IDLE_S;
           when others =>
             null;
         end case;
