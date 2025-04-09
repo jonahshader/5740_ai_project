@@ -14,9 +14,9 @@ entity tournament is
     go  : in boolean;                       -- re-init the tournament using seed. goes high for one cycle.
 
     -- tournament population
-    ga_config                : in ga_config_t;            -- configuration for the tournament
-    input_population_fitness : in  fitness_array_t;       -- fitnsess of each chromosome
-    winner_counts            : out winner_counts_array_t; -- indices of winners of the tournament
+    ga_config                : in ga_config_t;                                             -- configuration for the tournament
+    input_population_fitness : in  fitness_array_t;                                        -- fitnsess of each chromosome
+    winner_counts            : out winner_counts_array_t := default_winner_counts_array_t; -- indices of winners of the tournament
 
     done : out boolean
   );
@@ -37,8 +37,6 @@ architecture tournament_arch of tournament is
   signal best_index       : unsigned(6 downto 0) := (others => '0');
 
 begin
-
-  winner_counts <= winner_counts;
 
   -- FSM: run one tournament round per clock cycle
   process (clk) is
@@ -77,7 +75,7 @@ begin
             winner_counts(to_integer(best_index)) <= winner_counts(to_integer(best_index)) + 1;
             count                                 <= count + 1;
             tournament_round                      <= 0;
-            best_score                            <= (others => '0');
+            best_score                            <= fitness_candidate;
 
             if count = population_size - 1 then
               done  <= TRUE;

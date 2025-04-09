@@ -25,7 +25,7 @@ architecture tb of tb_tournament is
     mutation_rates => default_mutation_rates_t,
     max_gen => to_unsigned(0, 16),
     run_until_stop_cmd => false,
-    tournament_size => to_unsigned(2, 8),
+    tournament_size => to_unsigned(3, 8),
     population_size_exp => to_unsigned(7, 8),
     model_history_size => to_unsigned(0, 8),
     model_history_interval => to_unsigned(0, 8),
@@ -52,6 +52,8 @@ architecture tb of tb_tournament is
 
   signal clk_counter : unsigned(31 downto 0) := to_unsigned(0, 32);
 
+  signal running : boolean := false;
+
 begin
 
   -- Timeout after 125 us.
@@ -73,16 +75,21 @@ begin
   counter_proc : process (clk) is
   begin
     if rising_edge(clk) then
+      -- if running then
+      -- increment the counter
       clk_counter <= clk_counter + 1;
+    -- end if;
     end if;
   end process;
 
   main : process is
   begin
     test_runner_setup(runner, RUNNER_CFG);
-    go <= true;
     wait until rising_edge(clk);
-    go <= false;
+    go      <= true;
+    running <= true;
+    wait until rising_edge(clk);
+    go      <= false;
 
     -- -- Wait until tournament module asserts "done"
     -- wait until done;
