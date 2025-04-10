@@ -46,7 +46,7 @@ architecture comms_rx_arch of comms_rx is
     TR_GA_MAX_GEN,
     TR_GA_RUN_UNTIL_STOP_CMD,
     TR_GA_TOURNAMENT_SIZE,
-    TR_GA_POPULATION_SIZE,
+    TR_GA_POPULATION_SIZE_EXP,
     TR_GA_MODEL_HISTORY_SIZE,
     TR_GA_MODEL_HISTORY_INTERVAL,
     TR_GA_SEED,
@@ -211,10 +211,10 @@ begin
             -- tournament_size is a byte
             ga_config.tournament_size <= unsigned(uart_rx);
             -- go next
-            state <= TR_GA_POPULATION_SIZE;
-          when TR_GA_POPULATION_SIZE =>
+            state <= TR_GA_POPULATION_SIZE_EXP;
+          when TR_GA_POPULATION_SIZE_EXP =>
             -- population_size is a byte
-            ga_config.population_size <= unsigned(uart_rx);
+            ga_config.population_size_exp <= unsigned(uart_rx);
             -- go next
             state <= TR_GA_MODEL_HISTORY_SIZE;
           when TR_GA_MODEL_HISTORY_SIZE =>
