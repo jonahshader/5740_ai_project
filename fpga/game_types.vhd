@@ -77,7 +77,6 @@ package game_types is
     p2       : player_t;
     coin_pos : tilepos_t;
     age      : unsigned(15 downto 0);
-  -- seed     : std_logic_vector(31 downto 0);
   end record gamestate_t;
   function default_gamestate_t return gamestate_t;
 
