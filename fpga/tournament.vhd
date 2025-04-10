@@ -42,6 +42,7 @@ begin
   process (clk) is
     variable current_index     : unsigned(6 downto 0);
     variable fitness_candidate : signed(15 downto 0);
+    variable best_index_var : unsigned(6 downto 0);
   begin
     if rising_edge(clk) then
       case state is
@@ -63,16 +64,18 @@ begin
 
           fitness_candidate := input_population_fitness(to_integer(current_index));
 
+          best_index_var := best_index;
           if tournament_round = 0 or fitness_candidate > best_score then
             best_score <= fitness_candidate;
             best_index <= current_index;
+            best_index_var := current_index;
           end if;
 
           tournament_round <= tournament_round + 1;
 
           if tournament_round = ga_config.tournament_size - 1 then
             -- end of tournament: update win count
-            winner_counts(to_integer(best_index)) <= winner_counts(to_integer(best_index)) + 1;
+            winner_counts(to_integer(best_index_var)) <= winner_counts(to_integer(best_index_var)) + 1;
             count                                 <= count + 1;
             tournament_round                      <= 0;
             best_score                            <= fitness_candidate;
