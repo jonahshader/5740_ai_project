@@ -58,28 +58,22 @@ int main(int argc, char *argv[]) {
     config.max_gen = 64;
 
     // lambda that spits out a randomly init model
-    // auto model_builder = [width = map.width,
-    //                       height = map.height](std::mt19937 &rng) -> std::shared_ptr<jnb::Model>
-    //                       {
-    //   static int model_type = 0;
-
-    //   model_type = (model_type + 1) % 2;
-    //   switch (model_type) {
-    //     case 0:
-    //       return std::make_shared<jnb::SimpleMLPModel>(rng);
-    //       break;
-    //     case 1:
-    //       return std::make_shared<jnb::MLPMapLutModel>(rng, width, height);
-    //       break;
-    //     default:
-    //       return std::make_shared<jnb::SimpleMLPModel>(rng);
-    //       break;
-    //   }
-    // };
-
     auto model_builder = [width = map.width,
                           height = map.height](std::mt19937 &rng) -> std::shared_ptr<jnb::Model> {
-      return std::make_shared<jnb::SimpleMLPModel>(rng);
+      static int model_type = 0;
+
+      model_type = (model_type + 1) % 2;
+      switch (model_type) {
+        case 0:
+          return std::make_shared<jnb::SimpleMLPModel>(rng);
+          break;
+        case 1:
+          return std::make_shared<jnb::MLPMapLutModel>(rng, width, height);
+          break;
+        default:
+          return std::make_shared<jnb::SimpleMLPModel>(rng);
+          break;
+      }
     };
 
     jnb::GAState ga_state;
