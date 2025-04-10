@@ -33,7 +33,13 @@ architecture core_arch of core is
   signal ga_state       : ga_state_t;
   signal ga_state_send  : boolean;
   signal gamestate      : gamestate_t;
-  signal gamestate_send : boolean;
+  signal gamestate_send : boolean := false;
+  signal tx_ready       : boolean;
+
+  -- game signals
+  signal game_done          : boolean;
+  signal p_game_done        : boolean := false;
+  signal queue_tr_gamestate : boolean := false;
 
 begin
 
@@ -60,7 +66,48 @@ begin
       ga_state       => ga_state,
       ga_state_send  => ga_state_send,
       gamestate      => gamestate,
-      gamestate_send => gamestate_send
+      gamestate_send => gamestate_send,
+      ready          => tx_ready
     );
+
+  game_ent : entity work.game
+    port map (
+      clk        => clk,
+      init       => inference_go,
+      swap_start => false,
+      seed       => std_logic_vector(to_unsigned(1, 32)),
+      m          => tilemap,
+      p1_input   => human_input,
+      p2_input   => default_playerinput_t,
+      go         => human_input_valid,
+      done       => game_done,
+      gamestate  => gamestate
+    );
+
+  state_proc : process (clk) is
+  begin
+    if rising_edge(clk) then
+      -- default to no sending
+      gamestate_send <= false;
+
+      -- get edge of game_done
+      p_game_done <= game_done;
+      if game_done and not p_game_done then
+        -- if we can send it now, then do it
+        if tx_ready then
+          gamestate_send <= true;
+        else
+          -- can't do it right away, so queue for it
+          queue_tr_gamestate <= true;
+        end if;
+      end if;
+
+      -- we are queued and ready, so send it
+      if queue_tr_gamestate and tx_ready then
+        gamestate_send     <= true;
+        queue_tr_gamestate <= false;
+      end if;
+    end if;
+  end process;
 
 end architecture core_arch;
