@@ -31,6 +31,12 @@ package ga_types is
   end record ga_config_t;
   function default_ga_config_t return ga_config_t;
 
+  type ga_state_t is record
+    current_gen       : unsigned(15 downto 0);
+    reference_fitness : signed(15 downto 0);
+  end record ga_state_t;
+  function default_ga_state_t return ga_state_t;
+
   type fitness_array_t is array(0 to MAX_POPULATION_SIZE - 1) of signed(15 downto 0);
   function default_fitness_array_t return fitness_array_t;
   type winner_counts_array_t is array(0 to MAX_POPULATION_SIZE - 1) of unsigned(7 downto 0);
@@ -62,6 +68,15 @@ package body ga_types is
       
       seed_count => to_unsigned(0, 8),
       frame_limit => to_unsigned(0, 16)
+    );
+  begin
+    return val;
+  end function;
+
+  function default_ga_state_t return ga_state_t is
+    variable val : ga_state_t := (
+      current_gen => to_unsigned(0, 16),
+      reference_fitness => to_signed(0, 16)
     );
   begin
     return val;
