@@ -8,3 +8,13 @@ set_property IOSTANDARD LVCMOS33  [get_ports "i_rx_serial"]
 # Using PMOD[1] for tx
 set_property PACKAGE_PIN E10      [get_ports "o_tx_serial"]
 set_property IOSTANDARD LVCMOS33  [get_ports "o_tx_serial"]
+
+# False paths for asynchronous UART interface
+set_false_path -from [get_ports i_rx_serial]
+set_false_path -to [get_ports o_tx_serial]
+
+# Clock constraints for PS clocks
+#create_clock -period 10.000 -name pl_clk0 -waveform {0.000 5.000} [get_pins zynq_ultra_ps_e_0/inst/PS8_i/PLCLK[0]]
+#create_clock -period 10.000 -name pl_clk1 -waveform {0.000 5.000} [get_pins zynq_ultra_ps_e_0/inst/PS8_i/PLCLK[1]]
+create_clock -period 10.000 -name pl_clk0 [get_ports pl_clk0]
+create_clock -period 10.000 -name pl_clk1 [get_ports pl_clk1]
