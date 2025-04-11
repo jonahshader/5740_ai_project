@@ -135,10 +135,10 @@ begin
                                                     16)(7 downto 0));
             state   <= TR_P1_SCORE_1_S;
           when TR_P1_SCORE_1_S =>
-            uart_tx <= std_logic_vector(gamestate.p1.score)(15 downto 8);
+            uart_tx <= std_logic_vector(unsigned(gamestate.p1.score(15 downto 8)));
             state   <= TR_P1_SCORE_2_S;
           when TR_P1_SCORE_2_S =>
-            uart_tx <= std_logic_vector(gamestate.p1.score)(7 downto 0);
+            uart_tx <= std_logic_vector(unsigned(gamestate.p1.score(7 downto 0)));
             state   <= TR_P1_DEAD_TIMEOUT_S;
           when TR_P1_DEAD_TIMEOUT_S =>
             uart_tx <= std_logic_vector(gamestate.p1.dead_timeout);
@@ -160,10 +160,10 @@ begin
                                                     16)(7 downto 0));
             state   <= TR_P2_SCORE_1_S;
           when TR_P2_SCORE_1_S =>
-            uart_tx <= std_logic_vector(gamestate.p2.score)(15 downto 8);
+            uart_tx <= std_logic_vector(unsigned(gamestate.p2.score(15 downto 8)));
             state   <= TR_P2_SCORE_2_S;
           when TR_P2_SCORE_2_S =>
-            uart_tx <= std_logic_vector(gamestate.p2.score)(7 downto 0);
+            uart_tx <= std_logic_vector(unsigned(gamestate.p2.score(7 downto 0)));
             state   <= TR_P2_DEAD_TIMEOUT_S;
           when TR_P2_DEAD_TIMEOUT_S =>
             uart_tx <= std_logic_vector(gamestate.p2.dead_timeout);
@@ -175,11 +175,11 @@ begin
             uart_tx <= std_logic_vector(resize(gamestate.coin_pos.y, 8));
             state   <= TR_AGE_1_S;
           when TR_AGE_1_S =>
-            uart_tx <= std_logic_vector(gamestate.age)(15 downto 8);
+            uart_tx <= std_logic_vector(gamestate.age(15 downto 8));
             state   <= TR_AGE_2_S;
           when TR_AGE_2_S =>
             -- take the lower byte
-            uart_tx <= std_logic_vector(gamestate.age)(7 downto 0);
+            uart_tx <= std_logic_vector(gamestate.age(7 downto 0));
             state   <= IDLE_S;
           when IDLE_S =>
             uart_tx_send <= '0';    -- don't send anything

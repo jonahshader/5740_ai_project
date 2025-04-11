@@ -118,7 +118,7 @@ begin
             to_integer(tr_counter(MAP_TILES_BITS - 1 downto 0)),
             to_integer(tr_counter(2 * MAP_TILES_BITS - 1 downto MAP_TILES_BITS))
             -- TODO: uart_rx is 8 bits, but a tile is 3 bits. this auto-truncate is bad practice...
-            ) <= uart_rx;
+            ) <= uart_rx(2 downto 0);
 
             if tr_counter = MAP_MAX_SIZE_TILES * MAP_MAX_SIZE_TILES - 1 then
               -- go next
@@ -135,9 +135,9 @@ begin
             -- on even counts, populate x.
             -- on odd counts, populate y.
             if tr_counter(0) = '0' then
-              tilemap.spawn(to_integer(tr_counter(15 downto 1))).x <= unsigned(uart_rx);
+              tilemap.spawn(to_integer(tr_counter(15 downto 1))).x <= unsigned(uart_rx(5 downto 0));
             else
-              tilemap.spawn(to_integer(tr_counter(15 downto 1))).y <= unsigned(uart_rx);
+              tilemap.spawn(to_integer(tr_counter(15 downto 1))).y <= unsigned(uart_rx(5 downto 0));
             end if;
 
             if tr_counter = MAP_MAX_SIZE_TILES - 1 then
@@ -155,17 +155,17 @@ begin
             state <= TR_MAP_NUM_SPAWN_BITS_S;
           when TR_MAP_NUM_SPAWN_BITS_S =>
             -- num_spawn_bits is just a byte
-            tilemap.num_spawn_bits <= unsigned(uart_rx);
+            tilemap.num_spawn_bits <= unsigned(uart_rx(3 downto 0));
             -- go next
             state <= TR_MAP_WIDTH;
           when TR_MAP_WIDTH =>
             -- map width is just a byte
-            tilemap.width <= unsigned(uart_rx);
+            tilemap.width <= unsigned(uart_rx(MAP_TILES_BITS downto 0));
             -- go next
             state <= TR_MAP_HEIGHT;
           when TR_MAP_HEIGHT =>
             -- map height is just a byte
-            tilemap.height <= unsigned(uart_rx);
+            tilemap.height <= unsigned(uart_rx(MAP_TILES_BITS downto 0));
             -- go back to idle
             state <= IDLE_S;
 

@@ -8,13 +8,14 @@
 
 # Set project name and directory
 set projName "kria_minimal"
-set projDir "../${projName}"  # Create project in root directory, one level up from scripts
+set projDir "./${projName}"
 
 # Create project
 create_project ${projName} ${projDir} -part xck26-sfvc784-2LV-c
 
 # Set the board part for Kria KV260 Vision AI Starter Kit
-set_property board_part xilinx.com:kv260_vision_starter:part0:1.4 [current_project]
+set_property board_part "xilinx.com:kv260_som:part0:1.4" [current_project]
+set_property board_connections "som240_1_connector xilinx.com:kv260_carrier:som240_1_connector:1.3" [current_project]
 
 # Set project properties
 set_property target_language VHDL [current_project]

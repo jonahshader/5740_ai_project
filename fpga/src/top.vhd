@@ -8,6 +8,7 @@ entity top is
   port (
     pl_clk0 : in std_logic;
     pl_clk1 : in std_logic;
+    pl_resetn0  : in std_logic;
 
     -- uart rx
     i_rx_serial : in  std_logic;
