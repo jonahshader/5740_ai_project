@@ -135,9 +135,9 @@ begin
             -- on even counts, populate x.
             -- on odd counts, populate y.
             if tr_counter(0) = '0' then
-              tilemap.spawn(to_integer(tr_counter(15 downto 1))).x <= unsigned(uart_rx(5 downto 0));
+              tilemap.spawn(to_integer(tr_counter(15 downto 1))).x <= unsigned(uart_rx(MAP_TILES_BITS - 1 downto 0));
             else
-              tilemap.spawn(to_integer(tr_counter(15 downto 1))).y <= unsigned(uart_rx(5 downto 0));
+              tilemap.spawn(to_integer(tr_counter(15 downto 1))).y <= unsigned(uart_rx(MAP_TILES_BITS - 1 downto 0));
             end if;
 
             if tr_counter = MAP_MAX_SIZE_TILES - 1 then

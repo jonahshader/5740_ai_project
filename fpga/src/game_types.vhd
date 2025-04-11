@@ -9,7 +9,7 @@ use ieee.math_real.ceil;
 package game_types is
 
   -- constants
-  constant MAP_TILES_BITS       : integer := 6;                             -- bits needed to describe tile position
+  constant MAP_TILES_BITS       : integer := 4;                             -- bits needed to describe tile position
   constant MAP_MAX_SIZE_TILES   : integer := 2 ** MAP_TILES_BITS;           -- map max size (width height) in tiles
   constant TILE_PX_BITS         : integer := 3;                             -- bits needed to describe PX position within tile
   constant TILE_PX              : integer := 2 ** TILE_PX_BITS;             -- tile size (width height) in pixels
