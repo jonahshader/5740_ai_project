@@ -12,7 +12,7 @@ entity top is
     i_rx_serial : in  std_logic;
 
     -- uart tx
-    o_tx_active : out std_logic;
+    -- o_tx_active : out std_logic;
     o_tx_serial : out std_logic
   );
 end entity top;
@@ -49,7 +49,7 @@ begin
       i_clk       => clk,
       i_tx_dv     => i_tx_dv,
       i_tx_byte   => i_tx_byte,
-      o_tx_active => o_tx_active,
+      o_tx_active => open,
       o_tx_serial => o_tx_serial,
       o_tx_done   => o_tx_done
     );

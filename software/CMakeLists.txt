@@ -25,6 +25,18 @@ if(NOT SDL2_FOUND)
   FetchContent_MakeAvailable(SDL2)
 endif()
 
+# SerialPort
+FetchContent_Declare(
+  serialport
+  GIT_REPOSITORY https://github.com/wjwwood/serial.git
+  GIT_TAG master
+)
+
+# Explicitly make SerialPort available (and configurable)
+set(SERIAL_BUILD_EXAMPLES OFF CACHE BOOL "Build SerialPort examples" FORCE)
+set(SERIAL_BUILD_TESTS OFF CACHE BOOL "Build SerialPort tests" FORCE)
+FetchContent_MakeAvailable(serialport)
+
 # lodepng
 FetchContent_Declare(
   lodepng
@@ -67,12 +79,14 @@ set(COMMON_INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/src
   ${CMAKE_CURRENT_SOURCE_DIR}/src/models
   ${lodepng_SOURCE_DIR}
+  ${serialport_SOURCE_DIR}/include
 )
 
 # Define common libraries
 set(COMMON_LIBRARIES
   SDL2::SDL2
   OpenMP::OpenMP_CXX
+  serial
 )
 
 # Create main executable
@@ -102,26 +116,6 @@ if(WIN32)
 endif()
 
 # Verilator-based executable (Linux only)
-# if(NOT WIN32)
-#   find_package(verilator HINTS $ENV{VERILATOR_ROOT})
-#   if(verilator_FOUND)
-#     add_executable(verilog_sim
-#       ${COMMON_SOURCES}
-#       src/main_sim.cpp
-#       ${CMAKE_CURRENT_SOURCE_DIR}/obj_dir/Vgame_test.cpp
-#     )
-#     target_link_libraries(verilog_sim PRIVATE
-#       ${COMMON_LIBRARIES}
-#       verilator
-#     )
-#     target_include_directories(verilog_sim PRIVATE
-#       ${COMMON_INCLUDE_DIRS}
-#       ${VERILATOR_ROOT}/include
-#       ${CMAKE_CURRENT_SOURCE_DIR}/obj_dir
-#     )
-#   endif()
-# endif()
-
 if(NOT WIN32)
   find_package(verilator HINTS $ENV{VERILATOR_ROOT})
   add_executable(verilog_sim
