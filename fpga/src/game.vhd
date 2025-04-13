@@ -26,13 +26,13 @@ end entity game;
 architecture game_arch of game is
 
   -- rng stuff
-  constant NUM_RNG         : integer := 3;                                -- three random numbers: p1 spawn, p2 spawn, coin spawn
-  constant INIT_CYCLES     : integer := 6;
-  signal   enable_rng      : boolean := false;
+  constant NUM_RNG         : integer   := 3;                              -- three random numbers: p1 spawn, p2 spawn, coin spawn
+  constant INIT_CYCLES     : integer   := 7;
+  signal   enable_rng      : boolean   := false;
   signal   result_rng      : std_logic_vector(32 * NUM_RNG - 1 downto 0); -- rng output is a multiple of 32 bits
-  signal   p1_spawn_tile   : tilepos_t;
-  signal   p2_spawn_tile   : tilepos_t;
-  signal   coin_spawn_tile : tilepos_t;
+  signal   p1_spawn_tile   : tilepos_t := default_tilepos_t;
+  signal   p2_spawn_tile   : tilepos_t := default_tilepos_t;
+  signal   coin_spawn_tile : tilepos_t := default_tilepos_t;
 
   signal swap_start_r : boolean;
   signal p1_input_r   : playerinput_t;
@@ -40,21 +40,28 @@ architecture game_arch of game is
 
   signal init_counter : unsigned(3 downto 0) := to_unsigned(INIT_CYCLES, 4);
 
-  type   state_t is (IDLE_S, INIT_S, PHASE1_S, PHASE2_S);
+  type   state_t is (IDLE_S, INIT_S, PHASE1_SETUP_S, PHASE1_S, PHASE2_SETUP_S, PHASE2_S);
   signal state : state_t := IDLE_S;
 
   -- gs contains all the game state
   signal gs : gamestate_t := default_gamestate_t;
 
+  -- phase setup
+  signal p1_setup_1 : player_setup_1_t := default_player_setup_1_t;
+  signal p2_setup_1 : player_setup_1_t := default_player_setup_1_t;
+  signal p1_setup_2 : player_setup_2_t := default_player_setup_2_t;
+  signal p2_setup_2 : player_setup_2_t := default_player_setup_2_t;
+
 begin
 
   -- connecting wires
-  p1_spawn_tile   <= sample_spawn(m, result_rng(31 downto 0));
-  p2_spawn_tile   <= sample_spawn(m, result_rng(63 downto 32));
-  coin_spawn_tile <= sample_spawn(m, result_rng(95 downto 64));
-  enable_rng      <= state = INIT_S or state = PHASE1_S;
-  done            <= state = IDLE_S;
-  gamestate       <= gs;
+
+  -- p1_spawn_tile   <= sample_spawn(m, result_rng(31 downto 0));
+  -- p2_spawn_tile   <= sample_spawn(m, result_rng(31 downto 0));
+  -- coin_spawn_tile <= sample_spawn(m, result_rng(31 downto 0));
+  enable_rng <= state = INIT_S or state = PHASE1_S;
+  done       <= state = IDLE_S;
+  gamestate  <= gs;
 
   -- instantiate
   rng : entity work.xormix32
@@ -78,6 +85,11 @@ begin
   state_proc : process (clk) is
   begin
     if rising_edge(clk) then
+      -- always register these
+      p1_spawn_tile   <= sample_spawn(m, result_rng(31 downto 0));
+      p2_spawn_tile   <= sample_spawn(m, result_rng(63 downto 32));
+      coin_spawn_tile <= sample_spawn(m, result_rng(95 downto 64));
+
       -- always go straight to init state when init is true
       if init then
         state        <= INIT_S;
@@ -88,7 +100,7 @@ begin
         case state is
           when IDLE_S =>
             if go then
-              state      <= PHASE1_S;
+              state      <= PHASE1_SETUP_S;
               p1_input_r <= p1_input;
               p2_input_r <= p2_input;
             end if;
@@ -110,13 +122,21 @@ begin
               gs.coin_pos <= coin_spawn_tile;
             end if;
             init_counter <= init_counter - 1;
+          when PHASE1_SETUP_S =>
+            p1_setup_1 <= phase_1_setup(gs.p1, m);
+            p2_setup_1 <= phase_1_setup(gs.p2, m);
+            state      <= PHASE1_S;
           when PHASE1_S =>
-            gs.p1 <= phase_1(gs.p1, gs.p2, p1_input_r, m);
-            gs.p2 <= phase_1(gs.p2, gs.p1, p2_input_r, m);
-            state <= PHASE2_S;
+            gs.p1 <= phase_1(gs.p1, gs.p2, p1_input_r, p1_setup_1, m);
+            gs.p2 <= phase_1(gs.p2, gs.p1, p2_input_r, p2_setup_1, m);
+            state <= PHASE2_SETUP_S;
+          when PHASE2_SETUP_S =>
+            p1_setup_2 <= phase_2_setup(gs.p1, m, p1_setup_1);
+            p2_setup_2 <= phase_2_setup(gs.p2, m, p2_setup_1);
+            state      <= PHASE2_S;
           when PHASE2_S =>
-            gs.p1 <= phase_2(gs.p1, p1_spawn_tile, gs.coin_pos, m);
-            gs.p2 <= phase_2(gs.p2, p2_spawn_tile, gs.coin_pos, m);
+            gs.p1 <= phase_2(gs.p1, p1_spawn_tile, gs.coin_pos, p1_setup_2, m);
+            gs.p2 <= phase_2(gs.p2, p2_spawn_tile, gs.coin_pos, p2_setup_2, m);
             -- coin respawn from collision
             if is_touching_coin(gs.p1, gs.coin_pos) or is_touching_coin(gs.p2, gs.coin_pos) then
               -- respawn coin

@@ -98,7 +98,7 @@ if {[file exists "$build_dir"] && !$force_build } {
   add_files -fileset constrs_1 ${constr_files}
 
   # Use ExtraTimingOpt implementation strategy for now.
-  # set_property strategy Performance_ExtraTimingOpt [get_runs impl_1]
+  set_property strategy Performance_ExtraTimingOpt [get_runs impl_1]
 
   # Change some critical warnings to errors.
   set_msg_config -id {Route 35-39}   -new_severity ERROR; # IMPL:  The design did not meet timing requirements.
