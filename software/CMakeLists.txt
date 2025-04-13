@@ -27,15 +27,12 @@ endif()
 
 # SerialPort
 FetchContent_Declare(
-  serialport
-  GIT_REPOSITORY https://github.com/wjwwood/serial.git
-  GIT_TAG master
+  serial_cpp
+  GIT_REPOSITORY https://github.com/ami-iit/serial_cpp.git
+  GIT_TAG        v1.3.3 # or use the tag or commit you prefer
 )
 
-# Explicitly make SerialPort available (and configurable)
-set(SERIAL_BUILD_EXAMPLES OFF CACHE BOOL "Build SerialPort examples" FORCE)
-set(SERIAL_BUILD_TESTS OFF CACHE BOOL "Build SerialPort tests" FORCE)
-FetchContent_MakeAvailable(serialport)
+FetchContent_MakeAvailable(serial_cpp)
 
 # lodepng
 FetchContent_Declare(
@@ -86,7 +83,7 @@ set(COMMON_INCLUDE_DIRS
 set(COMMON_LIBRARIES
   SDL2::SDL2
   OpenMP::OpenMP_CXX
-  serial
+  serial_cpp::serial_cpp
 )
 
 # Create main executable

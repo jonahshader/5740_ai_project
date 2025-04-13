@@ -38,7 +38,7 @@ package player_funs is
   end record player_setup_2_t;
   function default_player_setup_2_t return player_setup_2_t;
 
-  function phase_1(p : player_t; other : player_t; input : playerinput_t; s : player_setup_1_t; m : tilemap_t) return player_t;
+  function phase_1(p : player_t; other : player_t; input : playerinput_t; setup_1 : player_setup_1_t; m : tilemap_t) return player_t;
   function phase_2(p : player_t; p_spawn : tilepos_t; coin_pos : tilepos_t; setup_2 : player_setup_2_t; m : tilemap_t) return player_t;
   function is_touching_coin(p : player_t; coinpos : tilepos_t) return boolean;
 
