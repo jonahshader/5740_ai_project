@@ -39,7 +39,7 @@ architecture core_arch of core is
 
   -- game signals
   signal game_done          : boolean;
-  signal p_game_done        : boolean := false;
+  signal p_game_done        : boolean := true;
   signal queue_tr_gamestate : boolean := false;
 
 begin

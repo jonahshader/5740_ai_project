@@ -58,15 +58,23 @@ begin
         o_rx_byte <= x"05";
         o_rx_dv   <= '1';
         wait until rising_edge(clk);
+        o_rx_dv   <= '0';
         wait until i_tx_dv = '1';
+
         -- read message
-        check_equal(i_tx_byte, x"68", "Core incorrect test message returned.");
-        wait until rising_edge(clk);
+        check_equal(i_tx_byte, std_logic_vector'(x"68"), "Core incorrect test message returned.");
+
       -- TODO: check more stuff?
       end if;
+
+      wait until rising_edge(clk);
+      wait until rising_edge(clk);
+      wait until rising_edge(clk);
+      wait until rising_edge(clk);
     end loop;
 
     test_runner_cleanup(runner);
+    wait;
   end process;
 
 end architecture tb;

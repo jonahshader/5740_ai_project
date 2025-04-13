@@ -2,7 +2,8 @@
 """Core test creator."""
 
 from vunit import VUnit
-from os.path import dirname, join
+from os.path import dirname, join, basename
+import glob
 
 root = dirname(__file__)
 
@@ -16,8 +17,14 @@ vu.add_vhdl_builtins()
 lib = vu.add_library("lib")
 
 # Add testbench files
-lib.add_source_files([join(root, '*.vhd'),
-                     join(root, '../../src/*.vhd')])
+lib.add_source_files(join(root, '*.vhd'))
+
+# Add imports
+lib.add_source_files(join(root, '../../src/imports/*.vhd'))
+
+# Add src files except top.vhd
+src_files = [f for f in glob.glob(join(root, '../../src/*.vhd')) if basename(f) != "top.vhd"]
+lib.add_source_files(src_files)
 
 # Run vunit function
 vu.main()

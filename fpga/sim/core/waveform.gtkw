@@ -1,0 +1,33 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Sun Apr 13 22:22:28 2025
+[*]
+[dumpfile] "/home/jonah/repos/5740_ai_project/fpga/sim/core/vunit_out/test_output/lib.tb_core.test_msg_f137dd974c5babaf3ef0662676be9d89167f978e/ghdl/wave.ghw"
+[dumpfile_mtime] "Sun Apr 13 21:59:07 2025"
+[dumpfile_size] 19861
+[savefile] "/home/jonah/repos/5740_ai_project/fpga/sim/core/waveform.gtkw"
+[timestart] 0
+[size] 1825 917
+[pos] -260 -118
+*-23.253496 27250000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[treeopen] top.
+[treeopen] top.tb_core.
+[treeopen] top.tb_core.core_ent.
+[sst_width] 276
+[signals_width] 142
+[sst_expanded] 1
+[sst_vpaned_height] 261
+@28
+top.tb_core.clk
+top.tb_core.o_rx_dv
+top.tb_core.i_tx_dv
+top.tb_core.o_tx_done
+@22
+#{top.tb_core.o_rx_byte[7:0]} top.tb_core.o_rx_byte[7] top.tb_core.o_rx_byte[6] top.tb_core.o_rx_byte[5] top.tb_core.o_rx_byte[4] top.tb_core.o_rx_byte[3] top.tb_core.o_rx_byte[2] top.tb_core.o_rx_byte[1] top.tb_core.o_rx_byte[0]
+#{top.tb_core.i_tx_byte[7:0]} top.tb_core.i_tx_byte[7] top.tb_core.i_tx_byte[6] top.tb_core.i_tx_byte[5] top.tb_core.i_tx_byte[4] top.tb_core.i_tx_byte[3] top.tb_core.i_tx_byte[2] top.tb_core.i_tx_byte[1] top.tb_core.i_tx_byte[0]
+@421
+top.tb_core.core_ent.test_go
+@420
+top.tb_core.core_ent.comms_tx_ent.state
+[pattern_trace] 1
+[pattern_trace] 0
