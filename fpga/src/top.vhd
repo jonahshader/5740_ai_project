@@ -6,10 +6,6 @@ use ieee.std_logic_1164.all;
 
 entity top is
   port (
-    pl_clk0 : in std_logic;
-    pl_clk1 : in std_logic;
-    pl_resetn0  : in std_logic;
-
     -- uart rx
     i_rx_serial : in  std_logic;
 
@@ -29,14 +25,25 @@ architecture top_arch of top is
   signal i_tx_byte : std_logic_vector(7 downto 0);
   signal o_tx_done : std_logic;
 
+  -- ps outputs
+  signal pl_clk0_0    : std_logic;
+  signal pl_resetn0_0 : std_logic;
+
 begin
+
+  -- instantiate the wrapper
+  kv260_wrapper_inst : entity work.kv260_design_wrapper
+    port map (
+      pl_clk0      => pl_clk0_0,
+      pl_resetn0_0 => pl_resetn0_0
+    );
 
   uart_rx_ent : entity work.uart_rx
     generic map (
       G_CLKS_PER_BIT => G_CLKS_PER_BIT
     )
     port map (
-      i_clk       => pl_clk0,
+      i_clk       => pl_clk0_0,
       i_rx_serial => i_rx_serial,
       o_rx_dv     => o_rx_dv,
       o_rx_byte   => o_rx_byte
@@ -47,7 +54,7 @@ begin
       G_CLKS_PER_BIT => G_CLKS_PER_BIT
     )
     port map (
-      i_clk       => pl_clk0,
+      i_clk       => pl_clk0_0,
       i_tx_dv     => i_tx_dv,
       i_tx_byte   => i_tx_byte,
       o_tx_active => open,
@@ -57,7 +64,7 @@ begin
 
   core_ent : entity work.core
     port map (
-      clk       => pl_clk0,
+      clk       => pl_clk0_0,
       o_rx_dv   => o_rx_dv,
       o_rx_byte => o_rx_byte,
       i_tx_dv   => i_tx_dv,
