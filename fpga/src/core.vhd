@@ -26,6 +26,7 @@ architecture core_arch of core is
   signal inference_go      : boolean;
   signal human_input       : playerinput_t;
   signal human_input_valid : boolean;
+  signal test_go           : boolean;
   signal tilemap           : tilemap_t;
   signal ga_config         : ga_config_t;
 
@@ -53,6 +54,7 @@ begin
       inference_go      => inference_go,
       human_input       => human_input,
       human_input_valid => human_input_valid,
+      test_go           => test_go,
       tilemap           => tilemap,
       ga_config         => ga_config
     );
@@ -67,6 +69,7 @@ begin
       ga_state_send  => ga_state_send,
       gamestate      => gamestate,
       gamestate_send => gamestate_send,
+      test_go        => test_go,
       ready          => tx_ready
     );
 

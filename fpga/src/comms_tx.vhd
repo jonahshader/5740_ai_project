@@ -20,6 +20,7 @@ entity comms_tx is
     ga_state_send  : in boolean;
     gamestate      : in gamestate_t;
     gamestate_send : in boolean;
+    test_go        : in boolean;
 
     -- ready to initiate a transfer (i.e., not busy)
     ready : out boolean
@@ -63,6 +64,7 @@ architecture comms_tx_arch of comms_tx is
   subtype  msg_t is std_logic_vector(7 downto 0);
   constant GA_STATE_MSG  : msg_t := x"01";
   constant GAMESTATE_MSG : msg_t := x"02";
+  constant TEST_MSG      : msg_t := x"68"; -- 'h'
 
 begin
 
@@ -95,6 +97,11 @@ begin
           uart_tx_send <= '1';
           uart_ready_r <= false;
           state        <= TR_P1_X_1_S;
+        elsif test_go then
+          uart_tx      <= TEST_MSG;
+          uart_tx_send <= '1';
+          uart_ready_r <= false;
+        -- no state transition
         end if;
       end if;
 

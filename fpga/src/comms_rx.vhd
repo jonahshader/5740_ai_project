@@ -22,6 +22,7 @@ entity comms_rx is
     inference_go      : out boolean       := false;
     human_input       : out playerinput_t := default_playerinput_t;
     human_input_valid : out boolean       := false;
+    test_go           : out boolean       := false;
 
     -- configs
     tilemap   : out tilemap_t   := default_tilemap_t;
@@ -68,7 +69,10 @@ architecture comms_rx_arch of comms_rx is
   constant TILEMAP_MSG       : msg_t := x"01"; -- start tilemap transfer
   constant GA_CONFIG_MSG     : msg_t := x"02"; -- start ga_config transfer
   constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop the training early
-  constant PLAYER_INPUT_MSG  : msg_t := x"04"; -- human player input transfer
+  -- TODO: need a msg for inference_go
+  -- TODO: look into strategies for resetting/flushing state machine
+  constant PLAYER_INPUT_MSG : msg_t := x"04"; -- human player input transfer
+  constant TEST_MSG         : msg_t := x"05"; -- test print to serial
 
 begin
 
@@ -82,6 +86,7 @@ begin
       inference_go      <= false;
       human_input       <= default_playerinput_t;
       human_input_valid <= false;
+      test_go           <= false;
 
       -- we only do anything when we recieve a valid message
       if uart_rx_valid = '1' then
@@ -102,6 +107,8 @@ begin
                 training_stop <= true;
               when PLAYER_INPUT_MSG =>
                 state <= TR_PLAYER_INPUT;
+              when TEST_MSG =>
+                test_go <= true;
               when others =>
                 null;
             end case;
@@ -200,7 +207,7 @@ begin
             end if;
           when TR_GA_RUN_UNTIL_STOP_CMD =>
             -- run_until_stop_cmd is a bool
-            if tr_counter(0) = '0' then
+            if uart_rx(0) = '0' then
               ga_config.run_until_stop_cmd <= false;
             else
               ga_config.run_until_stop_cmd <= true;
@@ -274,6 +281,8 @@ begin
               -- go back to idle
               state      <= IDLE_S;
               tr_counter <= to_unsigned(0, 16);
+            else
+              tr_counter <= tr_counter + 1;
             end if;
 
           -- player input transfer
