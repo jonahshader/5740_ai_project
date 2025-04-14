@@ -25,6 +25,31 @@ if(NOT SDL2_FOUND)
   FetchContent_MakeAvailable(SDL2)
 endif()
 
+# Dear ImGui
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG v1.91.2
+)
+FetchContent_GetProperties(imgui)
+if(NOT imgui_POPULATED)
+  FetchContent_Populate(imgui)
+  add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer2.cpp
+  )
+  target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+  )
+  target_link_libraries(imgui PRIVATE SDL2::SDL2)
+endif()
+
 # SerialPort
 FetchContent_Declare(
   serial_cpp
@@ -84,6 +109,7 @@ set(COMMON_LIBRARIES
   SDL2::SDL2
   OpenMP::OpenMP_CXX
   serial_cpp::serial_cpp
+  imgui
 )
 
 # Create main executable

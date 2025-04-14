@@ -69,10 +69,10 @@ architecture comms_rx_arch of comms_rx is
   constant TILEMAP_MSG       : msg_t := x"01"; -- start tilemap transfer
   constant GA_CONFIG_MSG     : msg_t := x"02"; -- start ga_config transfer
   constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop the training early
-  -- TODO: need a msg for inference_go
   -- TODO: look into strategies for resetting/flushing state machine
   constant PLAYER_INPUT_MSG : msg_t := x"04"; -- human player input transfer
   constant TEST_MSG         : msg_t := x"05"; -- test print to serial
+  constant INFERENCE_GO_MSG : msg_t := x"06"; -- init game, configure to use player input
 
 begin
 
@@ -109,6 +109,8 @@ begin
                 state <= TR_PLAYER_INPUT;
               when TEST_MSG =>
                 test_go <= true;
+              when INFERENCE_GO_MSG =>
+                inference_go <= true;
               when others =>
                 null;
             end case;
