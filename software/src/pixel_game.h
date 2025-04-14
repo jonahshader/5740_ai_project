@@ -80,10 +80,13 @@ public:
    * @param update_func Function to update game state
    * @param render_func Function to render game state, takes an array of RGBA pixels
    * @param handle_input Function to handle input events, takes SDL_Event
+   * @param imgui_update_func Function to update ImGui interface, called every frame
    */
-  void run(std::function<void()> update_func,
-           std::function<void(std::vector<uint32_t> &pixels)> render_func,
-           std::function<void(SDL_Event &)> handle_input);
+  void run(
+      std::function<void()> update_func,
+      std::function<void(std::vector<uint32_t> &pixels)> render_func,
+      std::function<void(SDL_Event &)> handle_input,
+      std::function<void()> imgui_update_func = []() {});
 
   /**
    * Stop the game loop

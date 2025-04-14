@@ -267,7 +267,8 @@ bool PixelGame::create_shader_program() {
 
 void PixelGame::run(std::function<void()> update_func,
                     std::function<void(std::vector<uint32_t> &pixels)> render_func,
-                    std::function<void(SDL_Event &)> handle_input) {
+                    std::function<void(SDL_Event &)> handle_input,
+                    std::function<void()> imgui_update_func) {
 
   if (!running) {
     std::cerr << "Cannot run game: not initialized properly" << std::endl;
@@ -300,20 +301,23 @@ void PixelGame::run(std::function<void()> update_func,
       }
     }
 
-    // Start ImGui frame
+    // Start ImGui frame - ALWAYS do this every frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
+    // Always update ImGui interface
+    imgui_update_func();
+
     // Check if we should update the game state and render a new frame
-    bool should_update = false;
+    bool should_update_game = false;
     current_frame = (current_frame + 1) % frame_repeat_count;
     if (current_frame == 0) {
-      should_update = true;
+      should_update_game = true;
     }
 
     // Only update game state and render if needed
-    if (should_update) {
+    if (should_update_game) {
       // Update game state
       update_func();
 

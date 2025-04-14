@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "lodepng.h"
+#include "imgui.h"
 
 #include "interfaces.h"
 #include "models/human.h"
@@ -244,6 +245,16 @@ void run_game_with_models(const std::string &map_filename, uint64_t seed,
     render(state, spritesheet, pixels);
   };
 
+  auto imgui_lambda = [&state, map_filename, seed]() {
+    ImGui::Begin("Inference");
+
+    if (ImGui::Button("Reset")) {
+      state = init(map_filename, seed);
+    }
+
+    ImGui::End();
+  };
+
   std::vector<std::function<void(SDL_Event &)>> input_handlers;
 
   // try downcasting each model to HumanModel.
@@ -275,7 +286,7 @@ void run_game_with_models(const std::string &map_filename, uint64_t seed,
     }
   };
 
-  game.run(update_lambda, render_lambda, handle_input_lambda);
+  game.run(update_lambda, render_lambda, handle_input_lambda, imgui_lambda);
 }
 
 } // namespace jnb
