@@ -154,18 +154,23 @@ endif()
 
 # Verilator-based executable (Linux only)
 if(NOT WIN32)
-  find_package(verilator HINTS $ENV{VERILATOR_ROOT})
-  add_executable(verilog_sim
-  ${COMMON_SOURCES}
-  src/main_sim.cpp
-  )
-  verilate(verilog_sim SOURCES game_test.v)
+  find_package(verilator HINTS $ENV{VERILATOR_ROOT} QUIET)
+  if(verilator_FOUND)
+    add_executable(verilog_sim
+      ${COMMON_SOURCES}
+      src/main_sim.cpp
+    )
+    verilate(verilog_sim SOURCES game_test.v)
 
-  target_include_directories(verilog_sim PRIVATE
-    ${COMMON_INCLUDE_DIRS}
-    ${VERILATOR_ROOT}/include
-  )
+    target_include_directories(verilog_sim PRIVATE
+      ${COMMON_INCLUDE_DIRS}
+      ${VERILATOR_ROOT}/include
+    )
 
-  # Link with common libraries
-  target_link_libraries(verilog_sim PRIVATE ${COMMON_LIBRARIES})
+    # Link with common libraries
+    target_link_libraries(verilog_sim PRIVATE ${COMMON_LIBRARIES})
+    message(STATUS "Verilator found. Building verilog_sim target.")
+  else()
+    message(STATUS "Verilator not found. Skipping verilog_sim target.")
+  endif()
 endif()
