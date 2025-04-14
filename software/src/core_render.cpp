@@ -131,11 +131,11 @@ void render(const GameState &state, const std::vector<uint8_t> &spritesheet,
   }
 
   // draw score
-  for (int i = 0; i < state.p1.score; ++i) {
+  for (int i = 0; i < std::min(state.p1.score, state.map.width * CELL_SIZE); ++i) {
     pixels[i] = p1_col;
   }
-  for (int i = 0; i < state.p2.score; ++i) {
-    pixels[((state.map.width + 1) * CELL_SIZE - i - 1)] = p2_col;
+  for (int i = 0; i < std::min(state.p2.score, state.map.width * CELL_SIZE); ++i) {
+    pixels[(((state.map.width) * CELL_SIZE) * 2 - i - 1)] = p2_col;
   }
 }
 
