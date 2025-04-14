@@ -211,11 +211,8 @@ package body game_types is
   end function;
 
   function default_spawn_t return spawn_t is
-    variable val : spawn_t;
+    variable val : spawn_t := (others => default_tilepos_t);
   begin
-    for i in 0 to MAP_MAX_SIZE_TILES - 1 loop
-      val(i) := default_tilepos_t;
-    end loop;
     return val;
   end function;
 

@@ -65,8 +65,8 @@ architecture rtl of xormix32 is
     x"00AF1456"
   );
 
-  signal r_state_x : std_logic_vector(31 downto 0);
-  signal r_state_y : std_logic_vector(32 * STREAMS - 1 downto 0);
+  signal r_state_x : std_logic_vector(31 downto 0)               := (others => '0');
+  signal r_state_y : std_logic_vector(32 * STREAMS - 1 downto 0) := (others => '0');
 
 begin
 

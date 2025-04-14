@@ -56,15 +56,48 @@ begin
       if run("test_msg") then
         -- send the test message
         o_rx_byte <= x"05";
-        o_rx_dv   <= '1';
+        -- valid signal goes high for once cycle
+        o_rx_dv <= '1';
         wait until rising_edge(clk);
-        o_rx_dv   <= '0';
+        o_rx_dv <= '0';
+
+        -- wait for the reply
         wait until i_tx_dv = '1';
+        -- TODO: should really drive o_tx_done high for a cycle here.
 
         -- read message
         check_equal(i_tx_byte, std_logic_vector'(x"68"), "Core incorrect test message returned.");
 
       -- TODO: check more stuff?
+      elsif run("playerinput_msg") then
+        -- send the PLAYER_INPUT_MSG
+        o_rx_byte <= x"04";
+        -- valid signal goes high for once cycle
+        o_rx_dv <= '1';
+        wait until rising_edge(clk);
+        o_rx_dv <= '0';
+
+        -- wait a cycle before sending the player input
+        wait until rising_edge(clk);
+
+        -- send the player input
+        o_rx_byte <= "00000010"; -- go right
+        -- valid signal goes high for once cycle
+        o_rx_dv <= '1';
+        wait until rising_edge(clk);
+        o_rx_dv <= '0';
+
+        -- we expect 18 transfers
+        -- this test fails if we don't get the 18 transfers, because the watchdog will trip
+        for i in 1 to 18 loop
+          -- wait for outputs
+          wait until i_tx_dv = '1';
+          wait until rising_edge(clk);
+          -- pulse done, indicating that we received this byte
+          o_tx_done <= '1';
+          wait until rising_edge(clk);
+          o_tx_done <= '0';
+        end loop;
       end if;
 
       wait until rising_edge(clk);
