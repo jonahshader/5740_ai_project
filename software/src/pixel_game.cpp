@@ -7,9 +7,9 @@ const char *vertex_shader_source = R"(
     #version 330 core
     layout (location = 0) in vec3 aPos;
     layout (location = 1) in vec2 aTexCoord;
-    
+
     out vec2 TexCoord;
-    
+
     void main()
     {
         gl_Position = vec4(aPos, 1.0);
@@ -21,11 +21,11 @@ const char *vertex_shader_source = R"(
 const char *fragment_shader_source = R"(
     #version 330 core
     out vec4 FragColor;
-    
+
     in vec2 TexCoord;
-    
+
     uniform sampler2D texture1;
-    
+
     void main()
     {
         FragColor = texture(texture1, TexCoord);
@@ -87,13 +87,45 @@ PixelGame::PixelGame(const std::string &title, int internal_width, int internal_
     return;
   }
 
-  // Set VSync
-  SDL_GL_SetSwapInterval(1);
+  // Initialize ImGui
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+  ImGui_ImplOpenGL3_Init("#version 330 core");
+
+  // Setup ImGui style
+  ImGui::StyleColorsDark();
+
+  // Set adaptive VSync if available, fallback to regular VSync
+  if (SDL_GL_SetSwapInterval(-1) != 0) {
+    SDL_GL_SetSwapInterval(1);
+  }
+
+  // Detect monitor refresh rate
+  SDL_DisplayMode mode;
+  if (SDL_GetWindowDisplayMode(window, &mode) == 0 && mode.refresh_rate != 0) {
+    monitor_refresh_rate = mode.refresh_rate;
+  } else {
+    monitor_refresh_rate = 60; // Default fallback
+  }
+
+  // Calculate frame repeat count (round to nearest integer)
+  frame_repeat_count = (monitor_refresh_rate + (target_fps / 2)) / target_fps;
+  if (frame_repeat_count < 1)
+    frame_repeat_count = 1;
+
+  std::cout << "Monitor refresh: " << monitor_refresh_rate << "Hz, Target: " << target_fps
+            << "Hz, Frame repeat: " << frame_repeat_count << std::endl;
 
   running = true;
 }
 
 PixelGame::~PixelGame() {
+  // Clean up ImGui
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplSDL2_Shutdown();
+  ImGui::DestroyContext();
+
   // Clean up OpenGL resources
   if (shader_program != 0) {
     glDeleteProgram(shader_program);
@@ -129,12 +161,6 @@ bool PixelGame::init_opengl() {
   // Set up vertex data and buffers
   float vertices[] = {
       // positions        // texture coords
-      // -1.0f, 1.0f,  0.0f, 0.0f, 1.0f, // top left
-      // 1.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top right
-      // 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f, // bottom right
-      // 1.0f,  -1.0f, 0.0f, 1.0f, 0.0f, // bottom right
-      // -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom left
-      // -1.0f, 1.0f,  0.0f, 0.0f, 1.0f  // top left
       -1.0f, 1.0f,  0.0f, 0.0f, 0.0f, // top left
       1.0f,  1.0f,  0.0f, 1.0f, 0.0f, // top right
       1.0f,  -1.0f, 0.0f, 1.0f, 1.0f, // bottom right
@@ -248,20 +274,17 @@ void PixelGame::run(std::function<void()> update_func,
     return;
   }
 
-  const int frame_delay = 1000 / target_fps;
-  Uint32 frame_start;
-  int frame_time;
-
   // Create pixel buffer
   std::vector<uint32_t> pixels(internal_width * internal_height, 0);
 
   // Main game loop
   while (running) {
-    frame_start = SDL_GetTicks();
-
     // Handle events
     SDL_Event e;
     while (SDL_PollEvent(&e) != 0) {
+      // Pass events to ImGui
+      ImGui_ImplSDL2_ProcessEvent(&e);
+
       if (e.type == SDL_QUIT) {
         running = false;
       } else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
@@ -277,19 +300,34 @@ void PixelGame::run(std::function<void()> update_func,
       }
     }
 
-    // Update game state
-    update_func();
+    // Start ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
 
-    // Clear the pixel buffer
-    std::fill(pixels.begin(), pixels.end(), 0);
+    // Check if we should update the game state and render a new frame
+    bool should_update = false;
+    current_frame = (current_frame + 1) % frame_repeat_count;
+    if (current_frame == 0) {
+      should_update = true;
+    }
 
-    // Let the game render to the pixel buffer
-    render_func(pixels);
+    // Only update game state and render if needed
+    if (should_update) {
+      // Update game state
+      update_func();
 
-    // Update the texture with the new pixel data
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, internal_width, internal_height, GL_RGBA,
-                    GL_UNSIGNED_BYTE, pixels.data());
+      // Clear the pixel buffer
+      std::fill(pixels.begin(), pixels.end(), 0);
+
+      // Let the game render to the pixel buffer
+      render_func(pixels);
+
+      // Update the texture with the new pixel data
+      glBindTexture(GL_TEXTURE_2D, texture);
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, internal_width, internal_height, GL_RGBA,
+                      GL_UNSIGNED_BYTE, pixels.data());
+    }
 
     // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT);
@@ -304,17 +342,12 @@ void PixelGame::run(std::function<void()> update_func,
     glBindTexture(GL_TEXTURE_2D, texture);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
+    // Render ImGui
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
     // Swap buffers
     SDL_GL_SwapWindow(window);
-
-    // Cap the frame rate
-    frame_time = SDL_GetTicks() - frame_start;
-    if (frame_time < frame_delay) {
-      SDL_Delay(frame_delay - frame_time);
-    }
-
-    // Calculate delta time for next frame
-    frame_time = SDL_GetTicks() - frame_start;
   }
 }
 

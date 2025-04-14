@@ -6,6 +6,9 @@
 #include <functional>
 #include <glad/glad.h>
 #include <vector>
+#include <imgui.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_opengl3.h>
 
 /**
  * PixelGame class - Handles SDL initialization, game loop, and OpenGL rendering with aspect ratio
@@ -17,6 +20,9 @@ private:
   SDL_GLContext gl_context = nullptr; // OpenGL context
   bool running = false;
   int target_fps;
+  int monitor_refresh_rate = 60; // Default refresh rate
+  int frame_repeat_count = 1;    // Number of refreshes per game update
+  int current_frame = 0;         // Current frame in the repetition cycle
 
   // Window size tracking
   int window_width = 0;
