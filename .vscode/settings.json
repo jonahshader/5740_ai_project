@@ -84,7 +84,8 @@
     "numeric": "cpp",
     "string_view": "cpp",
     "numbers": "cpp",
-    "cinttypes": "cpp"
+    "cinttypes": "cpp",
+    "bitset": "cpp"
   },
   "cmake.ignoreCMakeListsMissing": true
 }

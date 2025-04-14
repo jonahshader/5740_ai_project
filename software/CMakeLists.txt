@@ -25,6 +25,18 @@ if(NOT SDL2_FOUND)
   FetchContent_MakeAvailable(SDL2)
 endif()
 
+# GLAD
+FetchContent_Declare(
+        glad
+        GIT_REPOSITORY https://github.com/jonahshader/glad_opengl46.git
+        GIT_TAG main
+)
+FetchContent_GetProperties(glad)
+if(NOT glad_POPULATED)
+    FetchContent_Populate(glad)
+    add_subdirectory(${glad_SOURCE_DIR} ${glad_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
 # Dear ImGui
 FetchContent_Declare(
   imgui
@@ -41,7 +53,7 @@ if(NOT imgui_POPULATED)
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer2.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
   )
   target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}
@@ -102,11 +114,13 @@ set(COMMON_INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/models
   ${lodepng_SOURCE_DIR}
   ${serialport_SOURCE_DIR}/include
+  ${glad_SOURCE_DIR}/include
 )
 
 # Define common libraries
 set(COMMON_LIBRARIES
   SDL2::SDL2
+  glad
   OpenMP::OpenMP_CXX
   serial_cpp::serial_cpp
   imgui
