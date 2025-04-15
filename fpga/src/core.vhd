@@ -14,7 +14,9 @@ entity core is
 
     i_tx_dv   : out std_logic;
     i_tx_byte : out std_logic_vector(7 downto 0);
-    o_tx_done : in std_logic
+    o_tx_done : in std_logic;
+
+    led_out : out std_logic
   );
 end entity core;
 
@@ -37,12 +39,19 @@ architecture core_arch of core is
   signal gamestate_send : boolean := false;
   signal tx_ready       : boolean;
 
+  signal test_go_out : boolean;
+
   -- game signals
   signal game_done          : boolean;
   signal p_game_done        : boolean := true;
   signal queue_tr_gamestate : boolean := false;
 
+  signal temp_h_counter : unsigned(26 downto 0) := to_unsigned(0, 27);
+
 begin
+
+  test_go_out <= temp_h_counter = 0 or test_go;
+  led_out     <= temp_h_counter(25);
 
   comms_rx_ent : entity work.comms_rx
     port map (
@@ -69,7 +78,7 @@ begin
       ga_state_send  => ga_state_send,
       gamestate      => gamestate,
       gamestate_send => gamestate_send,
-      test_go        => test_go,
+      test_go        => test_go_out,
       ready          => tx_ready
     );
 
@@ -92,6 +101,12 @@ begin
     if rising_edge(clk) then
       -- default to no sending
       gamestate_send <= false;
+
+      if temp_h_counter = (2 ** 27) - 1 then
+        temp_h_counter <= to_unsigned(0, 27);
+      else
+        temp_h_counter <= temp_h_counter + 1;
+      end if;
 
       -- get edge of game_done
       p_game_done <= game_done;

@@ -10,7 +10,10 @@ entity top is
     i_rx_serial : in  std_logic;
 
     -- uart tx
-    o_tx_serial : out std_logic
+    o_tx_serial : out std_logic;
+
+    -- indicator led
+    led_out : out std_logic
   );
 end entity top;
 
@@ -69,7 +72,8 @@ begin
       o_rx_byte => o_rx_byte,
       i_tx_dv   => i_tx_dv,
       i_tx_byte => i_tx_byte,
-      o_tx_done => o_tx_done
+      o_tx_done => o_tx_done,
+      led_out   => led_out
     );
 
 end architecture top_arch;

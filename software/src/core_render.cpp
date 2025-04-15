@@ -5,9 +5,11 @@
 
 #include "lodepng.h"
 #include "imgui.h"
+#include "serial_cpp/serial.h"
 
 #include "interfaces.h"
 #include "models/human.h"
+#include "optimizers/simple.h"
 
 // constexpr int asdf = 0;
 
@@ -287,6 +289,186 @@ void run_game_with_models(const std::string &map_filename, uint64_t seed,
   };
 
   game.run(update_lambda, render_lambda, handle_input_lambda, imgui_lambda);
+}
+
+void run_on_pl(const std::string &map_filename) {
+  // TODO: these don't need to be shared ptrs
+  auto ga_config = std::make_shared<GAConfig>();
+  auto eval_config = std::make_shared<EvalConfig>();
+
+  auto imgui_lambda = [ga_config, eval_config]() {
+    ImGui::Begin("Training Config");
+
+    // GA Configuration section
+    ImGui::Text("Genetic Algorithm Configuration");
+
+    // Mutation rate with slider
+    ImGui::SliderFloat("Mutation Rate", &ga_config->mutation_rate, 0.0f, 1.0f, "%.2f");
+
+    // Taper mutation rate checkbox
+    ImGui::Checkbox("Taper Mutation Rate", &ga_config->taper_mutation_rate);
+
+    // Max generations setting
+    ImGui::InputInt("Max Generations", &ga_config->max_gen);
+    if (ga_config->max_gen < 1)
+      ga_config->max_gen = 1;
+
+    // Run until stop checkbox
+    ImGui::Checkbox("Run Until Stop", &ga_config->run_until_stop);
+
+    // Tournament size
+    ImGui::InputInt("Tournament Size", &ga_config->tournament_size);
+    if (ga_config->tournament_size < 2)
+      ga_config->tournament_size = 2;
+
+    // Population size
+    ImGui::InputInt("Population Size", &ga_config->population_size);
+    if (ga_config->population_size < 2)
+      ga_config->population_size = 2;
+
+    // Model history settings
+    ImGui::InputInt("Model History Size", &ga_config->model_history_size);
+    if (ga_config->model_history_size < 1)
+      ga_config->model_history_size = 1;
+
+    ImGui::InputInt("Model History Interval", &ga_config->model_history_interval);
+    if (ga_config->model_history_interval < 1)
+      ga_config->model_history_interval = 1;
+
+    // Seed setting
+    ImGui::InputScalar("Random Seed", ImGuiDataType_U64, &ga_config->seed);
+
+    // Reference count
+    ImGui::InputInt("Reference Count", &ga_config->reference_count);
+    if (ga_config->reference_count < 1)
+      ga_config->reference_count = 1;
+
+    // Evaluation interval
+    ImGui::InputInt("Evaluation Interval", &ga_config->eval_interval);
+    if (ga_config->eval_interval < 1)
+      ga_config->eval_interval = 1;
+
+    // Separator between GA config and Eval config
+    ImGui::Separator();
+
+    // Evaluation Configuration section
+    ImGui::Text("Evaluation Configuration");
+
+    // Seed count
+    ImGui::InputInt("Seed Count", &eval_config->seed_count);
+    if (eval_config->seed_count < 1)
+      eval_config->seed_count = 1;
+
+    // Frame limit
+    ImGui::InputInt("Frame Limit", &eval_config->frame_limit);
+    if (eval_config->frame_limit < 1)
+      eval_config->frame_limit = 1;
+
+    // Add buttons for common actions
+    if (ImGui::Button("Reset GA Config")) {
+      *ga_config = GAConfig{}; // Reset to default values
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Reset Eval Config")) {
+      *eval_config = EvalConfig{}; // Reset to default values
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Generate Random Seed")) {
+      // Simple way to generate a random seed
+      ga_config->seed = static_cast<uint64_t>(time(nullptr));
+    }
+
+    ImGui::End();
+  };
+
+  // Serial connection variables
+  std::shared_ptr<serial_cpp::Serial> serial_connection;
+  bool is_connected = false;
+  std::string selected_port;
+  std::vector<serial_cpp::PortInfo> available_ports;
+
+  // Function to refresh the available ports list
+  auto refresh_ports = [&available_ports]() { available_ports = serial_cpp::list_ports(); };
+
+  // Function to establish serial connection
+  auto connect_serial = [&serial_connection, &is_connected, &selected_port]() {
+    try {
+      // Close existing connection if any
+      if (serial_connection && serial_connection->isOpen()) {
+        serial_connection->close();
+      }
+
+      // Create new connection with fixed 115200 baud rate
+      serial_connection = std::make_shared<serial_cpp::Serial>(
+          selected_port,
+          115200,                                 // Fixed baud rate
+          serial_cpp::Timeout::simpleTimeout(250) // 250ms timeout
+      );
+
+      is_connected = serial_connection->isOpen();
+      return is_connected;
+    } catch (std::exception &e) {
+      std::cerr << "Error connecting to serial port: " << e.what() << std::endl;
+      is_connected = false;
+      return false;
+    }
+  };
+
+  // Function to disconnect serial
+  auto disconnect_serial = [&serial_connection, &is_connected]() {
+    if (serial_connection && serial_connection->isOpen()) {
+      serial_connection->close();
+    }
+    is_connected = false;
+  };
+
+  // Initial port refresh
+  refresh_ports();
+
+  // In the ImGui window:
+  if (!is_connected) {
+    if (ImGui::Button("Refresh Ports")) {
+      refresh_ports();
+    }
+
+    ImGui::SameLine();
+
+    // Available ports dropdown
+    if (ImGui::BeginCombo("Serial Port", selected_port.c_str())) {
+      for (const auto &port_info : available_ports) {
+        bool is_selected = (selected_port == port_info.port);
+        // Display port with description
+        std::string port_display = port_info.port + " - " + port_info.description;
+        if (ImGui::Selectable(port_display.c_str(), is_selected)) {
+          selected_port = port_info.port;
+        }
+        if (is_selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
+    }
+
+    // Connect button
+    if (ImGui::Button("Connect") && !selected_port.empty()) {
+      if (connect_serial()) {
+        // Successfully connected
+        std::cout << "Connected to " << selected_port << " at 115200 baud" << std::endl;
+      } else {
+        // Failed to connect
+        std::cerr << "Failed to connect to " << selected_port << std::endl;
+      }
+    }
+  } else {
+    // Disconnect button
+    if (ImGui::Button("Disconnect")) {
+      disconnect_serial();
+    }
+  }
 }
 
 } // namespace jnb
