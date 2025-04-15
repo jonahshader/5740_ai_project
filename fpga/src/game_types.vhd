@@ -16,6 +16,8 @@ package game_types is
   constant MAP_MAX_SIZE_PX_BITS : integer := MAP_TILES_BITS + TILE_PX_BITS; -- bits needed to describe pixel position within the full map
   constant MAP_MAX_SIZE_PX      : integer := 2 ** MAP_MAX_SIZE_PX_BITS;     -- map max size (width height) in pixels
 
+  constant MAP_MAX_SPAWNS : integer := MAP_MAX_SIZE_TILES * MAP_MAX_SIZE_TILES / 2;
+
   constant PLAYER_WIDTH       : integer := TILE_PX - 2;
   constant PLAYER_HEIGHT      : integer := TILE_PX - 2;
   constant PLAYER_KILL_HEIGHT : integer := PLAYER_HEIGHT / 2; -- height at which player is killed
@@ -107,7 +109,7 @@ package game_types is
   function default_map_t return map_t;
 
   -- 1d array for spawn tile spawn locations
-  type spawn_t is array (0 to MAP_MAX_SIZE_TILES - 1) of tilepos_t;
+  type spawn_t is array (0 to MAP_MAX_SPAWNS - 1) of tilepos_t;
   function default_spawn_t return spawn_t;
 
   -- a tilemap contains a map_t, spawn_t, width and height

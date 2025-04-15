@@ -1,6 +1,6 @@
 -- This houses the high level state machine, which is dictated
 -- from what is sent from PS to PL. This does not handle sending
--- data from PL to PS. That is handled elsewhere.
+-- data from PL to PS. That is handled in comms_tx.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -126,7 +126,6 @@ begin
             -- TODO: might need to swap x and y here.
             to_integer(tr_counter(MAP_TILES_BITS - 1 downto 0)),
             to_integer(tr_counter(2 * MAP_TILES_BITS - 1 downto MAP_TILES_BITS))
-            -- TODO: uart_rx is 8 bits, but a tile is 3 bits. this auto-truncate is bad practice...
             ) <= uart_rx(2 downto 0);
 
             if tr_counter = MAP_MAX_SIZE_TILES * MAP_MAX_SIZE_TILES - 1 then
@@ -149,7 +148,7 @@ begin
               tilemap.spawn(to_integer(tr_counter(15 downto 1))).y <= unsigned(uart_rx(MAP_TILES_BITS - 1 downto 0));
             end if;
 
-            if tr_counter = MAP_MAX_SIZE_TILES - 1 then
+            if tr_counter = (2 * MAP_MAX_SPAWNS) - 1 then
               -- go next
               state      <= TR_MAP_NUM_SPAWN_S;
               tr_counter <= to_unsigned(0, 16);
