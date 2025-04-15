@@ -31,7 +31,7 @@ architecture comms_tx_arch of comms_tx is
 
   type state_t is (
     IDLE_S,
-    -- ga state transfers
+    -- ga status transfers
     TR_CURRENT_GEN_1_S,
     TR_CURRENT_GEN_2_S,
     TR_REFERENCE_FITNESS_1_S,
@@ -62,7 +62,7 @@ architecture comms_tx_arch of comms_tx is
   signal uart_ready_r : boolean := true;
 
   subtype  msg_t is std_logic_vector(7 downto 0);
-  constant GA_STATE_MSG  : msg_t := x"01";
+  constant GA_STATUS_MSG : msg_t := x"01";
   constant GAMESTATE_MSG : msg_t := x"02";
   constant TEST_MSG      : msg_t := x"68"; -- 'h'
 
@@ -87,7 +87,7 @@ begin
       if ready then
         if ga_state_send then
           -- send a message indicating we are about to transfer ga state
-          uart_tx      <= GA_STATE_MSG;
+          uart_tx      <= GA_STATUS_MSG;
           uart_tx_send <= '1';
           uart_ready_r <= false;
           state        <= TR_CURRENT_GEN_1_S;

@@ -121,4 +121,111 @@ void send(const PlayerInput &player_input, const set_uart_fun &send_fun) {
   send_fun(msg);
 }
 
+std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
+                               const get_uart_non_blocking_fun &get_fun) {
+  // first get a byte without blocking
+  auto msg = get_fun();
+
+  // if we got nothing, return nothing
+  if (!msg) {
+    return std::nullopt;
+  }
+
+  // check the message type
+  switch (msg.value()) {
+    case GA_STATUS_MSG: {
+      // variant is GAStatus
+      GAStatus ret;
+      // TR_CURRENT_GEN_1_S
+      // 2 bytes
+      ret.current_gen = get_fun_blocking() << 8;
+      // TR_CURRENT_GEN_2_S
+      ret.current_gen |= get_fun_blocking();
+      // TR_REFERENCE_FITNESS_1_S
+      // 2 bytes
+      ret.reference_fitness = get_fun_blocking() << 8;
+      // TR_REFERENCE_FITNESS_2_S
+      ret.reference_fitness |= get_fun_blocking();
+      // return the GAStatus
+      return ret;
+    } break;
+    case GAMESTATE_MSG: {
+      // variant is GameState
+      GameState ret;
+      // TR_P1_X_1_S
+      // 2 bytes
+      uint16_t v;
+      v = get_fun_blocking() << 8;
+      // TR_P1_X_2_S
+      v |= get_fun_blocking();
+      ret.p1.x = F4(static_cast<int16_t>(v));
+      // TR_P1_Y_1_S
+      // 2 bytes
+      v = get_fun_blocking() << 8;
+      // TR_P1_Y_2_S
+      v |= get_fun_blocking();
+      ret.p1.y = F4(static_cast<int16_t>(v));
+      // TR_P1_SCORE_1_S
+      // 2 bytes
+      v = get_fun_blocking() << 8;
+      // TR_P1_SCORE_2_S
+      v |= get_fun_blocking();
+      ret.p1.score = static_cast<int16_t>(v);
+      // TR_P1_DEAD_TIMEOUT_S
+      // 1 byte
+      ret.p1.dead_timeout = get_fun_blocking();
+      // TR_P2_X_1_S
+      // 2 bytes
+      v = get_fun_blocking() << 8;
+      // TR_P2_X_2_S
+      v |= get_fun_blocking();
+      ret.p2.x = F4(static_cast<int16_t>(v));
+      // TR_P2_Y_1_S
+      // 2 bytes
+      v = get_fun_blocking() << 8;
+      // TR_P2_Y_2_S
+      v |= get_fun_blocking();
+      ret.p2.y = F4(static_cast<int16_t>(v));
+      // TR_P2_SCORE_1_S
+      // 2 bytes
+      v = get_fun_blocking() << 8;
+      // TR_P2_SCORE_2_S
+      v |= get_fun_blocking();
+      ret.p2.score = static_cast<int16_t>(v);
+      // TR_P2_DEAD_TIMEOUT_S
+      // 1 byte
+      ret.p2.dead_timeout = get_fun_blocking();
+      // TR_COIN_X_S
+      // 1 byte
+      ret.coin_pos.x = get_fun_blocking();
+      // TR_COIN_Y_S
+      // 1 byte
+      ret.coin_pos.y = get_fun_blocking();
+      // TR_AGE_1_S
+      // 2 bytes
+      v = get_fun_blocking() << 8;
+      // TR_AGE_2_S
+      v |= get_fun_blocking();
+      ret.age = v;
+      // return the GameState
+      return ret;
+    } break;
+    case TEST_MSG:
+      // variant is char
+      char ret;
+      // TR_TEST_MSG
+      // 1 byte
+      ret = get_fun_blocking();
+      // return the char
+      return ret;
+      break;
+    default:
+      // throw runtime exception
+      throw std::runtime_error("Unknown message type");
+  }
+
+  // if we get here, we didn't return anything
+  return std::nullopt;
+}
+
 } // namespace jnb
