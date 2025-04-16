@@ -54,6 +54,7 @@ begin
 
   -- Process to compute the weighted sum
   compute_process : process (clk, rst) is
+
     variable accumulate_temp : std_logic_vector(2 * DATA_WIDTH - 1 downto 0);
     variable product         : std_logic_vector(2 * DATA_WIDTH - 1 downto 0);
     variable extended_bias   : std_logic_vector(2 * DATA_WIDTH - 1 downto 0);

@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 
 -- inputs will be of
 -- type weights is array (natural range <>, natural range <>) of std_logic;
+-- quinary network
 
 entity neuron is
   generic (

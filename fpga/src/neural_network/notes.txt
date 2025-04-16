@@ -1,0 +1,3 @@
+MAybe we declare the layers to all be the same size so that we don't have to worry abot size
+32 x 32 --> 22 extra inputs that we just set to zero
+-- the NN should work the same, but we will have to use more registers

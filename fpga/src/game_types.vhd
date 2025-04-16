@@ -151,9 +151,9 @@ package body game_types is
 
   function default_f4_vec_t return f4_vec_t is
     variable val : f4_vec_t := (
-      x => to_sfixed(0.0, F4_UPPER, -F4_LOWER),
-      y => to_sfixed(0.0, F4_UPPER, -F4_LOWER)
-    );
+                                 x => to_sfixed(0.0, F4_UPPER, -F4_LOWER),
+                                 y => to_sfixed(0.0, F4_UPPER, -F4_LOWER)
+                               );
   begin
     return val;
   end function;
@@ -162,41 +162,41 @@ package body game_types is
   -- defaults
   function default_player_t return player_t is
     variable val : player_t := (
-      pos          => default_f4_vec_t,
-      vel          => default_f4_vec_t,
-      score        => (others => '0'),
-      dead_timeout => (others => '0')
-    );
+                                 pos          => default_f4_vec_t,
+                                vel          => default_f4_vec_t,
+                                score        => (others => '0'),
+                                 dead_timeout => (others => '0')
+                               );
   begin
     return val;
   end function;
 
   function default_tilepos_t return tilepos_t is
     variable val : tilepos_t := (
-      x => (others => '0'),
-      y => (others => '0')
-    );
+                                  x => (others => '0'),
+                                  y => (others => '0')
+                                );
   begin
     return val;
   end function;
 
   function default_gamestate_t return gamestate_t is
     variable val : gamestate_t := (
-      p1 => default_player_t,
-      p2 => default_player_t,
-      coin_pos => default_tilepos_t,
-      age => (others => '0')
-    );
+                                    p1 => default_player_t,
+                                   p2 => default_player_t,
+                                   coin_pos => default_tilepos_t,
+                                   age => (others => '0')
+                                  );
   begin
     return val;
   end function;
 
   function default_playerinput_t return playerinput_t is
     variable val : playerinput_t := (
-      left => false,
-      right => false,
-      jump => false
-    );
+                                      left => false,
+                                     right => false,
+                                     jump => false
+                                   );
   begin
     return val;
   end function;
@@ -220,13 +220,13 @@ package body game_types is
 
   function default_tilemap_t return tilemap_t is
     variable val : tilemap_t := (
-      m      => default_map_t,
-      spawn  => default_spawn_t,
-      num_spawn      => (others => '0'),
-      num_spawn_bits => (others => '0'),
-      width  => (others => '0'),
-      height => (others => '0')
-    );
+                                  m      => default_map_t,
+                                 spawn  => default_spawn_t,
+                                 num_spawn      => (others => '0'),
+                                  num_spawn_bits => (others => '0'),
+                                  width  => (others => '0'),
+                                  height => (others => '0')
+                                );
   begin
     return val;
   end function;

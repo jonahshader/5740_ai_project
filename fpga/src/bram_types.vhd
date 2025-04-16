@@ -11,6 +11,8 @@ package bram_types is
   type    bram_command_t is (C_COPY_AND_MUTATE, C_READ);
   subtype bram_index_t is unsigned(7 downto 0);
 
+  -- This is what is going into the NN
+  -- the decoder will read it and pass it into the NN
   subtype param_t is std_logic_vector(3 downto 0);
   subtype param_index_t is unsigned(13 downto 0);
 
