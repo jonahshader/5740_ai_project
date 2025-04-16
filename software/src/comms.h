@@ -37,7 +37,7 @@ constexpr uint8_t INFERENCE_GO_MSG = 6;
 
 constexpr uint8_t GA_STATUS_MSG = 1;
 constexpr uint8_t GAMESTATE_MSG = 2;
-constexpr uint8_t TEST_MSG = 0x68;
+constexpr uint8_t TEST_RESPONSE_MSG = 0x68;
 
 void send(const GAConfig &ga, const EvalConfig &eval, const set_uart_fun &send_fun);
 void send(const TileMap &map, const set_uart_fun &send_fun);

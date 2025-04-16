@@ -292,6 +292,22 @@ void run_game_with_models(const std::string &map_filename, uint64_t seed,
 }
 
 void run_on_pl(const std::string &map_filename) {
+  // initialize game state
+  GameState state = init(map_filename, 1);
+
+  PixelGame game("JnB Sim", state.map.width * CELL_SIZE, state.map.height * CELL_SIZE, 640, 480,
+                  60);
+
+  std::vector<uint8_t> spritesheet;
+  uint32_t w, h;
+  auto error = lodepng::decode(spritesheet, w, h, "tiles.png"); // TODO: move path to constexpr
+  if (error) {
+    std::cerr << "Error loading spritesheet: " << lodepng_error_text(error) << std::endl;
+    throw std::runtime_error("Failed to load spritesheet");
+  }
+  std::cout << "Loaded tiles.png" << std::endl;
+  std::cout << "Width: " << w << ", Height: " << h << std::endl;
+
   // TODO: these don't need to be shared ptrs
   auto ga_config = std::make_shared<GAConfig>();
   auto eval_config = std::make_shared<EvalConfig>();
@@ -430,45 +446,62 @@ void run_on_pl(const std::string &map_filename) {
   refresh_ports();
 
   // In the ImGui window:
-  if (!is_connected) {
-    if (ImGui::Button("Refresh Ports")) {
-      refresh_ports();
-    }
-
-    ImGui::SameLine();
-
-    // Available ports dropdown
-    if (ImGui::BeginCombo("Serial Port", selected_port.c_str())) {
-      for (const auto &port_info : available_ports) {
-        bool is_selected = (selected_port == port_info.port);
-        // Display port with description
-        std::string port_display = port_info.port + " - " + port_info.description;
-        if (ImGui::Selectable(port_display.c_str(), is_selected)) {
-          selected_port = port_info.port;
+  auto serial_imgui = [&]() {
+    if (!is_connected) {
+      if (ImGui::Button("Refresh Ports")) {
+        refresh_ports();
+      }
+  
+      ImGui::SameLine();
+  
+      // Available ports dropdown
+      if (ImGui::BeginCombo("Serial Port", selected_port.c_str())) {
+        for (const auto &port_info : available_ports) {
+          bool is_selected = (selected_port == port_info.port);
+          // Display port with description
+          std::string port_display = port_info.port + " - " + port_info.description;
+          if (ImGui::Selectable(port_display.c_str(), is_selected)) {
+            selected_port = port_info.port;
+          }
+          if (is_selected) {
+            ImGui::SetItemDefaultFocus();
+          }
         }
-        if (is_selected) {
-          ImGui::SetItemDefaultFocus();
+        ImGui::EndCombo();
+      }
+  
+      // Connect button
+      if (ImGui::Button("Connect") && !selected_port.empty()) {
+        if (connect_serial()) {
+          // Successfully connected
+          std::cout << "Connected to " << selected_port << " at 115200 baud" << std::endl;
+        } else {
+          // Failed to connect
+          std::cerr << "Failed to connect to " << selected_port << std::endl;
         }
       }
-      ImGui::EndCombo();
-    }
-
-    // Connect button
-    if (ImGui::Button("Connect") && !selected_port.empty()) {
-      if (connect_serial()) {
-        // Successfully connected
-        std::cout << "Connected to " << selected_port << " at 115200 baud" << std::endl;
-      } else {
-        // Failed to connect
-        std::cerr << "Failed to connect to " << selected_port << std::endl;
+    } else {
+      // Disconnect button
+      if (ImGui::Button("Disconnect")) {
+        disconnect_serial();
       }
     }
-  } else {
-    // Disconnect button
-    if (ImGui::Button("Disconnect")) {
-      disconnect_serial();
-    }
-  }
+  };
+
+  // combine all imgui lambdas
+  auto combined_imgui_lambda = [&]() {
+    imgui_lambda();
+    serial_imgui();
+  };
+
+
+  // launch a game with empty lambdas except for the imgui lambda
+  game.run(
+      []() {}, // update lambda
+      [&state, &spritesheet](std::vector<uint32_t> &pixels) { render(state, spritesheet, pixels); },
+      [](SDL_Event &) {}, // handle input lambda
+      combined_imgui_lambda // imgui lambda
+  );
 }
 
 } // namespace jnb

@@ -4,6 +4,16 @@ project(sim CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Enable consistent runtime library propagation to dependencies
+set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
+
+# Set runtime library based on build type
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
+else()
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+endif()
+
 # Include FetchContent for downloading dependencies
 include(FetchContent)
 
@@ -95,6 +105,8 @@ set(COMMON_SOURCES
   src/models/mlp_simple.h
   src/optimizers/simple.cpp
   src/optimizers/simple.h
+  src/comms.cpp
+  src/comms.h
   src/core_render.cpp
   src/core_render.h
   src/core.cpp
@@ -143,7 +155,6 @@ if(WIN32)
       LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE"
       LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE"
     )
-    set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
   endif()
   add_custom_command(TARGET sim POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
