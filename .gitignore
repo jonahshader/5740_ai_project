@@ -6,3 +6,4 @@ obj_dir
 *.v
 game_test
 vunit_out
+build

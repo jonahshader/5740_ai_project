@@ -62,6 +62,8 @@ struct GAConfig {
   float mutation_rate{0.5f};
   bool taper_mutation_rate{true};
   int max_gen{128};
+  bool run_until_stop{false};
+  int tournament_size{2}; // TODO: integrate into system
   int population_size{64};
   int model_history_size{5};
   int model_history_interval{5};

@@ -25,7 +25,8 @@ int main(int argc, char *argv[]) {
   // initialize game state
   GameState state = init(map_file, 0);
 
-  PixelGame game("JnB Sim", CELL_SIZE * state.map.width, CELL_SIZE * state.map.height, 8, 60);
+  PixelGame game("JnB Sim", CELL_SIZE * state.map.width, CELL_SIZE * state.map.height, 640, 480,
+                 60);
 
   std::vector<uint8_t> spritesheet;
   uint32_t w, h;
@@ -80,7 +81,6 @@ int main(int argc, char *argv[]) {
     vgame_test->eval();
     std::cout << "second eval loop" << std::endl;
     std::cout << vgame_test->done << std::endl;
-
   }
   // vgame_test is ready
 
@@ -125,8 +125,11 @@ int main(int argc, char *argv[]) {
     // update(state, p1_input, p2_input);
   };
 
-  auto render_lambda = [&state, &spritesheet](SDL_Renderer *renderer) {
-    render(state, renderer, spritesheet);
+  // auto render_lambda = [&state, &spritesheet](SDL_Renderer *renderer) {
+  //   render(state, renderer, spritesheet);
+  // };
+  auto render_lambda = [&state, &spritesheet](std::vector<uint32_t> &pixels) {
+    render(state, spritesheet, pixels);
   };
 
   std::vector<std::function<void(SDL_Event &)>> input_handlers;

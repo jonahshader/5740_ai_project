@@ -4,6 +4,16 @@ project(sim CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Enable consistent runtime library propagation to dependencies
+set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
+
+# Set runtime library based on build type
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
+else()
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+endif()
+
 # Include FetchContent for downloading dependencies
 include(FetchContent)
 
@@ -24,6 +34,52 @@ if(NOT SDL2_FOUND)
 
   FetchContent_MakeAvailable(SDL2)
 endif()
+
+# GLAD
+FetchContent_Declare(
+        glad
+        GIT_REPOSITORY https://github.com/jonahshader/glad_opengl46.git
+        GIT_TAG main
+)
+FetchContent_GetProperties(glad)
+if(NOT glad_POPULATED)
+    FetchContent_Populate(glad)
+    add_subdirectory(${glad_SOURCE_DIR} ${glad_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+# Dear ImGui
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG v1.91.2
+)
+FetchContent_GetProperties(imgui)
+if(NOT imgui_POPULATED)
+  FetchContent_Populate(imgui)
+  add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+  )
+  target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+  )
+  target_link_libraries(imgui PRIVATE SDL2::SDL2)
+endif()
+
+# SerialPort
+FetchContent_Declare(
+  serial_cpp
+  GIT_REPOSITORY https://github.com/ami-iit/serial_cpp.git
+  GIT_TAG        v1.3.3 # or use the tag or commit you prefer
+)
+
+FetchContent_MakeAvailable(serial_cpp)
 
 # lodepng
 FetchContent_Declare(
@@ -49,6 +105,8 @@ set(COMMON_SOURCES
   src/models/mlp_simple.h
   src/optimizers/simple.cpp
   src/optimizers/simple.h
+  src/comms.cpp
+  src/comms.h
   src/core_render.cpp
   src/core_render.h
   src/core.cpp
@@ -67,12 +125,17 @@ set(COMMON_INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/src
   ${CMAKE_CURRENT_SOURCE_DIR}/src/models
   ${lodepng_SOURCE_DIR}
+  ${serialport_SOURCE_DIR}/include
+  ${glad_SOURCE_DIR}/include
 )
 
 # Define common libraries
 set(COMMON_LIBRARIES
   SDL2::SDL2
+  glad
   OpenMP::OpenMP_CXX
+  serial_cpp::serial_cpp
+  imgui
 )
 
 # Create main executable
@@ -92,7 +155,6 @@ if(WIN32)
       LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE"
       LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE"
     )
-    set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
   endif()
   add_custom_command(TARGET sim POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -102,39 +164,24 @@ if(WIN32)
 endif()
 
 # Verilator-based executable (Linux only)
-# if(NOT WIN32)
-#   find_package(verilator HINTS $ENV{VERILATOR_ROOT})
-#   if(verilator_FOUND)
-#     add_executable(verilog_sim
-#       ${COMMON_SOURCES}
-#       src/main_sim.cpp
-#       ${CMAKE_CURRENT_SOURCE_DIR}/obj_dir/Vgame_test.cpp
-#     )
-#     target_link_libraries(verilog_sim PRIVATE
-#       ${COMMON_LIBRARIES}
-#       verilator
-#     )
-#     target_include_directories(verilog_sim PRIVATE
-#       ${COMMON_INCLUDE_DIRS}
-#       ${VERILATOR_ROOT}/include
-#       ${CMAKE_CURRENT_SOURCE_DIR}/obj_dir
-#     )
-#   endif()
-# endif()
-
 if(NOT WIN32)
-  find_package(verilator HINTS $ENV{VERILATOR_ROOT})
-  add_executable(verilog_sim
-  ${COMMON_SOURCES}
-  src/main_sim.cpp
-  )
-  verilate(verilog_sim SOURCES game_test.v)
+  find_package(verilator HINTS $ENV{VERILATOR_ROOT} QUIET)
+  if(verilator_FOUND)
+    add_executable(verilog_sim
+      ${COMMON_SOURCES}
+      src/main_sim.cpp
+    )
+    verilate(verilog_sim SOURCES game_test.v)
 
-  target_include_directories(verilog_sim PRIVATE
-    ${COMMON_INCLUDE_DIRS}
-    ${VERILATOR_ROOT}/include
-  )
+    target_include_directories(verilog_sim PRIVATE
+      ${COMMON_INCLUDE_DIRS}
+      ${VERILATOR_ROOT}/include
+    )
 
-  # Link with common libraries
-  target_link_libraries(verilog_sim PRIVATE ${COMMON_LIBRARIES})
+    # Link with common libraries
+    target_link_libraries(verilog_sim PRIVATE ${COMMON_LIBRARIES})
+    message(STATUS "Verilator found. Building verilog_sim target.")
+  else()
+    message(STATUS "Verilator not found. Skipping verilog_sim target.")
+  endif()
 endif()
