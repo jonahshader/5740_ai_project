@@ -1,8 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.log2;
-use ieee.math_real.ceil;
 
 package nn_types is
 
@@ -19,15 +17,30 @@ package nn_types is
   function default_weights_t return weights_t;
   subtype bias_t is signed(BIAS_BITS - 1 downto 0);
   subtype neuron_logit_t is signed(NEURON_DATA_WIDTH - 1 downto 0);
+  type    neuron_logits_t is array(0 to WEIGHTS_PER_NEURON - 1) of neuron_logit_t;
+  function default_neuron_logits_t return neuron_logits_t;
+  subtype post_mult_t is signed(NEURON_DATA_WIDTH downto 0);
 
   -- all the parameters needed for a neuron
   type neuron_t is record
     weights : weights_t;
     bias    : bias_t;
-    logit   : neuron_logit_t; -- acts as both the input and output register
   end record neuron_t;
 
-  function neuron_forward(neuron : neuron_t; activate : boolean) return neuron_logit_t;
+  function weight_mult(data : neuron_logit_t; weight : weight_t) return post_mult_t;
+  function neuron_forward(neuron : neuron_t; logits : neuron_logits_t; activate : boolean) return neuron_logit_t;
+
+  type neurons_t is array(0 to WEIGHTS_PER_NEURON - 1) of neuron_t;
+  function default_neurons_t return neurons_t;
+
+  -- layer contains the neurons and the logits
+  type layer_t is record
+    neurons : neurons_t;
+    logits  : neuron_logits_t;
+  end record layer_t;
+  function default_layer_t return layer_t;
+
+  function layer_forward(layer : layer_t; activate : boolean) return neuron_logits_t;
 
 end package nn_types;
 
@@ -36,11 +49,8 @@ end package nn_types;
 package body nn_types is
 
   function default_neuron_t return neuron_t is
-    variable val : neuron_t := (
-                                 weights => default_weights_t,
-                                bias    => (others => '0'),
-                                 logit   => (others => '0')
-                               );
+    variable val : neuron_t := (weights => default_weights_t,
+                                 bias => (others => '0'));
   begin
     return val;
   end function;
@@ -51,10 +61,101 @@ package body nn_types is
     return val;
   end function;
 
-  function neuron_forward(neuron : neuron_t; activate : boolean) return neuron_logit_t is
-    constant
-    variable sum :
+  function default_neurons_t return neurons_t is
+    variable val : neurons_t := (others => default_neuron_t);
   begin
+    return val;
+  end function;
+
+  function default_layer_t return layer_t is
+    variable val : layer_t := (neurons => default_neurons_t,
+                                logits => default_neuron_logits_t);
+  begin
+    return val;
+  end function;
+
+  function default_neuron_logits_t return neuron_logits_t is
+    variable val : neuron_logits_t := (others => (others => '0'));
+  begin
+    return val;
+  end function;
+
+  function layer_forward(layer : layer_t; activate : boolean) return neuron_logits_t is
+    variable logits : neuron_logits_t := (others => (others => '0'));
+  begin
+    for i in 0 to WEIGHTS_PER_NEURON loop
+      logits(i) := neuron_forward(layer.neurons(i), layer.logits, activate);
+    end loop;
+
+    return logits;
+  end function;
+
+  function weight_mult(data : neuron_logit_t; weight : weight_t) return post_mult_t is
+    variable post_mult : post_mult_t := data;
+  begin
+    case weight is
+      when to_signed(-2, weight'length) =>
+        post_mult := -shift_left(post_mult, 1);
+      when to_signed(-1, weight'length) =>
+        post_mult := -post_mult;
+      when to_signed(2, weight'length) =>
+        post_mult := shift_left(post_mult, 1);
+      when others =>
+        post_mult := to_signed(0, post_mult'length);
+    end case;
+
+    return post_mult;
+  end function;
+
+  function neuron_forward(neuron : neuron_t; logits : neuron_logits_t; activate : boolean) return neuron_logit_t is
+    -- +1 for the weight operation's shift_left,
+    -- +1 for bias
+    -- +NEURON_DATA_WIDTH, the initial input size
+    -- +WEIGHTS_PER_NEURON_EXP, the number of addition stages,
+    --    where each sum results in an output with +1 bit
+    -- -1 because vhdl is inclusive
+    variable sum   : signed(2 + NEURON_DATA_WIDTH + WEIGHTS_PER_NEURON_EXP - 1 downto 0) := (others => '0');
+    variable logit : neuron_logit_t; -- scaled output
+
+    constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 3;
+  begin
+    for i in 0 to WEIGHTS_PER_NEURON loop
+      sum := sum + weight_mult(logits(i), neuron.weights(i));
+    end loop;
+
+    if activate and sum < 0 then
+      sum := to_signed(0, sum'length);
+    end if;
+
+    -- resize to fit into logit
+    -- 001010100
+    -- 0010
+    -- 1111
+    -- TODO: this is effectively shifting right, which is dividing.
+    -- we should also try truncating the upper bits by saturating,
+    -- or a mix of both (truncate some of the bottom, saturate some of the top).
+    -- Joey says this is so ill
+    --------" the illist of the illest"
+
+    -- TODO: try other shift config.
+    -- logit := sum(sum'length - 1 downto sum'length - NEURON_DATA_WIDTH);
+    -- logit := sum(sum'length - 1 - 3 downto sum'length - NEURON_DATA_WIDTH - 3);
+
+    -- 100110101
+    -- 011001011
+    -- 0..0010..
+    -- 1..1101..
+
+    -- 1..1101..
+    -- 11111
+
+    -- logit := sum(sum'length - 1) & sum(sum'length - 1 - 3 - 1 downto sum'length - NEURON_DATA_WIDTH - 3);
+
+    logit := resize(
+        shift_right(sum, SUM_TO_LOGIT_SHIFT),
+        NEURON_DATA_WIDTH
+      );
+    return logit;
   end function;
 
 end package body nn_types;
