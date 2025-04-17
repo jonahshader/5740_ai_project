@@ -41,7 +41,8 @@ architecture bram_manager_arch of bram_manager is
   signal we_a_arr   : we_a_arr_t;
   signal dout_b_arr : dout_b_arr_t;
 
-  signal addr  : addr_t := (others => '0');
+  signal addr_a  : addr_t := (others => '0');
+  signal addr_b : addr_t := (others => '0');
   signal din_a : param_t;
 
   signal command_r       : bram_command_t  := C_COPY_AND_MUTATE;
@@ -61,12 +62,12 @@ begin
         -- port a (write only)
         clk_a  => clk,
         we_a   => we_a_arr(i),
-        addr_a => addr,
+        addr_a => addr_a,
         din_a  => din_a,
         -- port b (read only)
         clk_b  => clk,
         en_b   => true,
-        addr_b => addr,
+        addr_b => addr_b,
         dout_b => dout_b_arr(i)
       );
   end generate bram_gen;
@@ -81,7 +82,8 @@ begin
           read_index_r    <= read_index;
           write_index_r   <= write_index;
           mutation_rate_r <= mutation_rate;
-          addr            <= to_unsigned(0, addr'length);
+          addr_a            <= to_unsigned(0, addr_a'length);
+          addr_b            <= to_unsigned(0, addr_b'length);
           done            <= false;
         end if;
       else         -- running
@@ -89,14 +91,14 @@ begin
           when C_COPY_AND_MUTATE =>
             null;
           when C_READ_TO_NN_1 =>
-            if addr < TOTAL_PARAMS - 1 then
+            if addr_a < TOTAL_PARAMS - 1 then
               param_valid_nn_1 <= true;
               param            <= dout_b_arr(to_integer(read_index_r));
-              param_index      <= addr;
-              addr             <= addr + 1;
+              param_index      <= addr_a;
+              addr_a             <= addr_a + 1;
             else   -- addr = TOTAL_PARAMS - 1, the last index
               param_valid_nn_1 <= false;
-              addr             <= to_unsigned(0, addr'length);
+              addr_a             <= to_unsigned(0, addr_a'length);
               done             <= true;
             end if;
           when C_READ_TO_NN_2 =>
