@@ -41,8 +41,7 @@ architecture tb_arch of tb_nn is
 
   constant CLK_100MHZ_PERIOD : time := 10 ns;
 
-  signal   clk        : std_logic := '0';
-  constant CLK_PERIOD : time      := 10 ns;
+  signal clk : std_logic := '0';
 
   -- inputs
   signal param       : param_t       := (others => '0');
@@ -56,8 +55,6 @@ architecture tb_arch of tb_nn is
   -- outputs
   signal action : playerinput_t;
   signal done   : boolean;
-
-  signal test_done : boolean := false;
 
 begin
 
@@ -136,6 +133,8 @@ begin
       wait until rising_edge(clk);
       wait until rising_edge(clk);
     end loop;
+
+    test_runner_cleanup(runner);
   end process;
 
 end architecture tb_arch;
