@@ -108,7 +108,13 @@ begin
         go <= false;
 
         wait until done;
-      elsif run("ones_dead_counter_1") then
+        -- neural net has positive inputs with positive weights,
+        -- so all outputs should be high, meaning the actions should be true,
+        -- because they are true when output > 0
+        check_equal(action.left, true, "Left action incorrect output.");
+        check_equal(action.right, true, "Right action incorrect output.");
+        check_equal(action.jump, true, "Jump action incorrect output.");
+      elsif run("ones_inv_dead_counter") then
         gs.p1.dead_timeout <= to_unsigned(1, gs.p1.dead_timeout'length);
         wait until rising_edge(clk);
         go                 <= true;
@@ -116,6 +122,13 @@ begin
         go                 <= false;
 
         wait until done;
+        wait until rising_edge(clk);
+
+        -- we have positive 32 and negative 32 inputs, which should cancel
+        -- each other out, resulting in 0, so our actions should be false.
+        check_equal(action.left, false, "Left action incorrect output.");
+        check_equal(action.right, false, "Right action incorrect output.");
+        check_equal(action.jump, false, "Jump action incorrect output.");
       end if;
 
       wait until rising_edge(clk);

@@ -122,7 +122,7 @@ begin
       end if;
 
       if running_v then
-        if layer_count = 0 then
+        if layer_counter = 0 then
           -- first layer input comes from input_logits
           logits        <= layer_forward(layers(to_integer(layer_counter)), input_logits, true);
           layer_counter <= layer_counter + 1;

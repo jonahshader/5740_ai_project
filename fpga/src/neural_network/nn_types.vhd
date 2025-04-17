@@ -95,6 +95,8 @@ package body nn_types is
         post_mult := -shift_left(post_mult, 1);
       when to_signed(-1, weight'length) =>
         post_mult := -post_mult;
+      when to_signed(1, weight'length) =>
+        null;
       when to_signed(2, weight'length) =>
         post_mult := shift_left(post_mult, 1);
       when others =>
