@@ -80,7 +80,7 @@ package body nn_types is
   function layer_forward(layer : neurons_t; logits : neuron_logits_t; activate : boolean) return neuron_logits_t is
     variable out_logits : neuron_logits_t := (others => (others => '0'));
   begin
-    for i in 0 to WEIGHTS_PER_NEURON loop
+    for i in 0 to WEIGHTS_PER_NEURON - 1 loop
       out_logits(i) := neuron_forward(layer(i), logits, activate);
     end loop;
 
@@ -88,7 +88,7 @@ package body nn_types is
   end function;
 
   function weight_mult(data : neuron_logit_t; weight : weight_t) return post_mult_t is
-    variable post_mult : post_mult_t := data;
+    variable post_mult : post_mult_t := resize(data, NEURON_DATA_WIDTH + 1);
   begin
     case weight is
       when to_signed(-2, weight'length) =>
@@ -116,7 +116,7 @@ package body nn_types is
 
     constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 3;
   begin
-    for i in 0 to WEIGHTS_PER_NEURON loop
+    for i in 0 to WEIGHTS_PER_NEURON - 1 loop
       sum := sum + weight_mult(logits(i), neuron.weights(i));
     end loop;
 

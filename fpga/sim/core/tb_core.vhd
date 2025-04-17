@@ -50,9 +50,8 @@ begin
   begin
     test_runner_setup(runner, RUNNER_CFG);
 
-    wait until rising_edge(clk);
-
     while test_suite loop
+      wait until rising_edge(clk);
       if run("test_msg") then
         -- send the test message
         o_rx_byte <= x"05";
