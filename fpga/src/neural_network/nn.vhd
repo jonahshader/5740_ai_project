@@ -3,10 +3,12 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_signed.all;
 use ieee.numeric_std.all;
 use ieee.fixed_pkg.all;
+use ieee.fixed_float_types.all;
 
 use work.nn_types.all;
 use work.bram_types.all;
 use work.game_types.all;
+use work.decoder_funs.all;
 
 entity nn is
   port (
@@ -37,52 +39,73 @@ architecture nn_arch of nn is
   -- wires
   signal input_logits : neuron_logits_t;
 
-  -- function test return boolean is
-
-  -- begin
-
-  -- end function;
-
   function observe_state(gs : gamestate_t; p1_perspective : boolean) return neuron_logits_t is
     variable observation : neuron_logits_t := default_neuron_logits_t;
-    variable p1          : player_t;
-    variable p2          : player_t;
     variable index       : integer         := 0;
-  -- need to define a cell_size?
+    variable first       : player_t;
+    variable second      : player_t;
+
   begin
-    -- TODO: figure out how to convert the the value to the proper type - - New Function?
     -- coin_pos
-    observation(index) := (gs.coin_pos.x);
+    observation(index) := signed(shift_left(resize(gs.coin_pos.x, observation(0)'length), TILE_PX_BITS));
     index              := index + 1;
-    observation(index) := to_float(gs.coin_pos.y);
+    observation(index) := signed(shift_left(resize(gs.coin_pos.y, observation(0)'length), TILE_PX_BITS));
     index              := index + 1;
 
-    -- figure out which player is is which based on who is observing
+    -- figure out which player is which based on who is observing
     if p1_perspective then
-      p1 := gs.p1;
-      p2 := gs.p2;
+      first  := gs.p1;
+      second := gs.p2;
     else
-      p1 := gs.p2;
-      p2 := gs.p1;
+      first  := gs.p2;
+      second := gs.p1;
     end if;
 
-  -- p1 postion
+    -- first position
+    observation(index) := to_signed(first.pos.x, observation(0)'length, fixed_wrap, fixed_truncate);
+    index              := index + 1;
+    observation(index) := to_signed(first.pos.y, observation(0)'length, fixed_wrap, fixed_truncate);
+    index              := index + 1;
+    -- first velocity
+    observation(index) := resize(signed(to_slv(first.vel.x)), observation(0)'length);
+    index              := index + 1;
+    observation(index) := resize(signed(to_slv(first.vel.y)), observation(0)'length);
+    index              := index + 1;
+    -- first dead flag
+    observation(index) := to_signed(32, observation(0)'length) when first.dead_timeout = 0 else to_signed(-32, observation(0)'length);
+    index              := index + 1;
 
-  -- p1 velocity
+    -- second position
+    observation(index) := to_signed(second.pos.x, observation(0)'length, fixed_wrap, fixed_truncate);
+    index              := index + 1;
+    observation(index) := to_signed(second.pos.y, observation(0)'length, fixed_wrap, fixed_truncate);
+    index              := index + 1;
+    -- second velocity
+    observation(index) := resize(signed(to_slv(second.vel.x)), observation(0)'length);
+    index              := index + 1;
+    observation(index) := resize(signed(to_slv(second.vel.y)), observation(0)'length);
+    index              := index + 1;
+    -- second dead flag
+    observation(index) := to_signed(32, observation(0)'length) when second.dead_timeout = 0 else to_signed(-32, observation(0)'length);
+    index              := index + 1;
 
-  -- p2 position
-
-  -- p2 velocity
+    return observation;
   end function;
 
 begin
 
-  -- TODO: figure out how to wire up game state to input logits.
-  -- also need to zero out the unused ones. might need a function.
-  -- input_logits(0) <= gs.coin_pos.x; -- e.g.
+  -- wire up game state to input logits.
+  input_logits <= observe_state(gs, p1_perspective);
 
-  -- TODO: figure out how to wire action to logits
-  -- action.jump <= logits(2) > 0; -- e.g.
+  -- wire action to logits
+  -- note: this is different than the c++ implementation,
+  -- which does multiple thresholds on output 2 to determine {left, none, right}
+  -- here it is better to interpret separate outputs because we don't have a
+  -- point of reference for the output scale, so we can't establish non-zero
+  -- thresholds easily.
+  action.left  <= logits(0) > 0;
+  action.right <= logits(1) > 0;
+  action.jump  <= logits(2) > 0;
 
   main_proc : process (all) is
 
@@ -116,6 +139,19 @@ begin
           -- pulse done
           done <= true;
         end if;
+      end if;
+    end if;
+  end process;
+
+  -- decoder process. kept separate from main_proc for clarity.
+  decoder_proc : process (all) is
+  begin
+    if rising_edge(clk) then
+      if param_valid then
+        -- when we receive a valid parameter, we need to place
+        -- it into the proper location. this is what decode_address
+        -- does. see decoder_funs.vhd
+        layers <= decode_address(layers, param, param_index);
       end if;
     end if;
   end process;
