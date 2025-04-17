@@ -28,7 +28,7 @@ architecture game_arch of game is
   -- rng stuff
   constant NUM_RNG         : integer   := 3;                              -- three random numbers: p1 spawn, p2 spawn, coin spawn
   constant INIT_CYCLES     : integer   := 7;
-  signal   enable_rng      : boolean   := false;
+  signal   enable_rng      : boolean;
   signal   result_rng      : std_logic_vector(32 * NUM_RNG - 1 downto 0); -- rng output is a multiple of 32 bits
   signal   p1_spawn_tile   : tilepos_t := default_tilepos_t;
   signal   p2_spawn_tile   : tilepos_t := default_tilepos_t;
