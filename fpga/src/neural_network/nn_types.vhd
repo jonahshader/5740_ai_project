@@ -10,6 +10,14 @@ package nn_types is
 
   constant WEIGHTS_PER_NEURON_EXP : integer := 5; -- 2 ** 5 = 32
   constant WEIGHTS_PER_NEURON     : integer := 2 ** WEIGHTS_PER_NEURON_EXP;
+  -- refers to the number of weights per layer
+  -- number of layers, excluding input layer
+  constant LAYER_COUNT_EXP : integer := 2;
+  constant LAYER_COUNT     : integer := 2 ** LAYER_COUNT_EXP;
+
+  constant TOTAL_WEIGHTS : integer := (WEIGHTS_PER_NEURON ** 2) * LAYER_COUNT;
+  constant TOTAL_BIAS    : integer := LAYER_COUNT * WEIGHTS_PER_NEURON;
+  constant TOTAL_PARAMS  : integer := TOTAL_WEIGHTS + TOTAL_BIAS;
 
   -- all the types needed for a neuron
   subtype weight_t is signed(WEIGHT_BITS - 1 downto 0); -- Making the wights signed makes the bit shift easier
@@ -30,17 +38,13 @@ package nn_types is
   function weight_mult(data : neuron_logit_t; weight : weight_t) return post_mult_t;
   function neuron_forward(neuron : neuron_t; logits : neuron_logits_t; activate : boolean) return neuron_logit_t;
 
-  type neurons_t is array(0 to WEIGHTS_PER_NEURON - 1) of neuron_t;
+  type neurons_t is array (0 to WEIGHTS_PER_NEURON - 1) of neuron_t;
   function default_neurons_t return neurons_t;
 
-  -- layer contains the neurons and the logits
-  type layer_t is record
-    neurons : neurons_t;
-    logits  : neuron_logits_t;
-  end record layer_t;
-  function default_layer_t return layer_t;
+  type layers_t is array (0 to LAYER_COUNT - 1) of neurons_t;
+  function default_layers_t return layers_t;
 
-  function layer_forward(layer : layer_t; activate : boolean) return neuron_logits_t;
+  function layer_forward(layer : neurons_t; logits : neuron_logits_t; activate : boolean) return neuron_logits_t;
 
 end package nn_types;
 
@@ -67,27 +71,20 @@ package body nn_types is
     return val;
   end function;
 
-  function default_layer_t return layer_t is
-    variable val : layer_t := (neurons => default_neurons_t,
-                                logits => default_neuron_logits_t);
-  begin
-    return val;
-  end function;
-
   function default_neuron_logits_t return neuron_logits_t is
     variable val : neuron_logits_t := (others => (others => '0'));
   begin
     return val;
   end function;
 
-  function layer_forward(layer : layer_t; activate : boolean) return neuron_logits_t is
-    variable logits : neuron_logits_t := (others => (others => '0'));
+  function layer_forward(layer : neurons_t; logits : neuron_logits_t; activate : boolean) return neuron_logits_t is
+    variable out_logits : neuron_logits_t := (others => (others => '0'));
   begin
     for i in 0 to WEIGHTS_PER_NEURON loop
-      logits(i) := neuron_forward(layer.neurons(i), layer.logits, activate);
+      out_logits(i) := neuron_forward(layer(i), logits, activate);
     end loop;
 
-    return logits;
+    return out_logits;
   end function;
 
   function weight_mult(data : neuron_logit_t; weight : weight_t) return post_mult_t is
@@ -156,6 +153,12 @@ package body nn_types is
         NEURON_DATA_WIDTH
       );
     return logit;
+  end function;
+
+  function default_layers_t return layers_t is
+    variable val : layers_t := (others => default_neurons_t);
+  begin
+    return val;
   end function;
 
 end package body nn_types;

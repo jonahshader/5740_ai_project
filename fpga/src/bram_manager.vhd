@@ -33,10 +33,6 @@ end entity bram_manager;
 
 architecture bram_manager_arch of bram_manager is
 
-  constant NUM_BRAMS  : integer := 144;
-  constant BRAM_WIDTH : integer := 4;
-  constant BRAM_DEPTH : integer := 9216;
-
   type dout_b_arr_t is array (0 to NUM_BRAMS - 1) of param_t;
 
   type we_a_arr_t is array (0 to NUM_BRAMS - 1) of boolean;

@@ -2,14 +2,19 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.nn_types.all;
+use work.bram_types.all;
+use work.game_types.all;
+
+-- (WEIGHTS_PER_NEURON ^ 2) * (LAYER_COUNT) + (LAYER_COUNT)
+
 entity decoder is
-  generic (
-    INPUT_NUM : natural := 4
-  );
   port (
     enable   : in std_logic;
-    sel      :    in std_logic_vector(INPUT_NUM - 1 downto 0);
-    data_out :   out std_logic_vector(2 ** INPUT_NUM - 1 downto 0)
+    sel      : in std_logic_vector(BRAM_ADDR_BITS - 1 downto 0);
+    layer
+    weight
+    neuron
   );
 end entity decoder;
 
@@ -17,12 +22,22 @@ architecture rtl of decoder is
 
 begin
 
+
+  32bit = integer(ceil(log2(real(WEIGHTS_PER_LAYER))));
+    0 - 11111 (0 to 31) - 32 bits
+
+    weight = sel mod WEIGHTS_PER_LAYER
+    nueuron = sel(max - 1 to 32bit) mod 32
+    layer = sel(max - 1 to 32bit * 2) mod 4
+
+
+    100000
+    weight <= sel mod 32;
+
+
   demux : process (sel, enable) is
   begin
     data_out <= (others => '0');
-    if enable = '1' then
-      data_out(to_integer(unsigned(sel))) <= '1';
-    end if;
-  end process;
+
 
 end architecture rtl;
