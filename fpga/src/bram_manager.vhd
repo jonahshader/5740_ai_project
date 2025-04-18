@@ -89,19 +89,20 @@ begin
           param_index     <= to_unsigned(0, param_index'length);
           addr_a          <= to_unsigned(0, addr_a'length);
           done            <= false;
+          we_a_arr        <= (others => false);
         end if;
       else         -- running
         case command_r is
           when C_COPY_AND_MUTATE =>
             if param_index < TOTAL_PARAMS - 1 then
-              param_index                         <= param_index + 1;
-              din_a                               <= mutate_param(param, param_index, rng, mutation_rate_r);
-              we_a_arr(to_integer(write_index_r)) <= true;
+              param_index <= param_index + 1;
+              din_a       <= mutate_param(param, param_index, rng, mutation_rate_r);
             else
-              param_index                         <= to_unsigned(0, param_index'length);
-              done                                <= true;
-              we_a_arr(to_integer(write_index_r)) <= false;
+              param_index <= to_unsigned(0, param_index'length);
+              done        <= true;
             end if;
+            addr_a                              <= param_index;
+            we_a_arr(to_integer(write_index_r)) <= true;
           when C_READ_TO_NN_1 | C_READ_TO_NN_2 =>
             if param_index < TOTAL_PARAMS - 1 then
               param_index <= param_index + 1;

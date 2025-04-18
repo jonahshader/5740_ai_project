@@ -21,7 +21,7 @@ package body mutate_funs is
     variable m_param : signed(param'length downto 0) := resize(signed(param), param'length + 1);
   begin
     -- check for mutation
-    if unsigned(rng(7 downto 0)) <= mutation_rate then
+    if unsigned(rng(7 downto 0)) < mutation_rate then
       -- we are gonna mutate.
       -- make a uniform mutation
       -- TODO: rewrite this in a less dumb way.
