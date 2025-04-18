@@ -24,7 +24,7 @@ entity victor_copy is
     bram_manager_done : in boolean;
 
     go   : in boolean;
-    done : out boolean := false
+    done : out boolean := true
   );
 end entity victor_copy;
 

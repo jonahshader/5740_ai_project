@@ -37,9 +37,9 @@ architecture tb_arch of tb_victor_copy is
   -- Signal to simulate bram_manager response
   signal bram_manager_done : boolean := true;
 
-  -- For tracking copy operations
-  signal copy_requested : boolean := false;
-  signal copy_count     : integer := 0;
+  -- Signal to control and monitor bram simulator
+  signal reset_counter : boolean := false;
+  signal copy_count    : integer := 0;
 
 begin
 
@@ -63,13 +63,27 @@ begin
   test_runner_watchdog(runner, 100 us);
   clk <= not clk after CLK_100MHZ_PERIOD / 2;
 
+  -- Process to handle copy_count, including reset
+  copy_counter_proc : process (clk) is
+
+    variable prev_go : boolean := false;
+
+  begin
+    if rising_edge(clk) then
+      if reset_counter then
+        copy_count <= 0;
+        prev_go    := false;
+      elsif bram_manager_go and not prev_go then
+        copy_count <= copy_count + 1;
+      end if;
+      prev_go := bram_manager_go;
+    end if;
+  end process;
+
   -- Simulate bram_manager response
   bram_manager_simulator : process is
   begin
-    wait until bram_manager_go = true;
-
-    -- Set the flag for the main process to increment the counter
-    copy_requested <= true;
+    wait until bram_manager_go;
 
     -- Check that command is correct
     check(command = C_COPY_AND_MUTATE, "Expected COPY_AND_MUTATE command");
@@ -86,33 +100,21 @@ begin
           integer'image(to_integer(winner_counts(to_integer(write_index)))));
 
     -- Verify mutation_rate matches the expected value from config
-    check(mutation_rate = config.mutation_rates(to_integer(write_index)),
-          "Mutation rate should match the config value for the write_index");
+    check_equal(mutation_rate, config.mutation_rates(to_integer(write_index)),
+                "Mutation rate should match the config value for the write_index");
 
     -- Simulate BRAM manager execution time
     bram_manager_done <= false;
     wait for 5 * CLK_100MHZ_PERIOD;
     bram_manager_done <= true;
-    wait until bram_manager_go = false;
-
-    -- Reset the flag
-    copy_requested <= false;
-  end process;
-
-  -- Process to count copy operations (single driver for copy_count)
-  copy_counter_process : process is
-  begin
-    wait until rising_edge(clk);
-    if copy_requested = true and copy_requested'event then
-      copy_count <= copy_count + 1;
-    end if;
+    wait until not bram_manager_go;
   end process;
 
   test_process : process is
 
     variable pop_size            : integer;
     variable non_victor_count    : integer;
-    variable multi_victor_extra  : integer;
+    variable multi_victor_total  : integer;
     variable expected_copy_count : integer;
 
   begin
@@ -143,29 +145,31 @@ begin
         winner_counts(6) <= to_unsigned(3, 8); -- Multi-victor with 3 wins
         winner_counts(7) <= to_unsigned(3, 8); -- Multi-victor with 3 wins
 
-        -- Reset copy counter
-        copy_count <= 0;
-
         -- Calculate expected number of copies
         non_victor_count    := 4;
-        multi_victor_extra  := 4; -- Total extra wins (3-1)+(3-1) = 4
-        expected_copy_count := minimum(non_victor_count, multi_victor_extra);
+        multi_victor_total  := 4; -- Total extra wins (3-1)+(3-1) = 4
+        expected_copy_count := minimum(non_victor_count, multi_victor_total);
 
-        wait for CLK_100MHZ_PERIOD;
+        -- Reset copy counter
+        wait until rising_edge(clk);
+        reset_counter <= true;
+        wait until rising_edge(clk);
+        reset_counter <= false;
 
         -- Start the process
+        wait until rising_edge(clk);
         go <= true;
-        wait for CLK_100MHZ_PERIOD;
+        wait until rising_edge(clk);
         go <= false;
 
         -- Wait for completion
         wait until done;
-        wait for CLK_100MHZ_PERIOD * 2;
+        wait until rising_edge(clk);
 
         -- Verify the number of copy operations matches expectations
-        check(copy_count = expected_copy_count,
-              "Expected " & integer'image(expected_copy_count) &
-              " copy operations, but got " & integer'image(copy_count));
+        check_equal(copy_count, expected_copy_count,
+                    "Expected " & integer'image(expected_copy_count) &
+                    " copy operations, but got " & integer'image(copy_count));
       elsif run("test_minimal_multi_victors") then
         -- Test with just enough multi-victors to cover non-victors
         config.population_size_exp <= to_unsigned(3, config.population_size_exp'length);
@@ -189,29 +193,31 @@ begin
         winner_counts(6) <= to_unsigned(2, 8); -- Double-victor
         winner_counts(7) <= to_unsigned(4, 8); -- Quad-victor
 
-        -- Reset copy counter
-        copy_count <= 0;
-
         -- Calculate expected copies
         non_victor_count    := 4;
-        multi_victor_extra  := 4; -- Extra wins (2-1)+(4-1) = 4
-        expected_copy_count := minimum(non_victor_count, multi_victor_extra);
+        multi_victor_total  := 4; -- Extra wins (2-1)+(4-1) = 4
+        expected_copy_count := minimum(non_victor_count, multi_victor_total);
 
-        wait for CLK_100MHZ_PERIOD;
+        -- Reset copy counter
+        wait until rising_edge(clk);
+        reset_counter <= true;
+        wait until rising_edge(clk);
+        reset_counter <= false;
 
         -- Start the process
+        wait until rising_edge(clk);
         go <= true;
-        wait for CLK_100MHZ_PERIOD;
+        wait until rising_edge(clk);
         go <= false;
 
         -- Wait for completion
         wait until done;
-        wait for CLK_100MHZ_PERIOD * 2;
+        wait until rising_edge(clk);
 
         -- Verify the number of copy operations
-        check(copy_count = expected_copy_count,
-              "Expected " & integer'image(expected_copy_count) &
-              " copy operations, but got " & integer'image(copy_count));
+        check_equal(copy_count, expected_copy_count,
+                    "Expected " & integer'image(expected_copy_count) &
+                    " copy operations, but got " & integer'image(copy_count));
       elsif run("test_no_multi_victors") then
         -- Test case where there are no multi-victors (should terminate quickly)
         config.population_size_exp <= to_unsigned(2, config.population_size_exp'length);
@@ -227,27 +233,29 @@ begin
         winner_counts(2) <= to_unsigned(1, 8); -- Single victor
         winner_counts(3) <= to_unsigned(2, 8); -- Multi-victor
 
-        -- Reset copy counter
-        copy_count <= 0;
-
         -- We expect 1 copy since there is 1 non-victor and 1 multi-victor
         expected_copy_count := 1;
 
-        wait for CLK_100MHZ_PERIOD;
+        -- Reset copy counter
+        wait until rising_edge(clk);
+        reset_counter <= true;
+        wait until rising_edge(clk);
+        reset_counter <= false;
 
         -- Start the process
+        wait until rising_edge(clk);
         go <= true;
-        wait for CLK_100MHZ_PERIOD;
+        wait until rising_edge(clk);
         go <= false;
 
         -- Wait for completion
         wait until done;
-        wait for CLK_100MHZ_PERIOD * 2;
+        wait until rising_edge(clk);
 
         -- Verify copy operations
-        check(copy_count = expected_copy_count,
-              "Expected " & integer'image(expected_copy_count) &
-              " copy operations with limited multi-victors");
+        check_equal(copy_count, expected_copy_count,
+                    "Expected " & integer'image(expected_copy_count) &
+                    " copy operations with limited multi-victors");
       elsif run("test_no_non_victors") then
         -- Test case where there are no non-victors (should terminate quickly)
         config.population_size_exp <= to_unsigned(2, config.population_size_exp'length);
@@ -263,27 +271,29 @@ begin
         winner_counts(2) <= to_unsigned(2, 8); -- Multi-victor
         winner_counts(3) <= to_unsigned(0, 8); -- Non-victor
 
-        -- Reset copy counter
-        copy_count <= 0;
-
         -- We expect 1 copy since there is one non-victor
         expected_copy_count := 1;
 
-        wait for CLK_100MHZ_PERIOD;
+        -- Reset copy counter
+        wait until rising_edge(clk);
+        reset_counter <= true;
+        wait until rising_edge(clk);
+        reset_counter <= false;
 
         -- Start the process
+        wait until rising_edge(clk);
         go <= true;
-        wait for CLK_100MHZ_PERIOD;
+        wait until rising_edge(clk);
         go <= false;
 
         -- Wait for completion
         wait until done;
-        wait for CLK_100MHZ_PERIOD * 2;
+        wait until rising_edge(clk);
 
         -- Verify copy count
-        check(copy_count = expected_copy_count,
-              "Expected " & integer'image(expected_copy_count) &
-              " copy operation for one non-victor");
+        check_equal(copy_count, expected_copy_count,
+                    "Expected " & integer'image(expected_copy_count) &
+                    " copy operation for one non-victor");
       elsif run("test_more_non_victors_than_extra_wins") then
         -- Test when there are more non-victors than extra wins available
         config.population_size_exp <= to_unsigned(3, config.population_size_exp'length);
@@ -303,32 +313,32 @@ begin
         winner_counts(6) <= to_unsigned(0, 8); -- Non-victor
         winner_counts(7) <= to_unsigned(8, 8); -- Super-victor
 
-        -- Reset copy counter
-        copy_count <= 0;
-
         -- Calculate expected copies
         non_victor_count    := 7;
-        multi_victor_extra  := 7; -- Extra wins (8-1) = 7
-        expected_copy_count := minimum(non_victor_count, multi_victor_extra);
+        multi_victor_total  := 7; -- Extra wins (8-1) = 7
+        expected_copy_count := minimum(non_victor_count, multi_victor_total);
 
-        wait for CLK_100MHZ_PERIOD;
+        -- Reset copy counter
+        wait until rising_edge(clk);
+        reset_counter <= true;
+        wait until rising_edge(clk);
+        reset_counter <= false;
 
         -- Start the process
+        wait until rising_edge(clk);
         go <= true;
-        wait for CLK_100MHZ_PERIOD;
+        wait until rising_edge(clk);
         go <= false;
 
         -- Wait for completion
         wait until done;
-        wait for CLK_100MHZ_PERIOD * 2;
+        wait until rising_edge(clk);
 
         -- Verify the number of copy operations
-        check(copy_count = expected_copy_count,
-              "Expected " & integer'image(expected_copy_count) &
-              " copy operations with limited multi-victors");
+        check_equal(copy_count, expected_copy_count,
+                    "Expected " & integer'image(expected_copy_count) &
+                    " copy operations with multiple non-victors");
       end if;
-
-      wait for CLK_100MHZ_PERIOD;
     end loop;
 
     test_runner_cleanup(runner);
