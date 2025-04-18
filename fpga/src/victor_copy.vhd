@@ -39,9 +39,9 @@ begin
 
   main_proc : process (all) is
 
-    variable pop_size                    : unsigned(7 downto 0);
-    variable read_index_on_non_victor    : boolean := false;
-    variable write_index_on_multi_victor : boolean := false;
+    variable pop_size                   : unsigned(7 downto 0);
+    variable read_index_on_multi_victor : boolean := false;
+    variable write_index_on_non_victor  : boolean := false;
 
   begin
     if rising_edge(clk) then
@@ -58,21 +58,21 @@ begin
             state           <= SEEKING_PTRS_S;
           end if;
         when SEEKING_PTRS_S =>
-          -- we want read_index to be on a non-victor, and
-          -- we want write_index to be on a multi-victor (victories >= 2).
+          -- we want read_index to be on a multi-victor (victories >= 2), and
+          -- we want write_index to be on a non-victor.
           -- when these are both true, we can proceed.
 
           if read_index < pop_size then
-            -- is read_index on a non-victor?
-            read_index_on_non_victor := winner_counts_r(to_integer(read_index)) = 0;
-            -- is write_index on a multi-victor?
-            write_index_on_multi_victor := winner_counts_r(to_integer(write_index)) >= 2;
+            -- is read_index on a multi-victor?
+            read_index_on_multi_victor := winner_counts_r(to_integer(read_index)) >= 2;
+            -- is write_index on a non-victor?
+            write_index_on_non_victor := winner_counts_r(to_integer(write_index)) = 0;
 
-            if not read_index_on_non_victor then
+            if not read_index_on_multi_victor then
               -- increment read_index
               read_index <= read_index + 1;
             end if;
-            if not write_index_on_multi_victor then
+            if not write_index_on_non_victor then
               -- increment or wrap-around write_index
               if write_index = pop_size - 1 then
                 write_index <= (others => '0');
@@ -82,7 +82,7 @@ begin
             end if;
 
             -- if both are good, initiate copy and go to copy state
-            if read_index_on_non_victor and write_index_on_multi_victor then
+            if read_index_on_multi_victor and write_index_on_non_victor then
               -- initiate copy
               mutation_rate   <= config.mutation_rates(to_integer(write_index));
               command         <= C_COPY_AND_MUTATE;
@@ -91,10 +91,10 @@ begin
 
               -- increment non_victor victors to 1
               -- (we already know its 0, so no need for an adder here)
-              winner_counts_r(to_integer(read_index)) <= to_unsigned(1, 8);
+              winner_counts_r(to_integer(write_index)) <= to_unsigned(1, 8);
               -- we also need to decrement the victor count
               -- of the victor that we are copying from
-              winner_counts_r(to_integer(write_index)) <= winner_counts_r(to_integer(write_index)) - 1;
+              winner_counts_r(to_integer(read_index)) <= winner_counts_r(to_integer(read_index)) - 1;
             end if;
           else -- we've reached the end, so we're done.
             done        <= true;
