@@ -4,20 +4,21 @@ use ieee.numeric_std.all;
 use ieee.math_real.log2;
 use ieee.math_real.ceil;
 
-use work.bram_types.param_t;
+use work.bram_types.all;
 use work.ga_types.mutation_rate_t;
+use work.nn_types.total_weights;
 
 package mutate_funs is
 
-  function mutate_param(param : param_t; rng : std_logic_vector(31 downto 0); mutation_rate : mutation_rate_t; bias : boolean) return param_t;
+  function mutate_param(param : param_t; param_index : param_index_t; rng : std_logic_vector(31 downto 0); mutation_rate : mutation_rate_t) return param_t;
 
 end package mutate_funs;
 
 package body mutate_funs is
 
-  function mutate_param(param : param_t; rng : std_logic_vector(31 downto 0); mutation_rate : mutation_rate_t; bias : boolean) return param_t is
-     -- 2 extra bits for overflow handling
-    variable m_param : signed(param'length downto 0) := resize(signed(param), param'length + 2);
+  function mutate_param(param : param_t; param_index : param_index_t; rng : std_logic_vector(31 downto 0); mutation_rate : mutation_rate_t) return param_t is
+    -- 2 extra bits for overflow handling
+    variable m_param : signed(param'length downto 0) := resize(signed(param), param'length + 1);
   begin
     -- check for mutation
     if unsigned(rng(7 downto 0)) <= mutation_rate then
@@ -45,19 +46,29 @@ package body mutate_funs is
         when to_unsigned(7, 3) =>
           m_param := m_param + 4;
         when others =>
-        null;    
+          null;
       end case;
 
       -- clamp
-      if m_param < to_signed(-2, m_param'length) then
-        m_param := to_signed(-2, m_param'length);
-      elsif m_param > to_signed(2, m_param'length) then
-        m_param := to_signed(2, m_param'length);
+      if param_index < TOTAL_WEIGHTS then
+        -- this is a weight. weights are clamped to [-2, 2]
+        if m_param < to_signed(-2, m_param'length) then
+          m_param := to_signed(-2, m_param'length);
+        elsif m_param > to_signed(2, m_param'length) then
+          m_param := to_signed(2, m_param'length);
+        end if;
+      else
+        -- this is a bias. biases are clamped to [-7, 7]
+        -- (a signed 4 is [-8, 7], so we are just making it symmetric.)
+        if m_param < to_signed(-7, m_param'length) then
+          m_param := to_signed(-7, m_param'length);
+        elsif m_param > to_signed(7, m_param'length) then
+          m_param := to_signed(7, m_param'length);
+        end if;
       end if;
     end if;
 
     return std_logic_vector(resize(m_param, param'length));
   end function;
-
 
 end package body mutate_funs;
