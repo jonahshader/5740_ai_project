@@ -18,11 +18,11 @@ lib = vu.add_library("lib")
 # Add testbench files
 # TODO: use glob for ../..
 lib.add_source_files([join(root, '*.vhd'),
-                     join(root, '../../fitness.vhd'),
-                     join(root, '../../playagame.vhd'),
-                     join(root, '../../ga_types.vhd'),
-                     join(root, '../../game_types.vhd'),
-                     join(root, '../../custom_utils.vhd')])
+                     join(root, '../../src/fitness.vhd'),
+                     join(root, '../../src/playagame.vhd'),
+                     join(root, '../../src/ga_types.vhd'),
+                     join(root, '../../src/game_types.vhd'),
+                     join(root, '../../src/custom_utils.vhd')])
 
 # Run vunit function
 vu.main()
