@@ -1,0 +1,33 @@
+[*]
+[*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
+[*] Fri Apr 18 05:20:27 2025
+[*]
+[dumpfile] "/home/jonah/repos/5740_ai_project/fpga/sim/bram_manager/vunit_out/test_output/lib.tb_bram_manager.mutate_and_copy_44352acadcb471dbc93d848918e18a356953fed6/ghdl/wave.ghw"
+[dumpfile_mtime] "Fri Apr 18 05:17:20 2025"
+[dumpfile_size] 24609016
+[savefile] "/home/jonah/repos/5740_ai_project/fpga/sim/bram_manager/waveform.gtkw"
+[timestart] 0
+[size] 3840 2041
+[pos] -27 -24
+*-32.229473 34190000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb_bram_manager.
+[sst_width] 297
+[signals_width] 158
+[sst_expanded] 1
+[sst_vpaned_height] 659
+@28
+top.tb_bram_manager.clk
+@420
+top.tb_bram_manager.go
+top.tb_bram_manager.done
+top.tb_bram_manager.command
+top.tb_bram_manager.param_valid_nn_1
+top.tb_bram_manager.param_valid_nn_2
+@22
+#{top.tb_bram_manager.param[3:0]} top.tb_bram_manager.param[3] top.tb_bram_manager.param[2] top.tb_bram_manager.param[1] top.tb_bram_manager.param[0]
+#{top.tb_bram_manager.read_index[7:0]} top.tb_bram_manager.read_index[7] top.tb_bram_manager.read_index[6] top.tb_bram_manager.read_index[5] top.tb_bram_manager.read_index[4] top.tb_bram_manager.read_index[3] top.tb_bram_manager.read_index[2] top.tb_bram_manager.read_index[1] top.tb_bram_manager.read_index[0]
+@23
+#{top.tb_bram_manager.write_index[7:0]} top.tb_bram_manager.write_index[7] top.tb_bram_manager.write_index[6] top.tb_bram_manager.write_index[5] top.tb_bram_manager.write_index[4] top.tb_bram_manager.write_index[3] top.tb_bram_manager.write_index[2] top.tb_bram_manager.write_index[1] top.tb_bram_manager.write_index[0]
+[pattern_trace] 1
+[pattern_trace] 0

@@ -11,7 +11,7 @@ package bram_types is
   constant BRAM_DEPTH     : integer := 9216;
   constant BRAM_ADDR_BITS : integer := integer(ceil(log2(real(BRAM_DEPTH))));
 
-  type    bram_command_t is (C_COPY_AND_MUTATE, C_READ);
+  type    bram_command_t is (C_COPY_AND_MUTATE, C_READ_TO_NN_1, C_READ_TO_NN_2);
   subtype bram_index_t is unsigned(7 downto 0);
 
   -- This is what is going into the NN

@@ -21,24 +21,6 @@ end entity tb_nn;
 
 architecture tb_arch of tb_nn is
 
-  component nn is
-    port (
-      clk : in std_logic;
-
-      -- bram io
-      param       : in param_t;
-      param_index : in param_index_t;
-      param_valid : in boolean;
-
-      -- nn io
-      gs             : in gamestate_t;
-      p1_perspective : in boolean;
-      action         : out playerinput_t;
-      go             : in boolean;
-      done           : out boolean
-    );
-  end component nn;
-
   constant CLK_100MHZ_PERIOD : time := 10 ns;
 
   signal clk : std_logic := '0';
@@ -64,7 +46,7 @@ begin
   clk <= not clk after CLK_100MHZ_PERIOD / 2;
 
   -- UUT instantiation
-  uut : component nn
+  uut : entity work.nn
     port map (
       clk            => clk,
       param          => param,
@@ -85,7 +67,6 @@ begin
     variable weight_index : integer := 0;
 
   begin
-    -- set all the values to one
     test_runner_setup(runner, RUNNER_CFG);
 
     while test_suite loop
