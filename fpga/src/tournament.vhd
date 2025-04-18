@@ -24,7 +24,7 @@ end entity tournament;
 
 architecture tournament_arch of tournament is
 
-  signal population_size : unsigned(7 downto 0) := shift_left(to_unsigned(1, 8), to_integer(ga_config.population_size_exp));
+  -- signal population_size : unsigned(7 downto 0) := shift_left(to_unsigned(1, 8), to_integer(ga_config.population_size_exp));
 
   -- FSM state
   signal count : integer := 0;
@@ -42,7 +42,7 @@ begin
   process (clk) is
     variable current_index     : unsigned(6 downto 0);
     variable fitness_candidate : signed(15 downto 0);
-    variable best_index_var : unsigned(6 downto 0);
+    variable best_index_var    : unsigned(6 downto 0);
   begin
     if rising_edge(clk) then
       case state is
@@ -66,8 +66,8 @@ begin
 
           best_index_var := best_index;
           if tournament_round = 0 or fitness_candidate > best_score then
-            best_score <= fitness_candidate;
-            best_index <= current_index;
+            best_score     <= fitness_candidate;
+            best_index     <= current_index;
             best_index_var := current_index;
           end if;
 
@@ -76,11 +76,11 @@ begin
           if tournament_round = ga_config.tournament_size - 1 then
             -- end of tournament: update win count
             winner_counts(to_integer(best_index_var)) <= winner_counts(to_integer(best_index_var)) + 1;
-            count                                 <= count + 1;
-            tournament_round                      <= 0;
-            best_score                            <= fitness_candidate;
+            count                                     <= count + 1;
+            tournament_round                          <= 0;
+            best_score                                <= fitness_candidate;
 
-            if count = population_size - 1 then
+            if count = shift_left(to_unsigned(1, 8), to_integer(ga_config.population_size_exp)) - 1 then
               done  <= TRUE;
               state <= IDLE_S;
             end if;
