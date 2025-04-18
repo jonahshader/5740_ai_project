@@ -62,7 +62,7 @@ begin
           -- we want write_index to be on a multi-victor (victories >= 2).
           -- when these are both true, we can proceed.
 
-          if read_index < pop_size and write_index < pop_size then
+          if read_index < pop_size then
             -- is read_index on a non-victor?
             read_index_on_non_victor := winner_counts_r(to_integer(read_index)) = 0;
             -- is write_index on a multi-victor?
@@ -73,8 +73,12 @@ begin
               read_index <= read_index + 1;
             end if;
             if not write_index_on_multi_victor then
-              -- increment write_index
-              write_index <= write_index + 1;
+              -- increment or wrap-around write_index
+              if write_index = pop_size - 1 then
+                write_index <= (others => '0');
+              else
+                write_index <= write_index + 1;
+              end if;
             end if;
 
             -- if both are good, initiate copy and go to copy state
