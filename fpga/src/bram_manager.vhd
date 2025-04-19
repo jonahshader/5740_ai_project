@@ -3,6 +3,9 @@
 -- for copying neural nets to other brams, copy & mutate,
 -- and randomly initializing.
 
+-- TODO: might run into issues with how the done timing lines
+-- up with victor_copy. done stays high instead of pulses.
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
