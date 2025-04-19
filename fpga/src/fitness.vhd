@@ -3,10 +3,18 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.game_types.all;
 use work.ga_types.all;
+use work.bram_types.all;
 
 entity fitness is
   port (
     clk : in std_logic;
+
+    -- interface with bram_manager (bm)
+    bm_command    : out bram_command_t := C_READ_TO_NN_1;
+    bm_read_index : out bram_index_t   := (others => '0');
+    -- (no write_index)
+    bm_go   : out boolean := false;
+    bm_done : in boolean;
 
     -- interface with GA controller
     ga_config    : in ga_config_t; -- population_size_exp, model_history_size, reference_count, seed, frame_limit
@@ -14,8 +22,6 @@ entity fitness is
     fitness_done : out boolean;
 
     -- interface with playagame
-    nn1_index      : out unsigned(7 downto 0);          -- index of bram to be loaded in nn1
-    nn2_index      : out unsigned(7 downto 0);          -- index of bram to be loaded in nn2
     seed           : out std_logic_vector(31 downto 0); -- seed from ga_config
     frame_limit    : out unsigned(15 downto 0);         -- frame_limit from ga_config
     init_playagame : out boolean;
