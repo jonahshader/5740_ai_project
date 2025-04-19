@@ -31,20 +31,19 @@ end entity playagame;
 architecture playagame_arch of playagame is
 
   type   state_t is (
-    IDLE_S, LOAD_NNS_S,
-    INIT_GAME1_S, WAIT_GAME1_S,
-    DONE_S
+    IDLE_S, REQUEST_INPUT_S,
+    INIT_GAME1_S, WAIT_GAME1_S
   );
   signal state : state_t := IDLE_S;
 
   signal score         : signed(15 downto 0)   := (others => '0');
   signal frame_counter : unsigned(15 downto 0) := (others => '0');
 
-  signal game_init_r : boolean := false;
-  signal frame_go_r  : boolean := false;
-  signal load_nns_r  : boolean := false;
-  signal game_done_r : boolean := false;
-  signal frame_done  : boolean := false;
+  signal game_init_r     : boolean := false;
+  signal frame_go_r      : boolean := false;
+  signal request_input_r : boolean := false;
+  signal game_done_r     : boolean := false;
+  signal frame_done      : boolean := false;
 
 begin
 
@@ -65,33 +64,33 @@ begin
   -- Outputs
   game_done        <= game_done_r;
   score_output     <= score;
-  p1_request_input <= load_nns_r;
-  p2_request_input <= load_nns_r;
+  p1_request_input <= request_input_r;
+  p2_request_input <= request_input_r;
 
   process (clk) is
   begin
     if rising_edge(clk) then
-      game_init_r <= false;
-      frame_go_r  <= false;
-      load_nns_r  <= false;
-      game_done_r <= false;
+      game_init_r     <= false;
+      frame_go_r      <= false;
+      request_input_r <= false;
+      game_done_r     <= false;
 
       case state is
         when IDLE_S =>
           score         <= (others => '0');
           frame_counter <= (others => '0');
           if game_go then
-            load_nns_r <= true; -- trigger loading of NN inputs
-            state      <= LOAD_NNS_S;
+            request_input_r <= true; -- trigger loading of NN inputs
+            state           <= REQUEST_INPUT_S;
           end if;
-        when LOAD_NNS_S =>
+        when REQUEST_INPUT_S =>
           -- wait until both neural network outputs are ready
           if p1_input_valid and p2_input_valid then
             game_init_r <= true;
             state       <= INIT_GAME1_S;
           end if;
         when INIT_GAME1_S =>
-          frame_go_r <= true;   -- trigger first game frame
+          frame_go_r <= true;        -- trigger first game frame
           state      <= WAIT_GAME1_S;
         when WAIT_GAME1_S =>
           if frame_done then
@@ -104,12 +103,8 @@ begin
             else
               score       <= gs.p1.score;
               game_done_r <= true;
-              state       <= DONE_S;
+              state       <= IDLE_S;
             end if;
-          end if;
-        when DONE_S =>
-          if not game_go then
-            state <= IDLE_S;
           end if;
         when others =>
           state <= IDLE_S;

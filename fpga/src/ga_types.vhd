@@ -9,6 +9,8 @@ use ieee.math_real.ceil;
 package ga_types is
 
   constant MAX_POPULATION_SIZE : integer := 128;
+  constant SEED_COUNT_BITS     : integer := 8;
+  constant MAX_SEED_COUNT      : integer := 2 ** SEED_COUNT_BITS;
 
   subtype mutation_rate_t is unsigned(7 downto 0);
   type    mutation_rates_t is array (0 to MAX_POPULATION_SIZE - 1) of mutation_rate_t;
@@ -26,7 +28,7 @@ package ga_types is
     reference_count        : unsigned(7 downto 0);
     eval_interval          : unsigned(7 downto 0);
 
-    seed_count  : unsigned(7 downto 0);
+    seed_count  : unsigned(SEED_COUNT_BITS - 1 downto 0); -- seed_count is interpreted from (1 to 2^SEED_COUNT_BITS) not from 0
     frame_limit : unsigned(15 downto 0);
   end record ga_config_t;
   function default_ga_config_t return ga_config_t;

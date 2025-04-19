@@ -19,9 +19,9 @@ lib = vu.add_library("lib")
 # TODO: use glob for ../..
 lib.add_source_files([join(root, '*.vhd'),
                      join(root, '../../src/fitness.vhd'),
-                     join(root, '../../src/playagame.vhd'),
                      join(root, '../../src/ga_types.vhd'),
                      join(root, '../../src/game_types.vhd'),
+                     join(root, '../../src/bram_types.vhd'),
                      join(root, '../../src/custom_utils.vhd')])
 
 # Run vunit function
