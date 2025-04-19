@@ -122,6 +122,9 @@ package body nn_types is
       sum := sum + weight_mult(logits(i), neuron.weights(i));
     end loop;
 
+    -- add bias
+    sum := sum + neuron.bias;
+
     if activate and sum < 0 then
       sum := to_signed(0, sum'length);
     end if;
