@@ -31,8 +31,11 @@ end entity playagame;
 architecture playagame_arch of playagame is
 
   type   state_t is (
-    IDLE_S, REQUEST_INPUT_S,
-    INIT_GAME1_S, WAIT_GAME1_S
+    IDLE_S,
+    INIT_GAME_S,
+    WAIT_INPUT_S,
+    START_FRAME_S,
+    WAIT_FRAME_DONE_S
   );
   signal state : state_t := IDLE_S;
 
@@ -44,6 +47,11 @@ architecture playagame_arch of playagame is
   signal request_input_r : boolean := false;
   signal game_done_r     : boolean := false;
   signal frame_done      : boolean := false;
+
+  signal p1_input_valid_r : boolean := false;
+  signal p2_input_valid_r : boolean := false;
+  signal p1_input_r       : playerinput_t;
+  signal p2_input_r       : playerinput_t;
 
 begin
 
@@ -75,31 +83,46 @@ begin
       request_input_r <= false;
       game_done_r     <= false;
 
+      -- Queue input_valid and latch player inputs
+      if p1_input_valid then
+        p1_input_valid_r <= true;
+        p1_input_r       <= p1_input;
+      end if;
+      if p2_input_valid then
+        p2_input_valid_r <= true;
+        p2_input_r       <= p2_input;
+      end if;
+
       case state is
         when IDLE_S =>
-          score         <= (others => '0');
-          frame_counter <= (others => '0');
+          score            <= (others => '0');
+          frame_counter    <= (others => '0');
+          p1_input_valid_r <= false;
+          p2_input_valid_r <= false;
           if game_go then
-            request_input_r <= true; -- trigger loading of NN inputs
-            state           <= REQUEST_INPUT_S;
-          end if;
-        when REQUEST_INPUT_S =>
-          -- wait until both neural network outputs are ready
-          if p1_input_valid and p2_input_valid then
             game_init_r <= true;
-            state       <= INIT_GAME1_S;
+            state       <= INIT_GAME_S;
           end if;
-        when INIT_GAME1_S =>
-          frame_go_r <= true;        -- trigger first game frame
-          state      <= WAIT_GAME1_S;
-        when WAIT_GAME1_S =>
+        when INIT_GAME_S =>
+          request_input_r  <= true;
+          p1_input_valid_r <= false;
+          p2_input_valid_r <= false;
+          state            <= WAIT_INPUT_S;
+        when WAIT_INPUT_S =>
+          if p1_input_valid_r and p2_input_valid_r then
+            state <= START_FRAME_S;
+          end if;
+        when START_FRAME_S =>
+          frame_go_r       <= true;
+          p1_input_valid_r <= false;
+          p2_input_valid_r <= false;
+          state            <= WAIT_FRAME_DONE_S;
+        when WAIT_FRAME_DONE_S =>
           if frame_done then
             if frame_limit = 0 or frame_counter < frame_limit - 1 then
-              frame_counter <= frame_counter + 1;
-              -- only proceed when both inputs are valid
-              if p1_input_valid and p2_input_valid then
-                frame_go_r <= true;
-              end if;
+              frame_counter   <= frame_counter + 1;
+              request_input_r <= true;
+              state           <= WAIT_INPUT_S;
             else
               score       <= gs.p1.score;
               game_done_r <= true;
