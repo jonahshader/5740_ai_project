@@ -8,11 +8,12 @@ package nn_types is
   constant BIAS_BITS         : integer := 4;
   constant NEURON_DATA_WIDTH : integer := 10;
 
-  constant WEIGHTS_PER_NEURON_EXP : integer := 5; -- 2 ** 5 = 32
+  -- temp: turned this way down
+  constant WEIGHTS_PER_NEURON_EXP : integer := 4; -- was 2 ** 5 = 32. now its 2 ** 3 = 8 lol
   constant WEIGHTS_PER_NEURON     : integer := 2 ** WEIGHTS_PER_NEURON_EXP;
   -- refers to the number of weights per layer
   -- number of layers, excluding input layer
-  constant LAYER_COUNT_EXP : integer := 2;
+  constant LAYER_COUNT_EXP : integer := 1;
   constant LAYER_COUNT     : integer := 2 ** LAYER_COUNT_EXP;
 
   constant TOTAL_WEIGHTS : integer := (WEIGHTS_PER_NEURON ** 2) * LAYER_COUNT;

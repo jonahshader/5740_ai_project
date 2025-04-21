@@ -28,7 +28,7 @@ entity neuroevolution is
     play_against_nn : in boolean;
 
     -- to comms_tx
-    announce_new_state : out boolean;
+    announce_new_state : out boolean    := false;
     state              : out ne_state_t := NE_IDLE_S;
     transmit_gs        : out boolean
   );

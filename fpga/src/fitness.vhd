@@ -23,7 +23,7 @@ entity fitness is
     fitness_done : out boolean;
 
     -- interface with playagame
-    seed           : out std_logic_vector(31 downto 0); -- seed from seed_array
+    seed           : out std_logic_vector(31 downto 0) := (others => '0'); -- seed from seed_array
     init_playagame : out boolean;
     swap_start     : out boolean;
 
@@ -40,8 +40,8 @@ architecture fitness_arch of fitness is
   type   seeds_array_t is array(0 to MAX_SEED_COUNT - 1) of std_logic_vector(31 downto 0);
   signal seeds_array : seeds_array_t := (others => (others => '0'));
 
-  signal current_chromosome : unsigned(7 downto 0);
-  signal current_opponent   : unsigned(7 downto 0);
+  signal current_chromosome : unsigned(7 downto 0)                  := (others => '0');
+  signal current_opponent   : unsigned(7 downto 0)                  := (others => '0');
   signal seed_ctr           : integer range 0 to MAX_SEED_COUNT - 1 := 0;
   signal swap_state         : boolean                               := FALSE;
 
