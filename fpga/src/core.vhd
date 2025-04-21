@@ -39,19 +39,16 @@ architecture core_arch of core is
   signal gamestate_send : boolean := false;
   signal tx_ready       : boolean;
 
-  signal test_go_out : boolean;
-
   -- game signals
   signal game_done          : boolean;
   signal p_game_done        : boolean := true;
   signal queue_tr_gamestate : boolean := false;
 
-  signal temp_h_counter : unsigned(26 downto 0) := to_unsigned(0, 27);
+  signal led_counter : unsigned(25 downto 0) := to_unsigned(0, 26);
 
 begin
 
-  test_go_out <= temp_h_counter = 0 or test_go;
-  led_out     <= temp_h_counter(25);
+  led_out <= led_counter(25);
 
   comms_rx_ent : entity work.comms_rx
     port map (
@@ -59,7 +56,7 @@ begin
       uart_rx           => o_rx_byte,
       uart_rx_valid     => o_rx_dv,
       training_go       => training_go,
-      training_stop     => training_stop,
+      training_pause    => training_stop,
       inference_go      => inference_go,
       human_input       => human_input,
       human_input_valid => human_input_valid,
@@ -78,7 +75,7 @@ begin
       ga_state_send  => ga_state_send,
       gamestate      => gamestate,
       gamestate_send => gamestate_send,
-      test_go        => test_go_out,
+      test_go        => test_go,
       ready          => tx_ready
     );
 
@@ -102,10 +99,10 @@ begin
       -- default to no sending
       gamestate_send <= false;
 
-      if temp_h_counter = (2 ** 27) - 1 then
-        temp_h_counter <= to_unsigned(0, 27);
+      if led_counter = (2 ** 27) - 1 then
+        led_counter <= to_unsigned(0, 27);
       else
-        temp_h_counter <= temp_h_counter + 1;
+        led_counter <= led_counter + 1;
       end if;
 
       -- get edge of game_done

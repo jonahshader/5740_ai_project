@@ -6,12 +6,31 @@ use work.bram_types.all;
 use work.ga_types.all;
 use work.custom_utils.all;
 use work.game_types.all;
+use work.ne_types.all;
 
 entity neuroevolution is
   port (
     clk    : in std_logic;
     config : in ga_config_t;
-    m      : in tilemap_t
+    m      : in tilemap_t;
+
+    -- controls
+    training_go     : in boolean;
+    training_pause  : in boolean;
+    training_resume : in boolean;
+    inference_go    : in boolean;
+    inference_stop  : in boolean;
+
+    -- from comms_rx
+    human_input       : in playerinput_t := default_playerinput_t;
+    human_input_valid : in boolean       := false;
+    -- when true, human_input_valid acts as a frame go pulse and human input is ignored
+    play_against_nn : in boolean;
+
+    -- to comms_tx
+    announce_new_state : out boolean;
+    state              : out ne_state_t := NE_IDLE_S;
+    transmit_gs        : out boolean
   );
 end entity neuroevolution;
 
@@ -59,11 +78,14 @@ architecture neuroevolution_arch of neuroevolution is
   signal nn1_go     : boolean;
   signal nn1_done   : boolean;
   signal nn2_action : playerinput_t;
-  signal nn2_go     : boolean;
   signal nn2_done   : boolean;
 
+  -- p2 muxed signals
+  signal p2_action : playerinput_t;
+  signal p2_go     : boolean;
+  signal p2_done   : boolean;
+
   -- ga io
-  signal ga_go               : boolean;
   signal ga_done             : boolean;
   signal ga_rng              : std_logic_vector(31 downto 0);
   signal ga_bm_command       : bram_command_t;
@@ -72,7 +94,56 @@ architecture neuroevolution_arch of neuroevolution is
   signal ga_bm_mutation_rate : mutation_rate_t;
   signal ga_bm_go            : boolean;
 
+  -- playagame io
+  signal frame_limit     : unsigned(15 downto 0);
+  signal frame_end_pulse : boolean;
+
 begin
+
+  -- set frame limit to 0 to disable it when in playing state.
+  frame_limit <= (others => '0') when state = NE_PLAYING_S else config.frame_limit;
+
+  state_proc : process (all) is
+  begin
+    if rising_edge(clk) then
+      -- defaults
+      announce_new_state <= false;
+
+      case state is
+        when NE_IDLE_S =>
+          -- we can go to training or playing from idle
+          if training_go or training_resume then
+            -- transition immediately
+            state <= NE_TRAINING_S;
+            -- announce
+            announce_new_state <= true;
+          elsif inference_go then
+            -- transition immediately
+            state <= NE_PLAYING_S;
+            -- announce
+            announce_new_state <= true;
+          end if;
+        when NE_TRAINING_S =>
+          -- if we get the done pulse from ga, go to idle
+          -- ga_done pulses high when its done training, or it has been
+          -- successfully paused.
+          if ga_done then
+            state <= NE_IDLE_S;
+            -- announce
+            announce_new_state <= true;
+          end if;
+        when NE_PLAYING_S =>
+          -- go back to idle if we get a stop pulse
+          if inference_stop then
+            state <= NE_IDLE_S;
+            -- announce
+            announce_new_state <= true;
+          end if;
+        when others =>
+          null;
+      end case;
+    end if;
+  end process;
 
   bram_control_mux_proc : process (all) is
   begin
@@ -86,6 +157,26 @@ begin
       bm_read_index  <= fn_bm_read_index;
       bm_write_index <= (others => '0');
       bm_go          <= fn_bm_go;
+    end if;
+  end process;
+
+  player_nn_mux_proc : process (all) is
+  begin
+    if state = NE_PLAYING_S and not play_against_nn then
+      -- p2 gets human input
+      p2_action <= human_input;
+      p2_done   <= human_input_valid;
+    else
+      -- p2 gets nn
+      p2_action <= nn2_action;
+      p2_done   <= nn2_done;
+    end if;
+
+    -- transmit gs only when in playing state
+    if state = NE_PLAYING_S and frame_end_pulse then
+      transmit_gs <= true;
+    else
+      transmit_gs <= false;
     end if;
   end process;
 
@@ -140,17 +231,18 @@ begin
       clk                     => clk,
       swap_start_from_fitness => pg_swap_start_from_fitness,
       seed_from_fitness       => fn_seed,
-      frame_limit             => config.frame_limit,
-      game_go                 => fn_init_playagame,
+      frame_limit             => frame_limit,
+      game_go                 => fn_init_playagame or inference_go, -- todo: is this sufficient?
       game_done               => fn_playagame_done,
       score_output            => fn_game_score,
       p1_input                => nn1_action,
       p1_input_valid          => nn1_done,
       p1_request_input        => nn1_go,
-      p2_input                => nn2_action,
-      p2_input_valid          => nn2_done,
-      p2_request_input        => nn2_go,
+      p2_input                => p2_action,                         -- muxed controls
+      p2_input_valid          => p2_done,
+      p2_request_input        => p2_go,
       gs                      => pg_gs,
+      frame_end_pulse         => frame_end_pulse,
       m                       => m
     );
 
@@ -178,7 +270,7 @@ begin
       -- TODO: perspective should be a generic
       p1_perspective => false,
       action         => nn2_action,
-      go             => nn2_go,
+      go             => p2_go,
       done           => nn2_done
     );
 
@@ -186,10 +278,10 @@ begin
     port map (
       clk              => clk,
       config           => config,
-      go               => ga_go,
+      go               => training_go,
       done             => ga_done,
-      pause            => false,
-      resume           => false,
+      pause            => training_pause,
+      resume           => training_resume,
       rng              => ga_rng,
       bm_command       => ga_bm_command,
       bm_read_index    => ga_bm_read_index,

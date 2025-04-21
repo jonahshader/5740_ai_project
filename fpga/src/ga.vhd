@@ -71,8 +71,8 @@ architecture ga_arch of ga is
   signal vc_go            : boolean := false;
   signal vc_done          : boolean;
 
-  signal init_bram_go               : boolean := false;
-  signal init_bram_read_write_index : bram_index_t;
+  signal init_bram_go               : boolean      := false;
+  signal init_bram_read_write_index : bram_index_t := (others => '0');
 
 begin
 

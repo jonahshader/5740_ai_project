@@ -10,19 +10,20 @@ entity playagame is
     -- interface with fitness
     swap_start_from_fitness : in  boolean;                       -- swap start from fitness
     seed_from_fitness       : in  std_logic_vector(31 downto 0); -- seed from fitness.ga_config
-    frame_limit             : in  unsigned(15 downto 0);         -- frame_limit from fitness.ga_config
+    frame_limit             : in  unsigned(15 downto 0);         -- frame_limit from fitness.ga_config. setting 0 means no limit (used for inference).
     game_go                 : in  boolean;                       -- start playing a game
     game_done               : out boolean;                       -- goes to fitness
     score_output            : out signed(15 downto 0);           -- final score from player 1 after a single game
 
     -- interface with players
-    p1_input         : in playerinput_t; -- player 1 input from nn1
-    p1_input_valid   : in boolean;       -- means that nn1 finished propagation and playerinput is ready
-    p1_request_input : out boolean;      -- nn1 start propagation
-    p2_input         : in playerinput_t; -- player 2 input from nn2 or human player
-    p2_input_valid   : in boolean;       -- means that nn2 finished propagation and playerinput is ready or human player input is read from uart
-    p2_request_input : out boolean;      -- nn2 start propagation or read playerinput from uart
-    gs               : out gamestate_t;  -- game state to be passed to nns
+    p1_input         : in playerinput_t;     -- player 1 input from nn1
+    p1_input_valid   : in boolean;           -- means that nn1 finished propagation and playerinput is ready
+    p1_request_input : out boolean;          -- nn1 start propagation
+    p2_input         : in playerinput_t;     -- player 2 input from nn2 or human player
+    p2_input_valid   : in boolean;           -- means that nn2 finished propagation and playerinput is ready or human player input is read from uart
+    p2_request_input : out boolean;          -- nn2 start propagation or read playerinput from uart
+    gs               : out gamestate_t;      -- game state to be passed to nns
+    frame_end_pulse  : out boolean := false; -- pulses when the frame finishes. used to trigger state transmission over uart.
 
     m : in tilemap_t -- comes from uart
   );
@@ -82,6 +83,7 @@ begin
       frame_go_r      <= false;
       request_input_r <= false;
       game_done_r     <= false;
+      frame_end_pulse <= false;
 
       -- Queue input_valid and latch player inputs
       if p1_input_valid then
@@ -119,6 +121,7 @@ begin
           state            <= WAIT_FRAME_DONE_S;
         when WAIT_FRAME_DONE_S =>
           if frame_done then
+            frame_end_pulse <= true; -- pulse done
             if frame_limit = 0 or frame_counter < frame_limit - 1 then
               frame_counter   <= frame_counter + 1;
               request_input_r <= true;

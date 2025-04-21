@@ -18,15 +18,18 @@ entity comms_rx is
 
     -- system controls
     training_go       : out boolean       := false;
-    training_stop     : out boolean       := false;
+    training_pause    : out boolean       := false; -- TODO: double-check logic on this
+    training_resume   : out boolean       := false; -- TODO: implement here and in c++
     inference_go      : out boolean       := false;
+    inference_stop    : out boolean       := false;
     human_input       : out playerinput_t := default_playerinput_t;
     human_input_valid : out boolean       := false;
     test_go           : out boolean       := false;
 
     -- configs
-    tilemap   : out tilemap_t   := default_tilemap_t;
-    ga_config : out ga_config_t := default_ga_config_t
+    tilemap         : out tilemap_t   := default_tilemap_t;
+    ga_config       : out ga_config_t := default_ga_config_t;
+    play_against_nn : out boolean     := false -- TODO: implement. true=nn vs human. false=nn vs nn
   );
 end entity comms_rx;
 
@@ -70,9 +73,10 @@ architecture comms_rx_arch of comms_rx is
   constant GA_CONFIG_MSG     : msg_t := x"02"; -- start ga_config transfer
   constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop the training early
   -- TODO: look into strategies for resetting/flushing state machine
-  constant PLAYER_INPUT_MSG : msg_t := x"04"; -- human player input transfer
-  constant TEST_MSG         : msg_t := x"05"; -- test print to serial
-  constant INFERENCE_GO_MSG : msg_t := x"06"; -- init game, configure to use player input
+  constant PLAYER_INPUT_MSG   : msg_t := x"04"; -- human player input transfer
+  constant TEST_MSG           : msg_t := x"05"; -- test print to serial
+  constant INFERENCE_GO_MSG   : msg_t := x"06"; -- init game, configure to use player input
+  constant INFERENCE_STOP_MSG : msg_t := x"07"; -- stop game
 
 begin
 
@@ -82,8 +86,9 @@ begin
       -- these are related to system control.
       -- they should be default until addressed via a message.
       training_go       <= false;
-      training_stop     <= false;
+      training_pause    <= false;
       inference_go      <= false;
+      inference_stop    <= false;
       human_input       <= default_playerinput_t;
       human_input_valid <= false;
       test_go           <= false;
@@ -104,13 +109,15 @@ begin
               when TRAINING_STOP_MSG =>
                 -- no state transition required here. we are just
                 -- passing it along through training_stop.
-                training_stop <= true;
+                training_pause <= true;
               when PLAYER_INPUT_MSG =>
                 state <= TR_PLAYER_INPUT;
               when TEST_MSG =>
                 test_go <= true;
               when INFERENCE_GO_MSG =>
                 inference_go <= true;
+              when INFERENCE_STOP_MSG =>
+                inference_stop <= true;
               when others =>
                 null;
             end case;
