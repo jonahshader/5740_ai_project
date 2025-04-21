@@ -18,10 +18,9 @@ end entity neuroevolution;
 architecture neuroevolution_arch of neuroevolution is
 
   -- bram_manager (bm) io
-  signal bm_command       : bram_command_t;
-  signal bm_read_index    : bram_index_t;
-  signal bm_write_index   : bram_index_t;
-  signal bm_mutation_rate : mutation_rate_t;
+  signal bm_command     : bram_command_t;
+  signal bm_read_index  : bram_index_t;
+  signal bm_write_index : bram_index_t;
 
   signal bm_param            : param_t;
   signal bm_param_index      : param_index_t;
@@ -46,23 +45,13 @@ architecture neuroevolution_arch of neuroevolution is
   signal fn_done : boolean;
 
   signal fn_seed           : std_logic_vector(31 downto 0);
-  signal fn_frame_limit    : unsigned(15 downto 0);
   signal fn_init_playagame : boolean;
 
   signal fn_playagame_done : boolean;
   signal fn_game_score     : signed(15 downto 0);
 
   -- playagame (pg) io
-  -- TODO: i dont think fitness currently outputs swap_start
   signal pg_swap_start_from_fitness : boolean;
-  signal pg_go                      : boolean;
-  signal pg_done                    : boolean;
-  signal pg_p1_input                : playerinput_t;
-  signal pg_p1_input_valid          : boolean;
-  signal pg_p1_request_input        : boolean;
-  signal pg_p2_input                : playerinput_t;
-  signal pg_p2_input_valid          : boolean;
-  signal pg_p2_request_input        : boolean;
   signal pg_gs                      : gamestate_t;
 
   -- nn io
@@ -73,10 +62,31 @@ architecture neuroevolution_arch of neuroevolution is
   signal nn2_go     : boolean;
   signal nn2_done   : boolean;
 
+  -- ga io
+  signal ga_go               : boolean;
+  signal ga_done             : boolean;
+  signal ga_rng              : std_logic_vector(31 downto 0);
+  signal ga_bm_command       : bram_command_t;
+  signal ga_bm_read_index    : bram_index_t;
+  signal ga_bm_write_index   : bram_index_t;
+  signal ga_bm_mutation_rate : mutation_rate_t;
+  signal ga_bm_go            : boolean;
+
 begin
 
   bram_control_mux_proc : process (all) is
   begin
+    if ga_bm_go then
+      bm_command     <= ga_bm_command;
+      bm_read_index  <= ga_bm_read_index;
+      bm_write_index <= ga_bm_write_index;
+      bm_go          <= ga_bm_go;
+    else
+      bm_command     <= fn_bm_command;
+      bm_read_index  <= fn_bm_read_index;
+      bm_write_index <= (others => '0');
+      bm_go          <= fn_bm_go;
+    end if;
   end process;
 
   bram_manager_ent : entity work.bram_manager
@@ -85,8 +95,8 @@ begin
       command          => bm_command,
       read_index       => bm_read_index,
       write_index      => bm_write_index,
-      rng              => xm_result,
-      mutation_rate    => bm_mutation_rate,
+      rng              => ga_rng,
+      mutation_rate    => ga_bm_mutation_rate,
       param            => bm_param,
       param_index      => bm_param_index,
       param_valid_nn_1 => bm_param_valid_nn_1,
@@ -95,20 +105,10 @@ begin
       done             => bm_done
     );
 
-  xormix32_ent : entity work.xormix32
-    port map (
-      clk    => clk,
-      rst    => to_std_logic(xm_rst),
-      seed_x => xm_seed_x,
-      seed_y => (others => '0'),
-      enable => to_std_logic(xm_enable),
-      result => xm_result
-    );
-
   tournament_ent : entity work.tournament
     port map (
       clk                      => clk,
-      rng                      => xm_result,
+      rng                      => ga_rng,
       go                       => tn_go,
       ga_config                => config,
       input_population_fitness => tn_input_population_fitness,
@@ -119,6 +119,7 @@ begin
   fitness_ent : entity work.fitness
     port map (
       clk                       => clk,
+      rng                       => ga_rng,
       bm_command                => fn_bm_command,
       bm_read_index             => fn_bm_read_index,
       bm_go                     => fn_bm_go,
@@ -127,8 +128,8 @@ begin
       fitness_go                => fn_go,
       fitness_done              => fn_done,
       seed                      => fn_seed,
-      frame_limit               => fn_frame_limit,
       init_playagame            => fn_init_playagame,
+      swap_start                => pg_swap_start_from_fitness,
       playagame_done            => fn_playagame_done,
       game_score                => fn_game_score,
       output_population_fitness => tn_input_population_fitness
@@ -139,20 +140,18 @@ begin
       clk                     => clk,
       swap_start_from_fitness => pg_swap_start_from_fitness,
       seed_from_fitness       => fn_seed,
-      -- TODO: why is frame limit coming from fitness?
-      --  just take from ga_state
-      frame_limit      => fn_frame_limit,
-      game_go          => pg_go,
-      game_done        => pg_done,
-      score_output     => fn_game_score,
-      p1_input         => pg_p1_input,
-      p1_input_valid   => pg_p1_input_valid,
-      p1_request_input => pg_p1_request_input,
-      p2_input         => pg_p2_input,
-      p2_input_valid   => pg_p2_input_valid,
-      p2_request_input => pg_p2_request_input,
-      gs               => pg_gs,
-      m                => m
+      frame_limit             => config.frame_limit,
+      game_go                 => fn_init_playagame,
+      game_done               => fn_playagame_done,
+      score_output            => fn_game_score,
+      p1_input                => nn1_action,
+      p1_input_valid          => nn1_done,
+      p1_request_input        => nn1_go,
+      p2_input                => nn2_action,
+      p2_input_valid          => nn2_done,
+      p2_request_input        => nn2_go,
+      gs                      => pg_gs,
+      m                       => m
     );
 
   nn1_ent : entity work.nn
@@ -195,13 +194,14 @@ begin
       bm_command       => ga_bm_command,
       bm_read_index    => ga_bm_read_index,
       bm_write_index   => ga_bm_write_index,
+      bm_mutation_rate => ga_bm_mutation_rate,
       bm_go            => ga_bm_go,
-      bm_done          => ga_bm_done -- TODO: wire directly to existing bm signal
-      tn_go => tn_go,
+      bm_done          => bm_done,
+      tn_go            => tn_go,
       tn_done          => tn_done,
       tn_winner_counts => tn_winner_counts,
-      ft_go            => ft_go,
-      ft_done          => ft_done
+      fn_go            => fn_go,
+      fn_done          => fn_done
 
     );
 
