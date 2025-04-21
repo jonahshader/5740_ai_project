@@ -32,7 +32,7 @@ entity bram_manager is
     param_valid_nn_2 : out boolean       := false;
 
     go   : in boolean;
-    done : out boolean := true
+    done : out boolean
   );
 end entity bram_manager;
 
@@ -53,11 +53,14 @@ architecture bram_manager_arch of bram_manager is
   signal write_index_r   : bram_index_t    := (others => '0');
   signal mutation_rate_r : mutation_rate_t := (others => '0');
 
+  signal done_r : boolean := true;
+
 begin
 
   param            <= dout_b_arr(to_integer(read_index_r));
-  param_valid_nn_1 <= command_r = C_READ_TO_NN_1 and not done;
-  param_valid_nn_2 <= command_r = C_READ_TO_NN_2 and not done;
+  param_valid_nn_1 <= command_r = C_READ_TO_NN_1 and not done_r;
+  param_valid_nn_2 <= command_r = C_READ_TO_NN_2 and not done_r;
+  done             <= done_r and not go;
 
   bram_gen : for i in 0 to NUM_BRAMS - 1 generate
     bram_inst : entity work.bram_sdp
@@ -82,19 +85,19 @@ begin
   proc : process (all) is
   begin
     if rising_edge(clk) then
-      if done then -- not running, able to accept command
-        if go then -- accept command
-          done            <= false;
+      if done_r then -- not running, able to accept command
+        if go then   -- accept command
+          done_r          <= false;
           command_r       <= command;
           read_index_r    <= read_index;
           write_index_r   <= write_index;
           mutation_rate_r <= mutation_rate;
           param_index     <= to_unsigned(0, param_index'length);
           addr_a          <= to_unsigned(0, addr_a'length);
-          done            <= false;
+          done_r          <= false;
           we_a_arr        <= (others => false);
         end if;
-      else         -- running
+      else           -- running
         case command_r is
           when C_COPY_AND_MUTATE =>
             if param_index < TOTAL_PARAMS - 1 then
@@ -102,16 +105,16 @@ begin
               din_a       <= mutate_param(param, param_index, rng, mutation_rate_r);
             else
               param_index <= to_unsigned(0, param_index'length);
-              done        <= true;
+              done_r      <= true;
             end if;
             addr_a                              <= param_index;
             we_a_arr(to_integer(write_index_r)) <= true;
           when C_READ_TO_NN_1 | C_READ_TO_NN_2 =>
             if param_index < TOTAL_PARAMS - 1 then
               param_index <= param_index + 1;
-            else   -- addr_a = TOTAL_PARAMS - 1, the last index
+            else     -- addr_a = TOTAL_PARAMS - 1, the last index
               param_index <= to_unsigned(0, param_index'length);
-              done        <= true;
+              done_r      <= true;
             end if;
           when others =>
             null;
