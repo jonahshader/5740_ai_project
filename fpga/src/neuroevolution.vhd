@@ -31,12 +31,6 @@ architecture neuroevolution_arch of neuroevolution is
   signal bm_go   : boolean;
   signal bm_done : boolean;
 
-  -- xormix32 (xm) io
-  signal xm_rst    : boolean;
-  signal xm_seed_x : std_logic_vector(31 downto 0);
-  signal xm_enable : boolean;
-  signal xm_result : std_logic_vector(31 downto 0);
-
   -- tournament (tn) io
   signal tn_go                       : boolean;
   signal tn_input_population_fitness : fitness_array_t;
@@ -80,6 +74,10 @@ architecture neuroevolution_arch of neuroevolution is
   signal nn2_done   : boolean;
 
 begin
+
+  bram_control_mux_proc : process (all) is
+  begin
+  end process;
 
   bram_manager_ent : entity work.bram_manager
     port map (
@@ -183,6 +181,28 @@ begin
       action         => nn2_action,
       go             => nn2_go,
       done           => nn2_done
+    );
+
+  ga_ent : entity work.ga
+    port map (
+      clk              => clk,
+      config           => config,
+      go               => ga_go,
+      done             => ga_done,
+      pause            => false,
+      resume           => false,
+      rng              => ga_rng,
+      bm_command       => ga_bm_command,
+      bm_read_index    => ga_bm_read_index,
+      bm_write_index   => ga_bm_write_index,
+      bm_go            => ga_bm_go,
+      bm_done          => ga_bm_done -- TODO: wire directly to existing bm signal
+      tn_go => tn_go,
+      tn_done          => tn_done,
+      tn_winner_counts => tn_winner_counts,
+      ft_go            => ft_go,
+      ft_done          => ft_done
+
     );
 
 end architecture neuroevolution_arch;

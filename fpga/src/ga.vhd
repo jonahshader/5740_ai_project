@@ -21,8 +21,8 @@ entity ga is
     bm_command     : out bram_command_t := C_COPY_AND_MUTATE;
     bm_read_index  : out bram_index_t   := (others => '0');
     bm_write_index : out bram_index_t   := (others => '0');
-    gn_go          : out boolean        := false;
-    gn_done        : in boolean;
+    bm_go          : out boolean        := false;
+    bm_done        : in boolean;
 
     -- tournament (tn) io
     tn_go            : out boolean := false;
