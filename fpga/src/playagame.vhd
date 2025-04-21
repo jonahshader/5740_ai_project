@@ -31,8 +31,11 @@ end entity playagame;
 architecture playagame_arch of playagame is
 
   type   state_t is (
-    IDLE_S, REQUEST_INPUT_S,
-    INIT_GAME1_S, WAIT_GAME1_S
+    IDLE_S,
+    INIT_GAME_S,
+    WAIT_INPUT_S,
+    START_FRAME_S,
+    WAIT_FRAME_DONE_S
   );
   signal state : state_t := IDLE_S;
 
@@ -44,16 +47,6 @@ architecture playagame_arch of playagame is
   signal request_input_r : boolean := false;
   signal game_done_r     : boolean := false;
   signal frame_done      : boolean := false;
-  signal game_init_r     : boolean := false;
-  signal frame_go_r      : boolean := false;
-  signal request_input_r : boolean := false;
-  signal game_done_r     : boolean := false;
-  signal frame_done      : boolean := false;
-
-  signal p1_input_valid_r : boolean := false;
-  signal p2_input_valid_r : boolean := false;
-  signal p1_input_r       : playerinput_t;
-  signal p2_input_r       : playerinput_t;
 
   signal p1_input_valid_r : boolean := false;
   signal p2_input_valid_r : boolean := false;
@@ -79,8 +72,6 @@ begin
   -- Outputs
   game_done        <= game_done_r;
   score_output     <= score;
-  p1_request_input <= request_input_r;
-  p2_request_input <= request_input_r;
   p1_request_input <= request_input_r;
   p2_request_input <= request_input_r;
 
@@ -109,8 +100,8 @@ begin
           p1_input_valid_r <= false;
           p2_input_valid_r <= false;
           if game_go then
-            request_input_r <= true; -- trigger loading of NN inputs
-            state           <= REQUEST_INPUT_S;
+            game_init_r <= true;
+            state       <= INIT_GAME_S;
           end if;
         when INIT_GAME_S =>
           request_input_r  <= true;
@@ -135,7 +126,6 @@ begin
             else
               score       <= gs.p1.score;
               game_done_r <= true;
-              state       <= IDLE_S;
               state       <= IDLE_S;
             end if;
           end if;
