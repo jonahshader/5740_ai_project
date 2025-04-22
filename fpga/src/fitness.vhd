@@ -31,7 +31,8 @@ entity fitness is
     game_score     : in signed(15 downto 0); -- score from playagame, (p1 vs p2 score + p2 vs p1 score)
 
     -- results
-    output_population_fitness : out fitness_array_t := default_fitness_array_t -- an array of size 2^population_size_exp, each index has the fitness of the respective choromosome
+    output_population_fitness : out fitness_array_t     := default_fitness_array_t; -- an array of size 2^population_size_exp, each index has the fitness of the respective choromosome
+    reference_fitness_sum     : out signed(15 downto 0) := (others => '0')
   );
 end entity fitness;
 
@@ -71,12 +72,23 @@ begin
     variable opponent_start  : unsigned(7 downto 0);
     variable nn1_end         : unsigned(7 downto 0);
 
+    variable reference_start       : unsigned(7 downto 0);
+    variable reference_end         : unsigned(7 downto 0);
+    variable is_reference_opponent : boolean;
+
   begin
     if rising_edge(clk) then
       population_size := shift_left(to_unsigned(1, 8), to_integer(ga_config.population_size_exp));
       total_opponents := ga_config.model_history_size + ga_config.reference_count;
       opponent_start  := population_size;
       nn1_end         := population_size - 1;
+
+      reference_start := population_size + ga_config.model_history_size;
+      reference_end   := population_size + ga_config.model_history_size + ga_config.reference_count - 1;
+
+      -- Compute if current opponent is a reference opponent
+      is_reference_opponent := (current_opponent >= reference_start) and
+      (current_opponent <= reference_end);
 
       init_playagame <= false;
       bm_go          <= false;
@@ -85,14 +97,15 @@ begin
       case state is
         when IDLE_S =>
           if fitness_go then
-            current_chromosome  <= (others => '0');
-            current_opponent    <= population_size;
-            seed_ctr            <= 0;
-            swap_state          <= FALSE;
-            fitness_accumulator <= (others => '0');
-            seed_rng            <= rng;
-            seed_init_ctr       <= 0;
-            state               <= INIT_SEEDS_S;
+            current_chromosome    <= (others => '0');
+            current_opponent      <= population_size;
+            seed_ctr              <= 0;
+            swap_state            <= FALSE;
+            fitness_accumulator   <= (others => '0');
+            reference_fitness_sum <= (others => '0'); -- Reset reference fitness sum at start
+            seed_rng              <= rng;
+            seed_init_ctr         <= 0;
+            state                 <= INIT_SEEDS_S;
           end if;
         when INIT_SEEDS_S =>
           seeds_array(seed_init_ctr) <= seed_rng;
@@ -141,20 +154,24 @@ begin
           end if;
         when ACCUMULATE_S =>
           fitness_accumulator <= fitness_accumulator + game_score;
-          state               <= ADVANCE_S;
+          -- If it's a reference opponent, also add to reference_fitness_sum
+          if is_reference_opponent then
+            reference_fitness_sum <= reference_fitness_sum + game_score;
+          end if;
+          state <= ADVANCE_S;
         when ADVANCE_S =>
           if swap_state = FALSE then
             swap_state <= TRUE;
-            state      <= START_GAME_S;      -- re-trigger game
+            state      <= START_GAME_S;               -- re-trigger game
           elsif seed_ctr < ga_config.seed_count - 1 then
             seed_ctr   <= seed_ctr + 1;
             swap_state <= FALSE;
-            state      <= START_GAME_S;      -- re-trigger game
+            state      <= START_GAME_S;               -- re-trigger game
           elsif current_opponent < opponent_start + total_opponents - 1 then
             current_opponent <= current_opponent + 1;
             seed_ctr         <= 0;
             swap_state       <= FALSE;
-            state            <= CHECK_NN2_S; -- may need to reload NN2
+            state            <= CHECK_NN2_S;          -- may need to reload NN2
           elsif current_chromosome < nn1_end then
             output_population_fitness(to_integer(current_chromosome)) <= fitness_accumulator;
             current_chromosome                                        <= current_chromosome + 1;
@@ -179,4 +196,3 @@ begin
   end process;
 
 end architecture fitness_arch;
-

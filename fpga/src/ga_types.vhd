@@ -26,7 +26,7 @@ package ga_types is
     model_history_interval : unsigned(7 downto 0);
     seed                   : std_logic_vector(31 downto 0);
     reference_count        : unsigned(7 downto 0);
-    eval_interval          : unsigned(7 downto 0); -- TODO: this is unused
+    eval_interval          : unsigned(7 downto 0); -- 0 indicates no eval.
 
     seed_count  : unsigned(SEED_COUNT_BITS - 1 downto 0); -- seed_count is interpreted from (1 to 2^SEED_COUNT_BITS) not from 0
     frame_limit : unsigned(15 downto 0);

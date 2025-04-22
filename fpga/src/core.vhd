@@ -37,15 +37,15 @@ architecture core_arch of core is
   signal play_against_nn   : boolean;
 
   -- comms_tx signals
-  signal ga_state      : ga_state_t;
   signal ga_state_send : boolean;
-  signal gamestate     : gamestate_t;
   signal tx_ready      : boolean;
 
   -- neuroevolution signals
   signal announce_new_state : boolean;
   signal ne_state           : ne_state_t;
+  signal pg_gs              : gamestate_t;
   signal transmit_gs        : boolean;
+  signal ga_state           : ga_state_t;
 
   signal led_counter : unsigned(25 downto 0) := to_unsigned(0, 26);
 
@@ -68,7 +68,10 @@ begin
       play_against_nn    => play_against_nn,
       announce_new_state => announce_new_state,
       state              => ne_state,
-      transmit_gs        => transmit_gs
+      pg_gs              => pg_gs,
+      transmit_gs        => transmit_gs,
+      ga_state           => ga_state,
+      ga_state_send      => ga_state_send
     );
 
   comms_rx_ent : entity work.comms_rx
@@ -97,7 +100,7 @@ begin
       uart_done             => o_tx_done,
       ga_state              => ga_state,
       ga_state_send         => ga_state_send,
-      gamestate             => gamestate,
+      gamestate             => pg_gs,
       gamestate_send        => transmit_gs,
       test_go               => test_go,
       ne_announce_new_state => announce_new_state,

@@ -12,13 +12,15 @@ use work.custom_utils.all;
 entity ga is
   port (
     -- ga io
-    clk    : in std_logic;
-    config : in ga_config_t;
-    go     : in boolean;
-    done   : out boolean := false;
-    pause  : in boolean;
-    resume : in boolean;
-    rng    : out std_logic_vector(31 downto 0); -- ga holds onto the global rng
+    clk           : in std_logic;
+    config        : in ga_config_t;
+    go            : in boolean;
+    done          : out boolean    := false;
+    pause         : in boolean;
+    resume        : in boolean;
+    rng           : out std_logic_vector(31 downto 0); -- ga holds onto the global rng
+    ga_state      : out ga_state_t := default_ga_state_t;
+    ga_state_send : out boolean    := false;
     -- TODO: add outputs for generation fitness
 
     -- bram_manager (bm) io
@@ -35,8 +37,9 @@ entity ga is
     tn_winner_counts : in winner_counts_array_t;
 
     -- fitness (fn) io
-    fn_go   : out boolean := false;
-    fn_done : in boolean
+    fn_go                    : out boolean := false;
+    fn_done                  : in boolean;
+    fn_reference_fitness_sum : in signed(15 downto 0)
   );
 end entity ga;
 
@@ -60,6 +63,7 @@ architecture ga_arch of ga is
 
   signal init_bram_counter : bram_index_t          := (others => '0');
   signal current_gen       : unsigned(15 downto 0) := (others => '0');
+  signal eval_counter      : unsigned(7 downto 0)  := (others => '0');
   signal rng_enable        : boolean;
 
   -- victor_copy (vc) io
@@ -147,6 +151,7 @@ begin
       tn_go              <= false;
       vc_go              <= false;
       prior_best_copy_go <= false;
+      ga_state_send      <= false;
 
       -- queue pause
       if pause and state /= PAUSED_S then
@@ -218,6 +223,15 @@ begin
           end if;
         when COPY_PRIOR_BEST_S =>
           if bm_done then
+            -- record ga_state here
+            if config.eval_interval /= to_unsigned(0, config.eval_interval'length) and eval_counter = config.eval_interval - 1 then
+              eval_counter               <= (others => '0');
+              ga_state.current_gen       <= current_gen;
+              ga_state.reference_fitness <= fn_reference_fitness_sum;
+              ga_state_send              <= true;
+            else
+              eval_counter <= eval_counter + 1;
+            end if;
             if current_gen = config.max_gen - 1 and not config.run_until_stop_cmd then
               current_gen <= (others => '0');
               -- pulse done

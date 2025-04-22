@@ -30,7 +30,10 @@ entity neuroevolution is
     -- to comms_tx
     announce_new_state : out boolean    := false;
     state              : out ne_state_t := NE_IDLE_S;
-    transmit_gs        : out boolean
+    pg_gs              : out gamestate_t;
+    transmit_gs        : out boolean;
+    ga_state           : out ga_state_t;
+    ga_state_send      : out boolean
   );
 end entity neuroevolution;
 
@@ -56,9 +59,10 @@ architecture neuroevolution_arch of neuroevolution is
   signal tn_done                     : boolean;
 
   -- fitness (fn) io
-  signal fn_bm_command    : bram_command_t;
-  signal fn_bm_read_index : bram_index_t;
-  signal fn_bm_go         : boolean;
+  signal fn_bm_command            : bram_command_t;
+  signal fn_bm_read_index         : bram_index_t;
+  signal fn_bm_go                 : boolean;
+  signal fn_reference_fitness_sum : signed(15 downto 0);
 
   signal fn_go   : boolean;
   signal fn_done : boolean;
@@ -71,7 +75,6 @@ architecture neuroevolution_arch of neuroevolution is
 
   -- playagame (pg) io
   signal pg_swap_start_from_fitness : boolean;
-  signal pg_gs                      : gamestate_t;
 
   -- nn io
   signal nn1_action : playerinput_t;
@@ -223,7 +226,8 @@ begin
       swap_start                => pg_swap_start_from_fitness,
       playagame_done            => fn_playagame_done,
       game_score                => fn_game_score,
-      output_population_fitness => tn_input_population_fitness
+      output_population_fitness => tn_input_population_fitness,
+      reference_fitness_sum     => fn_reference_fitness_sum
     );
 
   playagame_ent : entity work.playagame
@@ -276,25 +280,27 @@ begin
 
   ga_ent : entity work.ga
     port map (
-      clk              => clk,
-      config           => config,
-      go               => training_go,
-      done             => ga_done,
-      pause            => training_pause,
-      resume           => training_resume,
-      rng              => ga_rng,
-      bm_command       => ga_bm_command,
-      bm_read_index    => ga_bm_read_index,
-      bm_write_index   => ga_bm_write_index,
-      bm_mutation_rate => ga_bm_mutation_rate,
-      bm_go            => ga_bm_go,
-      bm_done          => bm_done,
-      tn_go            => tn_go,
-      tn_done          => tn_done,
-      tn_winner_counts => tn_winner_counts,
-      fn_go            => fn_go,
-      fn_done          => fn_done
-
+      clk                      => clk,
+      config                   => config,
+      go                       => training_go,
+      done                     => ga_done,
+      pause                    => training_pause,
+      resume                   => training_resume,
+      rng                      => ga_rng,
+      ga_state                 => ga_state,
+      ga_state_send            => ga_state_send,
+      bm_command               => ga_bm_command,
+      bm_read_index            => ga_bm_read_index,
+      bm_write_index           => ga_bm_write_index,
+      bm_mutation_rate         => ga_bm_mutation_rate,
+      bm_go                    => ga_bm_go,
+      bm_done                  => bm_done,
+      tn_go                    => tn_go,
+      tn_done                  => tn_done,
+      tn_winner_counts         => tn_winner_counts,
+      fn_go                    => fn_go,
+      fn_done                  => fn_done,
+      fn_reference_fitness_sum => fn_reference_fitness_sum
     );
 
 end architecture neuroevolution_arch;

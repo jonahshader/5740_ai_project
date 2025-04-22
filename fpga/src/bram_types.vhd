@@ -8,7 +8,7 @@ package bram_types is
 
   constant NUM_BRAMS      : integer := 144;
   constant BRAM_WIDTH     : integer := 4;
-  constant BRAM_DEPTH     : integer := 9216;
+  constant BRAM_DEPTH     : integer := 4608; -- was 9216. trying 4608
   constant BRAM_ADDR_BITS : integer := integer(ceil(log2(real(BRAM_DEPTH))));
 
   type    bram_command_t is (C_COPY_AND_MUTATE, C_READ_TO_NN_1, C_READ_TO_NN_2);

@@ -63,8 +63,8 @@ begin
       swap_start => swap_start_from_fitness,
       seed       => seed_from_fitness,
       m          => m,
-      p1_input   => p1_input,
-      p2_input   => p2_input,
+      p1_input   => p1_input_r,
+      p2_input   => p2_input_r,
       go         => frame_go_r,
       done       => frame_done,
       gamestate  => gs
