@@ -71,12 +71,15 @@ architecture comms_rx_arch of comms_rx is
   -- to transition to other states
   constant TILEMAP_MSG       : msg_t := x"01"; -- start tilemap transfer
   constant GA_CONFIG_MSG     : msg_t := x"02"; -- start ga_config transfer
-  constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop the training early
+  constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop/pause the training early
   -- TODO: look into strategies for resetting/flushing state machine
-  constant PLAYER_INPUT_MSG   : msg_t := x"04"; -- human player input transfer
-  constant TEST_MSG           : msg_t := x"05"; -- test print to serial
-  constant INFERENCE_GO_MSG   : msg_t := x"06"; -- init game, configure to use player input
-  constant INFERENCE_STOP_MSG : msg_t := x"07"; -- stop game
+  constant PLAYER_INPUT_MSG      : msg_t := x"04"; -- human player input transfer
+  constant TEST_MSG              : msg_t := x"05"; -- test print to serial
+  constant INFERENCE_GO_MSG      : msg_t := x"06"; -- init game, configure to use player input
+  constant INFERENCE_STOP_MSG    : msg_t := x"07"; -- stop game
+  constant TRAINING_RESUME_MSG   : msg_t := x"08"; -- resume training, only when stopped/paused early
+  constant PLAY_AGAINST_NN_TRUE  : msg_t := x"09"; -- turn on play against nn
+  constant PLAY_AGAINST_NN_FALSE : msg_t := x"0A"; -- turn off play against nn
 
 begin
 
@@ -87,6 +90,7 @@ begin
       -- they should be default until addressed via a message.
       training_go       <= false;
       training_pause    <= false;
+      training_resume   <= false;
       inference_go      <= false;
       inference_stop    <= false;
       human_input       <= default_playerinput_t;
@@ -118,6 +122,12 @@ begin
                 inference_go <= true;
               when INFERENCE_STOP_MSG =>
                 inference_stop <= true;
+              when TRAINING_RESUME_MSG =>
+                training_resume <= true;
+              when PLAY_AGAINST_NN_TRUE =>
+                play_against_nn <= true;
+              when PLAY_AGAINST_NN_FALSE =>
+                play_against_nn <= false;
               when others =>
                 null;
             end case;

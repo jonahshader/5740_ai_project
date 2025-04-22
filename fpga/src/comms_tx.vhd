@@ -6,6 +6,7 @@ use ieee.fixed_float_types.all;
 
 use work.game_types.all;
 use work.ga_types.all;
+use work.ne_types.all;
 
 entity comms_tx is
   port (
@@ -21,6 +22,10 @@ entity comms_tx is
     gamestate      : in gamestate_t;
     gamestate_send : in boolean;
     test_go        : in boolean;
+
+    -- from neuroevolution
+    ne_announce_new_state : in boolean;
+    ne_state              : in ne_state_t;
 
     -- ready to initiate a transfer (i.e., not busy)
     ready : out boolean
@@ -62,9 +67,12 @@ architecture comms_tx_arch of comms_tx is
   signal uart_ready_r : boolean := true;
 
   subtype  msg_t is std_logic_vector(7 downto 0);
-  constant GA_STATUS_MSG : msg_t := x"01";
-  constant GAMESTATE_MSG : msg_t := x"02";
-  constant TEST_MSG      : msg_t := x"68"; -- 'h'
+  constant GA_STATUS_MSG  : msg_t := x"01";
+  constant GAMESTATE_MSG  : msg_t := x"02";
+  constant NE_IS_IDLE     : msg_t := x"03";
+  constant NE_IS_TRAINING : msg_t := x"04";
+  constant NE_IS_PLAYING  : msg_t := x"05";
+  constant TEST_MSG       : msg_t := x"68"; -- 'h'
 
 begin
 
@@ -102,6 +110,24 @@ begin
           uart_tx_send <= '1';
           uart_ready_r <= false;
         -- no state transition
+        elsif ne_announce_new_state then
+          -- send messages indicating the current ne state.
+          case ne_state is
+            when NE_IDLE_S =>
+              uart_tx      <= NE_IS_IDLE;
+              uart_tx_send <= '1';
+              uart_ready_r <= false;
+            when NE_TRAINING_S =>
+              uart_tx      <= NE_IS_TRAINING;
+              uart_tx_send <= '1';
+              uart_ready_r <= false;
+            when NE_PLAYING_S =>
+              uart_tx      <= NE_IS_PLAYING;
+              uart_tx_send <= '1';
+              uart_ready_r <= false;
+            when others =>
+              null;
+          end case;
         end if;
       end if;
 
