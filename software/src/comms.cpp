@@ -128,25 +128,32 @@ std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
 
   // if we got nothing, return nothing
   if (!msg) {
+    std::cout << "Receive function got nothing, so returning nullopt." << std::endl;
     return std::nullopt;
   }
 
   // check the message type
   switch (msg.value()) {
     case GA_STATUS_MSG: {
+      std::cout << "Got GA_STATUS_MSG, so next serial receieves will go to GAStatus" << std::endl;
       // variant is GAStatus
       GAStatus ret;
       // TR_CURRENT_GEN_1_S
       // 2 bytes
+      std::cout << "Receiving current_gen upper" << std::endl;
       ret.current_gen = get_fun_blocking() << 8;
       // TR_CURRENT_GEN_2_S
+      std::cout << "Receiving current_gen lower" << std::endl;
       ret.current_gen |= get_fun_blocking();
       // TR_REFERENCE_FITNESS_1_S
       // 2 bytes
+      std::cout << "Receiving reference_fitness upper" << std::endl;
       ret.reference_fitness = get_fun_blocking() << 8;
       // TR_REFERENCE_FITNESS_2_S
+      std::cout << "Receiving reference_fitness lower" << std::endl;
       ret.reference_fitness |= get_fun_blocking();
       // return the GAStatus
+      std::cout << "Returning GAStatus" << std::endl;
       return ret;
     } break;
     case GAMESTATE_MSG: {
@@ -210,15 +217,6 @@ std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
       // return the GameState
       return ret;
     } break;
-    case TEST_MSG:
-      // variant is char
-      std::uint8_t ret;
-      // TR_TEST_MSG
-      // 1 byte
-      ret = get_fun_blocking();
-      // return the char
-      return ret;
-      break;
     default:
       // must be a state transition. return it as-is
       return msg.value();

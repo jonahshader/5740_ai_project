@@ -114,7 +114,7 @@ begin
         -- Stay here 1 clock
         when S_CLEANUP =>
           o_tx_active <= '0';
-          r_tx_done   <= '1';
+          r_tx_done   <= '1'; -- TODO: i think this is a bug. should be 0
           r_sm_main   <= S_IDLE;
         when others =>
           r_sm_main <= S_IDLE;

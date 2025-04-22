@@ -131,8 +131,10 @@ begin
         end if;
       end if;
 
-      -- the rest of the state machine operates upon the uart_done signal pulse
-      if uart_done = '1' then
+      -- the rest of the state machine operates upon the uart_done signal pulse.
+      -- also check uart_tx_send to prevent double-sends, because uart_tx might
+      -- be holding uart_done high for 2 cycles instead of one...
+      if uart_done = '1' and uart_tx_send = '0' then
         -- we are sending something in every state (except for IDLE_S, which overrides this)
         uart_tx_send <= '1';
         case state is

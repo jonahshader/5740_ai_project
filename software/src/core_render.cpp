@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <memory>
+#include <chrono>
+#include <thread>
 
 #include "lodepng.h"
 #include "imgui.h"
@@ -381,7 +383,8 @@ void imgui_training_config(GAConfig &ga_config, EvalConfig &eval_config) {
   ImGui::End();
 }
 
-void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const TileMap &map) {
+void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const TileMap &map,
+                         const GAConfig &ga_config, const EvalConfig &eval_config) {
   ImGui::Begin("State Control");
   switch (pspl_state) {
     case IDLE:
@@ -405,6 +408,9 @@ void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const Til
       if (ImGui::Button("Send Map")) {
         send(map, set_uart);
       }
+      if (ImGui::Button("Send Config")) {
+        send(ga_config, eval_config, set_uart);
+      }
       break;
     case TRAINING:
       ImGui::Text("Training");
@@ -423,22 +429,23 @@ void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const Til
     default:
       break;
   }
+  ImGui::End();
 }
 
 bool connect_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection, bool &is_connected,
                     const std::string &port) {
   try {
     // Close existing connection if any
-    if (serial_connection->isOpen()) {
+    if (serial_connection && serial_connection->isOpen()) {
       serial_connection->close();
     }
 
     // Create new connection with fixed 115200 baud rate
-    serial_connection = std::make_shared<serial_cpp::Serial>(
-        port,
-        115200,                                 // Fixed baud rate
-        serial_cpp::Timeout::simpleTimeout(250) // 250ms timeout
-    );
+    serial_connection =
+        std::make_shared<serial_cpp::Serial>(port,
+                                             115200, // Fixed baud rate
+                                             serial_cpp::Timeout::simpleTimeout(25) // 25ms timeout
+        );
 
     is_connected = serial_connection->isOpen();
     return is_connected;
@@ -452,12 +459,12 @@ bool connect_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection, bool
 void imgui_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection,
                   std::vector<serial_cpp::PortInfo> &available_ports, bool &is_connected,
                   std::string &selected_port) {
+  ImGui::Begin("Serial");
+
   if (!is_connected) {
     if (ImGui::Button("Refresh Ports")) {
       available_ports = serial_cpp::list_ports();
     }
-
-    ImGui::SameLine();
 
     // Available ports dropdown
     if (ImGui::BeginCombo("Serial Port", selected_port.c_str())) {
@@ -494,6 +501,9 @@ void imgui_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection,
       is_connected = false;
     }
   }
+
+  // Always call End()
+  ImGui::End();
 }
 
 void run_on_pl(const std::string &map_filename) {
@@ -522,32 +532,67 @@ void run_on_pl(const std::string &map_filename) {
   auto eval_config = std::make_shared<EvalConfig>();
 
   // Serial connection variables
-  std::shared_ptr<serial_cpp::Serial> serial_connection;
+  std::shared_ptr<serial_cpp::Serial> serial_connection = nullptr;
   bool is_connected = false;
   std::string selected_port;
   std::vector<serial_cpp::PortInfo> available_ports;
 
   // Initial port refresh
   available_ports = serial_cpp::list_ports();
+  std::cout << "Retrieved initially available serial ports." << std::endl;
+  std::cout << "Available ports: " << available_ports.size() << std::endl;
+  for (const auto &port_info : available_ports) {
+    std::cout << port_info.port << " - " << port_info.description << std::endl;
+  }
 
-  set_uart_fun set_uart = [&](std::uint8_t byte) { serial_connection->write(&byte, 1); };
+  set_uart_fun set_uart = [&](std::uint8_t byte) {
+    std::uint8_t buffer[1];
+    buffer[0] = byte;
+    std::cout << "Writing " << static_cast<int>(byte) << " to serial" << std::endl;
+    serial_connection->write(buffer, 1);
+  };
   get_uart_blocking_fun get_uart_blocking = [&]() {
     std::uint8_t buffer[1];
     buffer[0] = 0;
-    if (serial_connection->waitReadable()) {
-      serial_connection->read(buffer, 1);
-    } else {
-      // throw error
-      std::cerr << "Error: Serial read timed out" << std::endl;
-      throw std::runtime_error("Serial read timed out");
+
+    // Record start time
+    auto start_time = std::chrono::steady_clock::now();
+
+    // Set timeout duration to 25ms (matching your existing timeout)
+    const auto timeout_duration = std::chrono::milliseconds(25);
+
+    // Loop until we get data or timeout
+    while (true) {
+      // Check if data is available
+      if (serial_connection) {
+        auto available_before = serial_connection->available();
+        if (serial_connection->available() > 0) {
+          serial_connection->read(buffer, 1);
+          auto available_after = serial_connection->available();
+          std::cout << "Available before: " << available_before
+                    << ", Available after: " << available_after << std::endl;
+          return buffer[0];
+        }
+      }
+
+      // Check if we've timed out
+      auto current_time = std::chrono::steady_clock::now();
+      if (current_time - start_time > timeout_duration) {
+        // Timeout occurred
+        std::cerr << "Error: Serial read timed out" << std::endl;
+        throw std::runtime_error("Serial read timed out");
+      }
+
+      // Sleep for a brief period to avoid busy-waiting
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    return buffer[0];
   };
   get_uart_non_blocking_fun get_uart_non_blocking = [&]() -> std::optional<std::uint8_t> {
     std::uint8_t buffer[1];
     buffer[0] = 0;
-    if (serial_connection->available() > 0) {
+    if (serial_connection && serial_connection->available() > 0) {
       serial_connection->read(buffer, 1);
+      std::cout << "Non-blocking received: " << static_cast<int>(buffer[0]) << std::endl;
       return buffer[0];
     } else {
       return std::nullopt;
@@ -567,10 +612,13 @@ void run_on_pl(const std::string &map_filename) {
         break;
       case IDLE:
         imgui_training_config(*ga_config, *eval_config);
-        imgui_state_control(program_state, set_uart, state.map);
         break;
       default:
         break;
+    }
+
+    if (program_state != WAIT_FOR_UART_CONN) {
+      imgui_state_control(program_state, set_uart, state.map, *ga_config, *eval_config);
     }
 
     // state transitions
@@ -594,12 +642,17 @@ void run_on_pl(const std::string &map_filename) {
       send(input, set_uart);
     }
 
-    while (serial_connection->available() > 0) {
+    while (serial_connection != nullptr && serial_connection->isOpen() &&
+           serial_connection->available() > 0) {
       std::optional<msg_obj> msg_maybe = receive(get_uart_blocking, get_uart_non_blocking);
       auto overload =
           Overload{[&](GameState gs) {
                      std::cout << "Got GameState" << std::endl;
-                     state = gs;
+                     // transfer relevant state
+                     state.p1 = gs.p1;
+                     state.p2 = gs.p2;
+                     state.coin_pos = gs.coin_pos;
+                     state.age = gs.age;
                    },
                    [&](GAStatus ga_status) {
                      std::cout << "Gen " << ga_status.current_gen
@@ -678,7 +731,7 @@ void run_on_pl(const std::string &map_filename) {
       }
     }
   };
-
+  std::cout << "Launching game..." << std::endl;
   game.run(
       update_lambda,
       [&state, &spritesheet](std::vector<uint32_t> &pixels) { render(state, spritesheet, pixels); },
