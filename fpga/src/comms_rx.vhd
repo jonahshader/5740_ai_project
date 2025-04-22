@@ -27,7 +27,7 @@ entity comms_rx is
     test_go           : out boolean       := false;
 
     -- configs
-    tilemap         : out tilemap_t   := default_tilemap_t;
+    tilemap         : out tilemap_t   := test_tilemap_t;
     ga_config       : out ga_config_t := default_ga_config_t;
     play_against_nn : out boolean     := false -- TODO: implement. true=nn vs human. false=nn vs nn
   );
@@ -80,6 +80,7 @@ architecture comms_rx_arch of comms_rx is
   constant TRAINING_RESUME_MSG   : msg_t := x"08"; -- resume training, only when stopped/paused early
   constant PLAY_AGAINST_NN_TRUE  : msg_t := x"09"; -- turn on play against nn
   constant PLAY_AGAINST_NN_FALSE : msg_t := x"0A"; -- turn off play against nn
+  constant TRAINING_GO_MSG : msg_t := x"0B";
 
 begin
 
@@ -128,6 +129,8 @@ begin
                 play_against_nn <= true;
               when PLAY_AGAINST_NN_FALSE =>
                 play_against_nn <= false;
+              when TRAINING_GO_MSG =>
+                training_go <= true;
               when others =>
                 null;
             end case;

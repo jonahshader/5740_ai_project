@@ -212,7 +212,7 @@ std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
     } break;
     case TEST_MSG:
       // variant is char
-      char ret;
+      std::uint8_t ret;
       // TR_TEST_MSG
       // 1 byte
       ret = get_fun_blocking();
@@ -220,8 +220,8 @@ std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
       return ret;
       break;
     default:
-      // throw runtime exception
-      throw std::runtime_error("Unknown message type");
+      // must be a state transition. return it as-is
+      return msg.value();
   }
 
   // if we get here, we didn't return anything

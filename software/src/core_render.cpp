@@ -10,6 +10,7 @@
 #include "interfaces.h"
 #include "models/human.h"
 #include "optimizers/simple.h"
+#include "comms.h"
 
 // constexpr int asdf = 0;
 
@@ -291,12 +292,220 @@ void run_game_with_models(const std::string &map_filename, uint64_t seed,
   game.run(update_lambda, render_lambda, handle_input_lambda, imgui_lambda);
 }
 
+void imgui_training_config(GAConfig &ga_config, EvalConfig &eval_config) {
+  ImGui::Begin("Training Config");
+
+  // GA Configuration section
+  ImGui::Text("Genetic Algorithm Configuration");
+
+  // Mutation rate with slider
+  ImGui::SliderFloat("Mutation Rate", &ga_config.mutation_rate, 0.0f, 1.0f, "%.2f");
+
+  // Taper mutation rate checkbox
+  ImGui::Checkbox("Taper Mutation Rate", &ga_config.taper_mutation_rate);
+
+  // Max generations setting
+  ImGui::InputInt("Max Generations", &ga_config.max_gen);
+  if (ga_config.max_gen < 1)
+    ga_config.max_gen = 1;
+
+  // Run until stop checkbox
+  ImGui::Checkbox("Run Until Stop", &ga_config.run_until_stop);
+
+  // Tournament size
+  ImGui::InputInt("Tournament Size", &ga_config.tournament_size);
+  if (ga_config.tournament_size < 2)
+    ga_config.tournament_size = 2;
+
+  // Population size
+  ImGui::InputInt("Population Size", &ga_config.population_size);
+  if (ga_config.population_size < 2)
+    ga_config.population_size = 2;
+
+  // Model history settings
+  ImGui::InputInt("Model History Size", &ga_config.model_history_size);
+  if (ga_config.model_history_size < 1)
+    ga_config.model_history_size = 1;
+
+  ImGui::InputInt("Model History Interval", &ga_config.model_history_interval);
+  if (ga_config.model_history_interval < 1)
+    ga_config.model_history_interval = 1;
+
+  // Seed setting
+  ImGui::InputScalar("Random Seed", ImGuiDataType_U64, &ga_config.seed);
+
+  // Reference count
+  ImGui::InputInt("Reference Count", &ga_config.reference_count);
+  if (ga_config.reference_count < 1)
+    ga_config.reference_count = 1;
+
+  // Evaluation interval
+  ImGui::InputInt("Evaluation Interval", &ga_config.eval_interval);
+  if (ga_config.eval_interval < 1)
+    ga_config.eval_interval = 1;
+
+  // Separator between GA config and Eval config
+  ImGui::Separator();
+
+  // Evaluation Configuration section
+  ImGui::Text("Evaluation Configuration");
+
+  // Seed count
+  ImGui::InputInt("Seed Count", &eval_config.seed_count);
+  if (eval_config.seed_count < 1)
+    eval_config.seed_count = 1;
+
+  // Frame limit
+  ImGui::InputInt("Frame Limit", &eval_config.frame_limit);
+  if (eval_config.frame_limit < 1)
+    eval_config.frame_limit = 1;
+
+  // Add buttons for common actions
+  if (ImGui::Button("Reset GA Config")) {
+    ga_config = GAConfig{}; // Reset to default values
+  }
+
+  ImGui::SameLine();
+
+  if (ImGui::Button("Reset Eval Config")) {
+    eval_config = EvalConfig{}; // Reset to default values
+  }
+
+  ImGui::SameLine();
+
+  if (ImGui::Button("Generate Random Seed")) {
+    // Simple way to generate a random seed
+    ga_config.seed = static_cast<uint64_t>(time(nullptr));
+  }
+
+  ImGui::End();
+}
+
+void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const TileMap &map) {
+  ImGui::Begin("State Control");
+  switch (pspl_state) {
+    case IDLE:
+      ImGui::Text("Idle");
+      if (ImGui::Button("Start Training")) {
+        set_uart(TRAINING_GO_MSG);
+        pspl_state = TRAINING;
+      }
+      if (ImGui::Button("Resume Training")) {
+        set_uart(TRAINING_RESUME_MSG);
+        pspl_state = TRAINING;
+      }
+      if (ImGui::Button("Watch AI vs AI")) {
+        // TODO: configure properly
+        set_uart(INFERENCE_GO_MSG);
+      }
+      if (ImGui::Button("Play against AI")) {
+        // TODO: configure properly
+        set_uart(INFERENCE_GO_MSG);
+      }
+      if (ImGui::Button("Send Map")) {
+        send(map, set_uart);
+      }
+      break;
+    case TRAINING:
+      ImGui::Text("Training");
+      if (ImGui::Button("Pause Training")) {
+        set_uart(TRAINING_STOP_MSG);
+        // don't transition right away, since it takes time to pause/stop
+      }
+      break;
+    case PLAYING:
+      ImGui::Text("Playing");
+      if (ImGui::Button("Stop Playing")) {
+        set_uart(INFERENCE_STOP_MSG);
+        pspl_state = IDLE;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+bool connect_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection, bool &is_connected,
+                    const std::string &port) {
+  try {
+    // Close existing connection if any
+    if (serial_connection->isOpen()) {
+      serial_connection->close();
+    }
+
+    // Create new connection with fixed 115200 baud rate
+    serial_connection = std::make_shared<serial_cpp::Serial>(
+        port,
+        115200,                                 // Fixed baud rate
+        serial_cpp::Timeout::simpleTimeout(250) // 250ms timeout
+    );
+
+    is_connected = serial_connection->isOpen();
+    return is_connected;
+  } catch (std::exception &e) {
+    std::cerr << "Error connecting to serial port: " << e.what() << std::endl;
+    is_connected = false;
+    return false;
+  }
+}
+
+void imgui_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection,
+                  std::vector<serial_cpp::PortInfo> &available_ports, bool &is_connected,
+                  std::string &selected_port) {
+  if (!is_connected) {
+    if (ImGui::Button("Refresh Ports")) {
+      available_ports = serial_cpp::list_ports();
+    }
+
+    ImGui::SameLine();
+
+    // Available ports dropdown
+    if (ImGui::BeginCombo("Serial Port", selected_port.c_str())) {
+      for (const auto &port_info : available_ports) {
+        bool is_selected = (selected_port == port_info.port);
+        // Display port with description
+        std::string port_display = port_info.port + " - " + port_info.description;
+        if (ImGui::Selectable(port_display.c_str(), is_selected)) {
+          selected_port = port_info.port;
+        }
+        if (is_selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
+    }
+
+    // Connect button
+    if (ImGui::Button("Connect") && !selected_port.empty()) {
+      if (connect_serial(serial_connection, is_connected, selected_port)) {
+        // Successfully connected
+        std::cout << "Connected to " << selected_port << " at 115200 baud" << std::endl;
+      } else {
+        // Failed to connect
+        std::cerr << "Failed to connect to " << selected_port << std::endl;
+      }
+    }
+  } else {
+    // Disconnect button
+    if (ImGui::Button("Disconnect")) {
+      if (serial_connection->isOpen()) {
+        serial_connection->close();
+      }
+      is_connected = false;
+    }
+  }
+}
+
 void run_on_pl(const std::string &map_filename) {
   // initialize game state
   GameState state = init(map_filename, 1);
 
   PixelGame game("JnB Sim", state.map.width * CELL_SIZE, state.map.height * CELL_SIZE, 640, 480,
-                  60);
+                 60);
+
+  PSPLState program_state{PSPLState::WAIT_FOR_UART_CONN};
+
+  PlayerInput input;
 
   std::vector<uint8_t> spritesheet;
   uint32_t w, h;
@@ -312,194 +521,168 @@ void run_on_pl(const std::string &map_filename) {
   auto ga_config = std::make_shared<GAConfig>();
   auto eval_config = std::make_shared<EvalConfig>();
 
-  auto imgui_lambda = [ga_config, eval_config]() {
-    ImGui::Begin("Training Config");
-
-    // GA Configuration section
-    ImGui::Text("Genetic Algorithm Configuration");
-
-    // Mutation rate with slider
-    ImGui::SliderFloat("Mutation Rate", &ga_config->mutation_rate, 0.0f, 1.0f, "%.2f");
-
-    // Taper mutation rate checkbox
-    ImGui::Checkbox("Taper Mutation Rate", &ga_config->taper_mutation_rate);
-
-    // Max generations setting
-    ImGui::InputInt("Max Generations", &ga_config->max_gen);
-    if (ga_config->max_gen < 1)
-      ga_config->max_gen = 1;
-
-    // Run until stop checkbox
-    ImGui::Checkbox("Run Until Stop", &ga_config->run_until_stop);
-
-    // Tournament size
-    ImGui::InputInt("Tournament Size", &ga_config->tournament_size);
-    if (ga_config->tournament_size < 2)
-      ga_config->tournament_size = 2;
-
-    // Population size
-    ImGui::InputInt("Population Size", &ga_config->population_size);
-    if (ga_config->population_size < 2)
-      ga_config->population_size = 2;
-
-    // Model history settings
-    ImGui::InputInt("Model History Size", &ga_config->model_history_size);
-    if (ga_config->model_history_size < 1)
-      ga_config->model_history_size = 1;
-
-    ImGui::InputInt("Model History Interval", &ga_config->model_history_interval);
-    if (ga_config->model_history_interval < 1)
-      ga_config->model_history_interval = 1;
-
-    // Seed setting
-    ImGui::InputScalar("Random Seed", ImGuiDataType_U64, &ga_config->seed);
-
-    // Reference count
-    ImGui::InputInt("Reference Count", &ga_config->reference_count);
-    if (ga_config->reference_count < 1)
-      ga_config->reference_count = 1;
-
-    // Evaluation interval
-    ImGui::InputInt("Evaluation Interval", &ga_config->eval_interval);
-    if (ga_config->eval_interval < 1)
-      ga_config->eval_interval = 1;
-
-    // Separator between GA config and Eval config
-    ImGui::Separator();
-
-    // Evaluation Configuration section
-    ImGui::Text("Evaluation Configuration");
-
-    // Seed count
-    ImGui::InputInt("Seed Count", &eval_config->seed_count);
-    if (eval_config->seed_count < 1)
-      eval_config->seed_count = 1;
-
-    // Frame limit
-    ImGui::InputInt("Frame Limit", &eval_config->frame_limit);
-    if (eval_config->frame_limit < 1)
-      eval_config->frame_limit = 1;
-
-    // Add buttons for common actions
-    if (ImGui::Button("Reset GA Config")) {
-      *ga_config = GAConfig{}; // Reset to default values
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Reset Eval Config")) {
-      *eval_config = EvalConfig{}; // Reset to default values
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Generate Random Seed")) {
-      // Simple way to generate a random seed
-      ga_config->seed = static_cast<uint64_t>(time(nullptr));
-    }
-
-    ImGui::End();
-  };
-
   // Serial connection variables
   std::shared_ptr<serial_cpp::Serial> serial_connection;
   bool is_connected = false;
   std::string selected_port;
   std::vector<serial_cpp::PortInfo> available_ports;
 
-  // Function to refresh the available ports list
-  auto refresh_ports = [&available_ports]() { available_ports = serial_cpp::list_ports(); };
-
-  // Function to establish serial connection
-  auto connect_serial = [&serial_connection, &is_connected, &selected_port]() {
-    try {
-      // Close existing connection if any
-      if (serial_connection && serial_connection->isOpen()) {
-        serial_connection->close();
-      }
-
-      // Create new connection with fixed 115200 baud rate
-      serial_connection = std::make_shared<serial_cpp::Serial>(
-          selected_port,
-          115200,                                 // Fixed baud rate
-          serial_cpp::Timeout::simpleTimeout(250) // 250ms timeout
-      );
-
-      is_connected = serial_connection->isOpen();
-      return is_connected;
-    } catch (std::exception &e) {
-      std::cerr << "Error connecting to serial port: " << e.what() << std::endl;
-      is_connected = false;
-      return false;
-    }
-  };
-
-  // Function to disconnect serial
-  auto disconnect_serial = [&serial_connection, &is_connected]() {
-    if (serial_connection && serial_connection->isOpen()) {
-      serial_connection->close();
-    }
-    is_connected = false;
-  };
-
   // Initial port refresh
-  refresh_ports();
+  available_ports = serial_cpp::list_ports();
 
-  // In the ImGui window:
-  auto serial_imgui = [&]() {
-    if (!is_connected) {
-      if (ImGui::Button("Refresh Ports")) {
-        refresh_ports();
-      }
-  
-      ImGui::SameLine();
-  
-      // Available ports dropdown
-      if (ImGui::BeginCombo("Serial Port", selected_port.c_str())) {
-        for (const auto &port_info : available_ports) {
-          bool is_selected = (selected_port == port_info.port);
-          // Display port with description
-          std::string port_display = port_info.port + " - " + port_info.description;
-          if (ImGui::Selectable(port_display.c_str(), is_selected)) {
-            selected_port = port_info.port;
-          }
-          if (is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-        }
-        ImGui::EndCombo();
-      }
-  
-      // Connect button
-      if (ImGui::Button("Connect") && !selected_port.empty()) {
-        if (connect_serial()) {
-          // Successfully connected
-          std::cout << "Connected to " << selected_port << " at 115200 baud" << std::endl;
-        } else {
-          // Failed to connect
-          std::cerr << "Failed to connect to " << selected_port << std::endl;
-        }
-      }
+  set_uart_fun set_uart = [&](std::uint8_t byte) { serial_connection->write(&byte, 1); };
+  get_uart_blocking_fun get_uart_blocking = [&]() {
+    std::uint8_t buffer[1];
+    buffer[0] = 0;
+    if (serial_connection->waitReadable()) {
+      serial_connection->read(buffer, 1);
     } else {
-      // Disconnect button
-      if (ImGui::Button("Disconnect")) {
-        disconnect_serial();
-      }
+      // throw error
+      std::cerr << "Error: Serial read timed out" << std::endl;
+      throw std::runtime_error("Serial read timed out");
+    }
+    return buffer[0];
+  };
+  get_uart_non_blocking_fun get_uart_non_blocking = [&]() -> std::optional<std::uint8_t> {
+    std::uint8_t buffer[1];
+    buffer[0] = 0;
+    if (serial_connection->available() > 0) {
+      serial_connection->read(buffer, 1);
+      return buffer[0];
+    } else {
+      return std::nullopt;
     }
   };
 
   // combine all imgui lambdas
   auto combined_imgui_lambda = [&]() {
-    imgui_lambda();
-    serial_imgui();
+    // imgui_training_config(*ga_config, *eval_config);
+    // if (program_state == WAIT_FOR_UART_CONN) {
+    //   imgui_serial(serial_connection, available_ports, is_connected, selected_port);
+    // }
+
+    switch (program_state) {
+      case WAIT_FOR_UART_CONN:
+        imgui_serial(serial_connection, available_ports, is_connected, selected_port);
+        break;
+      case IDLE:
+        imgui_training_config(*ga_config, *eval_config);
+        imgui_state_control(program_state, set_uart, state.map);
+        break;
+      default:
+        break;
+    }
+
+    // state transitions
+    if (!is_connected) {
+      program_state = WAIT_FOR_UART_CONN;
+    }
+    switch (program_state) {
+      case WAIT_FOR_UART_CONN:
+        if (is_connected) {
+          program_state = IDLE;
+        }
+        break;
+      default:
+        break;
+    }
   };
 
+  auto update_lambda = [&]() {
+    if (program_state == PLAYING) {
+      // send player input, receive game state
+      send(input, set_uart);
+    }
 
-  // launch a game with empty lambdas except for the imgui lambda
+    while (serial_connection->available() > 0) {
+      std::optional<msg_obj> msg_maybe = receive(get_uart_blocking, get_uart_non_blocking);
+      auto overload =
+          Overload{[&](GameState gs) {
+                     std::cout << "Got GameState" << std::endl;
+                     state = gs;
+                   },
+                   [&](GAStatus ga_status) {
+                     std::cout << "Gen " << ga_status.current_gen
+                               << " total ref. fit.: " << ga_status.reference_fitness << std::endl;
+                   },
+                   [&](std::uint8_t byte) {
+                     switch (byte) {
+                       case NE_IS_IDLE:
+                         std::cout << "NE is idle" << std::endl;
+                         program_state = IDLE;
+                         break;
+                       case NE_IS_TRAINING:
+                         std::cout << "NE is training" << std::endl;
+                         program_state = TRAINING;
+                         break;
+                       case NE_IS_PLAYING:
+                         std::cout << "NE is playing" << std::endl;
+                         program_state = PLAYING;
+                         break;
+                       case TEST_RESPONSE_MSG:
+                         std::cout << "Received test response: " << static_cast<int>(byte)
+                                   << std::endl;
+                         break;
+                       default:
+                         std::cerr << "Unknown message byte: " << byte << std::endl;
+                         break;
+                     }
+                   },
+                   [](auto) {
+                     // handle other types
+                     std::cerr << "Unknown message type" << std::endl;
+                   }};
+
+      if (msg_maybe) {
+        std::visit(overload, msg_maybe.value());
+      } else {
+        std::cerr << "Error: No message received, but serial_connection->available() > 0"
+                  << std::endl;
+      }
+    }
+  };
+  // SDLK_LEFT, SDLK_RIGHT, SDLK_UP
+  constexpr SDL_KeyCode LEFT = SDLK_LEFT;
+  constexpr SDL_KeyCode RIGHT = SDLK_RIGHT;
+  constexpr SDL_KeyCode JUMP = SDLK_UP;
+
+  auto handle_input_lambda = [&](SDL_Event &event) {
+    auto k = event.key.keysym.sym;
+    if (event.type == SDL_KEYDOWN) {
+      switch (k) {
+        case LEFT:
+          input.left = true;
+          break;
+        case RIGHT:
+          input.right = true;
+          break;
+        case JUMP:
+          input.jump = true;
+          break;
+        default:
+          break;
+      }
+    } else if (event.type == SDL_KEYUP) {
+      switch (k) {
+        case LEFT:
+          input.left = false;
+          break;
+        case RIGHT:
+          input.right = false;
+          break;
+        case JUMP:
+          input.jump = false;
+          break;
+        default:
+          break;
+      }
+    }
+  };
+
   game.run(
-      []() {}, // update lambda
+      update_lambda,
       [&state, &spritesheet](std::vector<uint32_t> &pixels) { render(state, spritesheet, pixels); },
-      [](SDL_Event &) {}, // handle input lambda
+      handle_input_lambda,  // handle input lambda
       combined_imgui_lambda // imgui lambda
   );
 }
