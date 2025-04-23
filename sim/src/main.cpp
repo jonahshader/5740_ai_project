@@ -56,9 +56,9 @@ int main(int argc, char *argv[]) {
     config.population_size = 64;
     jnb::EvalConfig eval_config{};
     eval_config.frame_limit = 360;
-    config.mutation_rate = 0.1;
-    config.taper_mutation_rate = true;
-    config.max_gen = 128;
+    config.mutation_rate = 0.01;
+    config.taper_mutation_rate = false;
+    config.max_gen = 64;
 
     // lambda that spits out a randomly init model
     auto model_builder = [width = map.width,

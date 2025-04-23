@@ -82,6 +82,7 @@
         for (int j = 0; j < inputs; ++j) {
           output[i] += weights[i][j] * input[j];
         }
+        output[i] /= 4;
         // activation function (ReLU)
         if (activate)
           output[i] = std::max(static_cast<T>(0), output[i]);
@@ -111,10 +112,10 @@
           // TODO: test some differnt biasing functions, maybe this isn't the best
           // Since this doesn't have to be a true weight and can just be added to the 
           // layer we can expand the range of values that it can take
-          if (bias[i] < -2) {
-              bias[i] = -2;
-          } else if (bias[i] > 2) {
-              bias[i] = 2;
+          if (bias[i] < -7) {
+              bias[i] = -7;
+          } else if (bias[i] > 7) {
+              bias[i] = 7;
           }
       }
     }
