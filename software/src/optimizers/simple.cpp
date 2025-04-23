@@ -47,13 +47,13 @@ void init_state(GAState &state, const TileMap &map, const GAConfig &config,
     state.prior_best.emplace_back(model_builder(state.rng));
   }
 
-  // // references are randomly initialized models for the purpose of global evaluation
-  // for (int i = 0; i < config.reference_count; ++i) {
-  //   state.references.emplace_back(model_builder(state.rng));
-  // }
-  for (int i = 0; i < state.prior_best.size(); ++i) {
-    state.references.emplace_back(state.prior_best[i]);
+  // references are randomly initialized models for the purpose of global evaluation
+  for (int i = 0; i < config.reference_count; ++i) {
+    state.references.emplace_back(model_builder(state.rng));
   }
+  // for (int i = 0; i < state.prior_best.size(); ++i) {
+  //   state.references.emplace_back(state.prior_best[i]);
+  // }
 
   // next should be clear
   state.next.clear();

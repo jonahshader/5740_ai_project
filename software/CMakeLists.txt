@@ -103,6 +103,8 @@ set(COMMON_SOURCES
   src/models/mlp_map_lut.h
   src/models/mlp_simple.cpp
   src/models/mlp_simple.h
+  src/models/pl_nn_model.cpp
+  src/models/pl_nn_model.h
   src/optimizers/simple.cpp
   src/optimizers/simple.h
   src/comms.cpp
@@ -117,6 +119,8 @@ set(COMMON_SOURCES
   src/parse_map.h
   src/pixel_game.cpp
   src/pixel_game.h
+  src/pl_nn.cpp
+  src/pl_nn.h
   ${lodepng_SOURCE_DIR}/lodepng.cpp
 )
 
