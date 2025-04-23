@@ -445,6 +445,29 @@ void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const Til
   ImGui::End();
 }
 
+void imgui_plot_fitness(const std::vector<float> &fitness_history) {
+  ImGui::Begin("Fitness History");
+
+  // Find min and max values for proper scaling
+  float min_val = std::numeric_limits<float>::max();
+  float max_val = std::numeric_limits<float>::lowest();
+  for (const auto &val : fitness_history) {
+    min_val = std::min(min_val, val);
+    max_val = std::max(max_val, val);
+  }
+
+  // Add some padding to min/max to avoid exact edge cases
+  float range = max_val - min_val;
+  min_val -= range * 0.1f;
+  max_val += range * 0.1f;
+
+  // Plot with proper scaling
+  ImGui::PlotLines("Fitness", fitness_history.data(), fitness_history.size(), 0, nullptr, min_val,
+                   max_val, ImVec2(0, 80));
+
+  ImGui::End();
+}
+
 bool connect_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection, bool &is_connected,
                     const std::string &port) {
   try {
@@ -543,6 +566,7 @@ void run_on_pl(const std::string &map_filename) {
   // TODO: these don't need to be shared ptrs
   auto ga_config = std::make_shared<GAConfig>();
   auto eval_config = std::make_shared<EvalConfig>();
+  std::vector<float> fitness_history;
 
   // Serial connection variables
   std::shared_ptr<serial_cpp::Serial> serial_connection = nullptr;
@@ -618,7 +642,7 @@ void run_on_pl(const std::string &map_filename) {
     // if (program_state == WAIT_FOR_UART_CONN) {
     //   imgui_serial(serial_connection, available_ports, is_connected, selected_port);
     // }
-
+    imgui_plot_fitness(fitness_history);
     switch (program_state) {
       case WAIT_FOR_UART_CONN:
         imgui_serial(serial_connection, available_ports, is_connected, selected_port);
@@ -670,6 +694,7 @@ void run_on_pl(const std::string &map_filename) {
                    [&](GAStatus ga_status) {
                      std::cout << "Gen " << ga_status.current_gen
                                << " total ref. fit.: " << ga_status.reference_fitness << std::endl;
+                     fitness_history.emplace_back(static_cast<float>(ga_status.reference_fitness));
                    },
                    [&](std::uint8_t byte) {
                      switch (byte) {
@@ -748,9 +773,7 @@ void run_on_pl(const std::string &map_filename) {
   game.run(
       update_lambda,
       [&state, &spritesheet](std::vector<uint32_t> &pixels) { render(state, spritesheet, pixels); },
-      handle_input_lambda,  // handle input lambda
-      combined_imgui_lambda // imgui lambda
-  );
+      handle_input_lambda, combined_imgui_lambda);
 }
 
 } // namespace jnb

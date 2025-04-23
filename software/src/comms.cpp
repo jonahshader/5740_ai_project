@@ -88,15 +88,10 @@ void send(const TileMap &map, const set_uart_fun &send_fun) {
   // TR_MAP_SPAWNS_S
   // map spawns is 1d, but there are two numbers per coord.
   for (int i = 0; i < MAP_MAX_SPAWNS; ++i) {
-    if (i >= map.spawns.size()) {
-      // send 0 0
-      send_fun(0);
-      send_fun(0);
-    } else {
-      // send the spawn
-      send_fun(map.spawns[i].x);
-      send_fun(map.spawns[i].y);
-    }
+    // send the spawn.
+    // using modulus to fill the entire PL buffer
+    send_fun(map.spawns[i % map.spawns.size()].x);
+    send_fun(map.spawns[i % map.spawns.size()].y);
   }
 
   // TR_MAP_NUM_SPAWN_S
