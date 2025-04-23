@@ -6,7 +6,7 @@ package nn_types is
 
   constant WEIGHT_BITS       : integer := 3;
   constant BIAS_BITS         : integer := 4;
-  constant NEURON_DATA_WIDTH : integer := 10;
+  constant NEURON_DATA_WIDTH : integer := 12;
 
   -- temp: turned this way down
   constant WEIGHTS_PER_NEURON_EXP : integer := 5; -- was 2 ** 5 = 32. now its 2 ** 4 = 16 lol
@@ -55,7 +55,7 @@ package body nn_types is
 
   function default_neuron_t return neuron_t is
     variable val : neuron_t := (weights => default_weights_t,
-                                 bias => (others => '0'));
+      bias => (others => '0'));
   begin
     return val;
   end function;
@@ -118,7 +118,7 @@ package body nn_types is
     variable logit : neuron_logit_t; -- scaled output
 
     -- constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 3;
-    constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 4;
+    constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 5;
   begin
     for i in 0 to WEIGHTS_PER_NEURON - 1 loop
       sum := sum + weight_mult(logits(i), neuron.weights(i));

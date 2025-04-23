@@ -445,7 +445,7 @@ void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const Til
   ImGui::End();
 }
 
-void imgui_plot_fitness(const std::vector<float> &fitness_history) {
+void imgui_plot_fitness(std::vector<float> &fitness_history) {
   ImGui::Begin("Fitness History");
 
   // Find min and max values for proper scaling
@@ -464,6 +464,10 @@ void imgui_plot_fitness(const std::vector<float> &fitness_history) {
   // Plot with proper scaling
   ImGui::PlotLines("Fitness", fitness_history.data(), fitness_history.size(), 0, nullptr, min_val,
                    max_val, ImVec2(0, 80));
+
+  if (ImGui::Button("Clear")) {
+    fitness_history.clear();
+  }
 
   ImGui::End();
 }
