@@ -33,7 +33,8 @@ architecture tb of tb_fitness is
     reference_count => to_unsigned(2, 8),     -- one opponent
     eval_interval => to_unsigned(0, 8),
     seed_count => to_unsigned(2, 8),
-    frame_limit => to_unsigned(0, 16)
+    frame_limit => to_unsigned(0, 16),
+    recycle_seeds => false
   );
   signal fitness_go   : boolean     := false;
   signal fitness_done : boolean     := false;
@@ -78,8 +79,10 @@ begin
     );
 
   main : process is
+
     variable bm_go_seen          : boolean := false;
     variable init_playagame_seen : boolean := false;
+
   begin
     test_runner_setup(runner, RUNNER_CFG);
 

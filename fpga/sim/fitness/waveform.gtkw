@@ -1,0 +1,32 @@
+[*]
+[*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
+[*] Wed Apr 23 18:40:05 2025
+[*]
+[dumpfile] "/home/jonah/repos/5740_ai_project/fpga/sim/fitness/vunit_out/test_output/lib.tb_fitness.default_9f46ca2810d8633f6b5647bb01ab0fa32f49dc37/ghdl/wave.ghw"
+[dumpfile_mtime] "Wed Apr 23 18:37:29 2025"
+[dumpfile_size] 51564
+[savefile] "/home/jonah/repos/5740_ai_project/fpga/sim/fitness/waveform.gtkw"
+[timestart] 0
+[size] 1920 985
+[pos] -27 -24
+*-28.911549 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb_fitness.
+[treeopen] top.tb_fitness.output_population_fitness.
+[sst_width] 297
+[signals_width] 302
+[sst_expanded] 1
+[sst_vpaned_height] 291
+@28
+top.tb_fitness.clk
+@420
+top.tb_fitness.bm_go
+top.tb_fitness.bm_done
+top.tb_fitness.init_playagame
+@22
+#{top.tb_fitness.game_score[15:0]} top.tb_fitness.game_score[15] top.tb_fitness.game_score[14] top.tb_fitness.game_score[13] top.tb_fitness.game_score[12] top.tb_fitness.game_score[11] top.tb_fitness.game_score[10] top.tb_fitness.game_score[9] top.tb_fitness.game_score[8] top.tb_fitness.game_score[7] top.tb_fitness.game_score[6] top.tb_fitness.game_score[5] top.tb_fitness.game_score[4] top.tb_fitness.game_score[3] top.tb_fitness.game_score[2] top.tb_fitness.game_score[1] top.tb_fitness.game_score[0]
+#{top.tb_fitness.output_population_fitness[0][15:0]} top.tb_fitness.output_population_fitness[0][15] top.tb_fitness.output_population_fitness[0][14] top.tb_fitness.output_population_fitness[0][13] top.tb_fitness.output_population_fitness[0][12] top.tb_fitness.output_population_fitness[0][11] top.tb_fitness.output_population_fitness[0][10] top.tb_fitness.output_population_fitness[0][9] top.tb_fitness.output_population_fitness[0][8] top.tb_fitness.output_population_fitness[0][7] top.tb_fitness.output_population_fitness[0][6] top.tb_fitness.output_population_fitness[0][5] top.tb_fitness.output_population_fitness[0][4] top.tb_fitness.output_population_fitness[0][3] top.tb_fitness.output_population_fitness[0][2] top.tb_fitness.output_population_fitness[0][1] top.tb_fitness.output_population_fitness[0][0]
+@23
+#{top.tb_fitness.output_population_fitness[1][15:0]} top.tb_fitness.output_population_fitness[1][15] top.tb_fitness.output_population_fitness[1][14] top.tb_fitness.output_population_fitness[1][13] top.tb_fitness.output_population_fitness[1][12] top.tb_fitness.output_population_fitness[1][11] top.tb_fitness.output_population_fitness[1][10] top.tb_fitness.output_population_fitness[1][9] top.tb_fitness.output_population_fitness[1][8] top.tb_fitness.output_population_fitness[1][7] top.tb_fitness.output_population_fitness[1][6] top.tb_fitness.output_population_fitness[1][5] top.tb_fitness.output_population_fitness[1][4] top.tb_fitness.output_population_fitness[1][3] top.tb_fitness.output_population_fitness[1][2] top.tb_fitness.output_population_fitness[1][1] top.tb_fitness.output_population_fitness[1][0]
+[pattern_trace] 1
+[pattern_trace] 0

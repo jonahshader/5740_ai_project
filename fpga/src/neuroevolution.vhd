@@ -22,8 +22,8 @@ entity neuroevolution is
     inference_stop  : in boolean;
 
     -- from comms_rx
-    human_input       : in playerinput_t := default_playerinput_t;
-    human_input_valid : in boolean       := false;
+    human_input       : in playerinput_t;
+    human_input_valid : in boolean;
     -- when true, human_input_valid acts as a frame go pulse and human input is ignored
     play_against_nn : in boolean;
 
@@ -31,7 +31,7 @@ entity neuroevolution is
     announce_new_state : out boolean    := false;
     state              : out ne_state_t := NE_IDLE_S;
     pg_gs              : out gamestate_t;
-    transmit_gs        : out boolean;
+    transmit_gs        : out boolean    := false;
     ga_state           : out ga_state_t;
     ga_state_send      : out boolean
   );
@@ -165,6 +165,7 @@ begin
 
   player_nn_mux_proc : process (all) is
   begin
+    -- TODO: refactor this a bit
     if state = NE_PLAYING_S and play_against_nn then
       -- p2 gets human input
       p2_action <= human_input;
@@ -172,7 +173,7 @@ begin
     else
       -- p2 gets nn
       p2_action <= nn2_action;
-      p2_done   <= nn2_done;
+      p2_done   <= human_input_valid when state = NE_PLAYING_S else nn2_done;
     end if;
 
     -- transmit gs only when in playing state

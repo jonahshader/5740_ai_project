@@ -37,7 +37,10 @@ architecture tb of tb_neuroevolution is
 
   signal announce_new_state : boolean;
   signal state              : ne_state_t;
+  signal pg_gs              : gamestate_t;
   signal transmit_gs        : boolean;
+  signal ga_state           : ga_state_t;
+  signal ga_state_send      : boolean;
 
 begin
 
@@ -61,7 +64,10 @@ begin
       play_against_nn    => play_against_nn,
       announce_new_state => announce_new_state,
       state              => state,
-      transmit_gs        => transmit_gs
+      pg_gs              => pg_gs,
+      transmit_gs        => transmit_gs,
+      ga_state           => ga_state,
+      ga_state_send      => ga_state_send
     );
 
   test_process : process is
@@ -75,15 +81,17 @@ begin
         -- configure
         config.mutation_rates         <= (others => to_unsigned(128, 8));
         config.max_gen                <= to_unsigned(1, 16);
+        config.run_until_stop_cmd     <= false;
         config.tournament_size        <= to_unsigned(2, 8);
         config.population_size_exp    <= to_unsigned(2, 8);
         config.model_history_size     <= to_unsigned(2, 8);
         config.model_history_interval <= to_unsigned(1, 8);
         config.seed                   <= x"8DF9B76F";
         config.reference_count        <= to_unsigned(2, 8);
-        -- config.eval_interval
-        config.seed_count  <= to_unsigned(2, 8);
-        config.frame_limit <= to_unsigned(10, 16);
+        config.eval_interval          <= to_unsigned(1, 8);
+        config.seed_count             <= to_unsigned(2, 8);
+        config.frame_limit            <= to_unsigned(10, 16);
+        config.recycle_seeds          <= false;
 
         check(state = NE_IDLE_S, "NE state should be idle, but is " & to_string(state));
 
