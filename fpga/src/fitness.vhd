@@ -103,7 +103,11 @@ begin
             swap_state            <= FALSE;
             fitness_accumulator   <= (others => '0');
             reference_fitness_sum <= (others => '0'); -- Reset reference fitness sum at start
-            seed_rng              <= rng;
+            if ga_config.recycle_seeds then
+              seed_rng              <= ga_config.seed;
+            else
+              seed_rng              <= rng;
+            end if;
             seed_init_ctr         <= 0;
             state                 <= INIT_SEEDS_S;
           end if;

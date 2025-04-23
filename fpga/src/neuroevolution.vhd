@@ -165,7 +165,7 @@ begin
 
   player_nn_mux_proc : process (all) is
   begin
-    if state = NE_PLAYING_S and not play_against_nn then
+    if state = NE_PLAYING_S and play_against_nn then
       -- p2 gets human input
       p2_action <= human_input;
       p2_done   <= human_input_valid;

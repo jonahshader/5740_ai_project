@@ -266,12 +266,16 @@ package body game_types is
     m.m(7, 1) := TILE_WATER_TOP;
 
     -- set spawns, which are the 6 remaining ground tiles
-    for i in 2 to 7 loop
-      m.spawn(i - 2) :=
+    for i in 0 to 5 loop
+      m.spawn(i) :=
       (
-        x => to_unsigned(i, m.spawn(0).x'length),
+        x => to_unsigned(i+2, m.spawn(0).x'length),
         y => to_unsigned(1, m.spawn(0).y'length)
       );
+    end loop;
+    -- TEST: set all spawns, so that none are zero
+    for i in 0 to MAP_MAX_SPAWNS -1 loop
+      m.spawn(i) := m.spawn(i mod 6);
     end loop;
     -- set the number of spawns
     m.num_spawn := to_unsigned(6, m.num_spawn'length);

@@ -30,6 +30,7 @@ package ga_types is
 
     seed_count  : unsigned(SEED_COUNT_BITS - 1 downto 0); -- seed_count is interpreted from (1 to 2^SEED_COUNT_BITS) not from 0
     frame_limit : unsigned(15 downto 0);
+    recycle_seeds : boolean;
   end record ga_config_t;
   function default_ga_config_t return ga_config_t;
 
@@ -67,9 +68,10 @@ package body ga_types is
                                     seed => (others => '0'),
                                     reference_count => to_unsigned(0, 8),
                                     eval_interval => to_unsigned(0, 8),
-                                    
+
                                    seed_count => to_unsigned(0, 8),
-                                    frame_limit => to_unsigned(0, 16)
+                                    frame_limit => to_unsigned(0, 16),
+                                    recycle_seeds => false
                                   );
   begin
     return val;

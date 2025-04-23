@@ -97,11 +97,11 @@ begin
 
       case state is
         when IDLE_S =>
-          score            <= (others => '0');
           frame_counter    <= (others => '0');
           p1_input_valid_r <= false;
           p2_input_valid_r <= false;
           if game_go then
+            score       <= (others => '0'); -- clearing here so that its available after the game finishes
             game_init_r <= true;
             state       <= INIT_GAME_S;
           end if;
@@ -127,7 +127,7 @@ begin
               request_input_r <= true;
               state           <= WAIT_INPUT_S;
             else
-              score       <= gs.p1.score;
+              score       <= gs.p1.score - gs.p2.score;
               game_done_r <= true;
               state       <= IDLE_S;
             end if;

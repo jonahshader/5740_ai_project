@@ -44,6 +44,8 @@ constexpr uint8_t INFERENCE_GO_MSG = 6;
 constexpr uint8_t TRAINING_GO_MSG = 0x0B;
 constexpr uint8_t TRAINING_RESUME_MSG = 0x08;
 constexpr uint8_t INFERENCE_STOP_MSG = 0x07;
+constexpr uint8_t PLAY_AGAINST_NN_TRUE = 0x09;
+constexpr uint8_t PLAY_AGAINST_NN_FALSE = 0x0a;
 
 constexpr uint8_t GA_STATUS_MSG = 1;
 constexpr uint8_t GAMESTATE_MSG = 2;

@@ -114,6 +114,11 @@ void render(const GameState &state, const std::vector<uint8_t> &spritesheet,
       for (int x = 0; x < PLAYER_WIDTH; ++x) {
         int px = x1 + x;
         int py = y1 + y;
+        // continue if out of bounds
+        if (px < 0 || px >= state.map.width * CELL_SIZE || py < 0 ||
+            py >= state.map.height * CELL_SIZE) {
+          continue;
+        }
         size_t index = px + py * state.map.width * CELL_SIZE;
         pixels[index] = p1_col;
       }
@@ -130,6 +135,11 @@ void render(const GameState &state, const std::vector<uint8_t> &spritesheet,
       for (int x = 0; x < PLAYER_WIDTH; ++x) {
         int px = x1 + x;
         int py = y1 + y;
+        // continue if out of bounds
+        if (px < 0 || px >= state.map.width * CELL_SIZE || py < 0 ||
+            py >= state.map.height * CELL_SIZE) {
+          continue;
+        }
         size_t index = px + py * state.map.width * CELL_SIZE;
         pixels[index] = p2_col;
       }
@@ -326,8 +336,8 @@ void imgui_training_config(GAConfig &ga_config, EvalConfig &eval_config) {
 
   // Model history settings
   ImGui::InputInt("Model History Size", &ga_config.model_history_size);
-  if (ga_config.model_history_size < 1)
-    ga_config.model_history_size = 1;
+  // if (ga_config.model_history_size < 1)
+  //   ga_config.model_history_size = 1;
 
   ImGui::InputInt("Model History Interval", &ga_config.model_history_interval);
   if (ga_config.model_history_interval < 1)
@@ -338,8 +348,8 @@ void imgui_training_config(GAConfig &ga_config, EvalConfig &eval_config) {
 
   // Reference count
   ImGui::InputInt("Reference Count", &ga_config.reference_count);
-  if (ga_config.reference_count < 1)
-    ga_config.reference_count = 1;
+  // if (ga_config.reference_count < 1)
+  //   ga_config.reference_count = 1;
 
   // Evaluation interval
   ImGui::InputInt("Evaluation Interval", &ga_config.eval_interval);
@@ -361,6 +371,9 @@ void imgui_training_config(GAConfig &ga_config, EvalConfig &eval_config) {
   ImGui::InputInt("Frame Limit", &eval_config.frame_limit);
   if (eval_config.frame_limit < 1)
     eval_config.frame_limit = 1;
+
+  // Recycle seed
+  ImGui::Checkbox("Recycle Seeds", &eval_config.recycle_seeds);
 
   // Add buttons for common actions
   if (ImGui::Button("Reset GA Config")) {
@@ -398,12 +411,12 @@ void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const Til
         pspl_state = TRAINING;
       }
       if (ImGui::Button("Watch AI vs AI")) {
-        // TODO: configure properly
-        set_uart(INFERENCE_GO_MSG);
+        set_uart(PLAY_AGAINST_NN_FALSE);
+        // set_uart(INFERENCE_GO_MSG);
       }
       if (ImGui::Button("Play against AI")) {
-        // TODO: configure properly
-        set_uart(INFERENCE_GO_MSG);
+        set_uart(PLAY_AGAINST_NN_TRUE);
+        // set_uart(INFERENCE_GO_MSG);
       }
       if (ImGui::Button("Send Map")) {
         send(map, set_uart);
@@ -569,8 +582,8 @@ void run_on_pl(const std::string &map_filename) {
         if (serial_connection->available() > 0) {
           serial_connection->read(buffer, 1);
           auto available_after = serial_connection->available();
-          std::cout << "Available before: " << available_before
-                    << ", Available after: " << available_after << std::endl;
+          // std::cout << "Available before: " << available_before
+          //           << ", Available after: " << available_after << std::endl;
           return buffer[0];
         }
       }

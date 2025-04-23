@@ -14,7 +14,7 @@ void send(const GAConfig &ga, const EvalConfig &eval, const set_uart_fun &send_f
   // the hardware expects an array of mutation rates, which allows us to bake in
   // tapering, or any other curves (TODO: try quadratic tapering?)
   for (int i = 0; i < MAX_POPULATION_SIZE; ++i) {
-    float mr = ga.mutation_rate;
+    float mr = ga.mutation_rate * 255;
     if (ga.taper_mutation_rate) {
       mr *= (i / (ga.population_size - 1.0f));
     }
@@ -62,6 +62,8 @@ void send(const GAConfig &ga, const EvalConfig &eval, const set_uart_fun &send_f
   // send upper byte first
   send_fun(static_cast<uint8_t>(eval.frame_limit >> 8));
   send_fun(static_cast<uint8_t>(eval.frame_limit));
+  // TR_GA_RECYCLE_SEEDS
+  send_fun(static_cast<uint8_t>(eval.recycle_seeds));
   // done
 }
 
@@ -75,7 +77,7 @@ void send(const TileMap &map, const set_uart_fun &send_fun) {
     for (int x = 0; x < MAP_MAX_SIZE_TILES; ++x) {
       if (x < map.width && y < map.height) {
         // send the tile
-        send_fun(static_cast<uint8_t>(map.tiles[y][x]));
+        send_fun(static_cast<uint8_t>(map.tiles[x][y]));
       } else {
         // send empty tile
         send_fun(static_cast<uint8_t>(Tile::NOTHING));

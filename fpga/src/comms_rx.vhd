@@ -29,7 +29,7 @@ entity comms_rx is
     -- configs
     tilemap         : out tilemap_t   := test_tilemap_t;
     ga_config       : out ga_config_t := default_ga_config_t;
-    play_against_nn : out boolean     := false -- TODO: implement. true=nn vs human. false=nn vs nn
+    play_against_nn : out boolean     := false
   );
 end entity comms_rx;
 
@@ -58,6 +58,7 @@ architecture comms_rx_arch of comms_rx is
     TR_GA_EVAL_INTERVAL,
     TR_GA_SEED_COUNT,
     TR_GA_FRAME_LIMIT,
+    TR_GA_RECYCLE_SEEDS,
     -- player input transfers
     TR_PLAYER_INPUT
   );
@@ -127,8 +128,10 @@ begin
                 training_resume <= true;
               when PLAY_AGAINST_NN_TRUE =>
                 play_against_nn <= true;
+                inference_go <= true;
               when PLAY_AGAINST_NN_FALSE =>
                 play_against_nn <= false;
+                inference_go <= true;
               when TRAINING_GO_MSG =>
                 training_go <= true;
               when others =>
@@ -299,13 +302,21 @@ begin
             end if;
 
             if tr_counter = 1 then
-              -- go back to idle
-              state      <= IDLE_S;
+              -- go next
+              state      <= TR_GA_RECYCLE_SEEDS;
               tr_counter <= to_unsigned(0, 16);
             else
               tr_counter <= tr_counter + 1;
             end if;
-
+          when TR_GA_RECYCLE_SEEDS =>
+            -- boolean
+            if uart_rx(0) = '0' then
+              ga_config.recycle_seeds <= false;
+            else
+              ga_config.recycle_seeds <= true;
+            end if;
+            -- go back to idle
+            state <= IDLE_S;
           -- player input transfer
           when TR_PLAYER_INPUT =>
             -- three bools. just unpack from one byte.

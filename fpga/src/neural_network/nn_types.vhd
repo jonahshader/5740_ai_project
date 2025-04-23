@@ -13,7 +13,7 @@ package nn_types is
   constant WEIGHTS_PER_NEURON     : integer := 2 ** WEIGHTS_PER_NEURON_EXP;
   -- refers to the number of weights per layer
   -- number of layers, excluding input layer
-  constant LAYER_COUNT_EXP : integer := 2;
+  constant LAYER_COUNT_EXP : integer := 1;
   constant LAYER_COUNT     : integer := 2 ** LAYER_COUNT_EXP;
 
   constant TOTAL_WEIGHTS : integer := (WEIGHTS_PER_NEURON ** 2) * LAYER_COUNT;
@@ -117,7 +117,8 @@ package body nn_types is
     variable sum   : signed(2 + NEURON_DATA_WIDTH + WEIGHTS_PER_NEURON_EXP - 1 downto 0) := (others => '0');
     variable logit : neuron_logit_t; -- scaled output
 
-    constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 3;
+    -- constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 3;
+    constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 4;
   begin
     for i in 0 to WEIGHTS_PER_NEURON - 1 loop
       sum := sum + weight_mult(logits(i), neuron.weights(i));
@@ -153,7 +154,7 @@ package body nn_types is
     -- 11111
 
     -- logit := sum(sum'length - 1) & sum(sum'length - 1 - 3 - 1 downto sum'length - NEURON_DATA_WIDTH - 3);
-
+    -- TODO: shift sum right -> saturate -> resize
     logit := resize(
         shift_right(sum, SUM_TO_LOGIT_SHIFT),
         NEURON_DATA_WIDTH

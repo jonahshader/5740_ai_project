@@ -267,6 +267,10 @@ begin
               fn_go <= true;
               state <= RUN_FITNESS_S;
             end if;
+          elsif go then
+            init_bram_counter <= (others => '0');
+            state             <= INIT_BRAM_S;
+            prior_best_index  <= population_size;
           end if;
         when others =>
           null;
