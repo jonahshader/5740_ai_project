@@ -426,17 +426,17 @@ void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const Til
       if (ImGui::Button("Send Config")) {
         send(ga_config, eval_config, set_uart);
       }
-      // add slider for bram_to_save
-      ImGui::SliderInt("BRAM to dump", &bram_to_save, 0, 143);
-      if (ImGui::Button("Dump BRAM")) {
-        set_uart(BRAM_DUMP_MSG);
-      }
       break;
     case TRAINING:
       ImGui::Text("Training");
       if (ImGui::Button("Pause Training")) {
         set_uart(TRAINING_STOP_MSG);
         // don't transition right away, since it takes time to pause/stop
+      }
+      // add slider for bram_to_save
+      ImGui::SliderInt("BRAM to dump", &bram_to_save, 0, 143);
+      if (ImGui::Button("Dump BRAM")) {
+        set_uart(BRAM_DUMP_MSG);
       }
       break;
     case PLAYING:

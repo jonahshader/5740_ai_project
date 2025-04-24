@@ -54,6 +54,8 @@ architecture bram_manager_arch of bram_manager is
   signal write_index_r   : bram_index_t    := (others => '0');
   signal mutation_rate_r : mutation_rate_t := (others => '0');
 
+  signal param_index_delay : param_index_t := to_unsigned(0, param_index'length);
+
   signal done_r : boolean := true;
 
 begin
@@ -78,7 +80,7 @@ begin
         din_a  => din_a,
         -- port b (read only)
         clk_b  => clk,
-        en_b   => true, -- always reading
+        en_b   => true,
         addr_b => param_index,
         dout_b => dout_b_arr(i)
       );
@@ -87,6 +89,7 @@ begin
   proc : process (all) is
   begin
     if rising_edge(clk) then
+      param_index_delay <= param_index;
       if done_r then -- not running, able to accept command
         if go then   -- accept command
           done_r          <= false;
@@ -109,7 +112,7 @@ begin
               param_index <= to_unsigned(0, param_index'length);
               done_r      <= true;
             end if;
-            addr_a                              <= param_index;
+            addr_a                              <= param_index_delay;
             we_a_arr(to_integer(write_index_r)) <= true;
           when C_READ_TO_NN_1 | C_READ_TO_NN_2 | C_DUMP =>
             if param_index < TOTAL_PARAMS - 1 then

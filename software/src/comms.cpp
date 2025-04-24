@@ -73,11 +73,11 @@ void send(const TileMap &map, const set_uart_fun &send_fun) {
 
   // TR_MAP_S
   // iterate over the max size of the map, sending NOTHING for out-of-bound tiles
-  for (int y = 0; y < MAP_MAX_SIZE_TILES; ++y) {
-    for (int x = 0; x < MAP_MAX_SIZE_TILES; ++x) {
-      if (x < map.width && y < map.height) {
+  for (int x = 0; x < MAP_MAX_SIZE_TILES; ++x) {
+    for (int y = 0; y < MAP_MAX_SIZE_TILES; ++y) {
+      if (y < map.height && x < map.width) {
         // send the tile
-        send_fun(static_cast<uint8_t>(map.tiles[x][y]));
+        send_fun(static_cast<uint8_t>(map.tiles[y][x]));
       } else {
         // send empty tile
         send_fun(static_cast<uint8_t>(Tile::NOTHING));

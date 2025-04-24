@@ -69,6 +69,7 @@ architecture ga_arch of ga is
   -- debug stuff
   signal db_bram_dump_queued  : boolean      := false;
   signal db_bram_dump_index_r : bram_index_t := (others => '0');
+  signal db_bram_dump_go      : boolean      := false;
 
   signal init_bram_counter : bram_index_t          := (others => '0');
   signal current_gen       : unsigned(15 downto 0) := (others => '0');
@@ -132,6 +133,13 @@ begin
       -- TODO: is this good enough for initialization?
       bm_mutation_rate <= to_unsigned(255, bm_mutation_rate'length);
       bm_go            <= init_bram_go;
+    elsif db_bram_dump_go then
+      -- initiate dump
+      bm_command       <= C_DUMP;
+      bm_read_index    <= db_bram_dump_index_r;
+      bm_write_index   <= (others => '0');
+      bm_mutation_rate <= (others => '0');
+      bm_go            <= db_bram_dump_go;
     else
       -- prior best copy
       bm_command       <= C_COPY_AND_MUTATE;
@@ -161,6 +169,7 @@ begin
       vc_go              <= false;
       prior_best_copy_go <= false;
       ga_state_send      <= false;
+      db_bram_dump_go    <= false;
 
       -- queue pause
       if pause and state /= PAUSED_S then
@@ -260,11 +269,8 @@ begin
               fn_go <= true;
               if db_bram_dump_queued then
                 db_bram_dump_queued <= false;
+                db_bram_dump_go     <= true;
                 state               <= DB_BRAM_DUMP_S;
-                -- initiate dump
-                bm_command    <= C_DUMP;
-                bm_go         <= true;
-                bm_read_index <= db_bram_dump_index_r;
               else
                 state <= RUN_FITNESS_S;
               end if;
