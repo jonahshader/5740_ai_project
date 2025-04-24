@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 use work.game_types.all;
 use work.ga_types.all;
+use work.bram_types.all;
 use work.ne_types.all;
 
 entity core is
@@ -24,17 +25,19 @@ end entity core;
 architecture core_arch of core is
 
   -- comms_rx signals
-  signal training_go       : boolean;
-  signal training_pause    : boolean;
-  signal training_resume   : boolean;
-  signal inference_go      : boolean;
-  signal inference_stop    : boolean;
-  signal human_input       : playerinput_t;
-  signal human_input_valid : boolean;
-  signal test_go           : boolean;
-  signal tilemap           : tilemap_t;
-  signal ga_config         : ga_config_t;
-  signal play_against_nn   : boolean;
+  signal training_go        : boolean;
+  signal training_pause     : boolean;
+  signal training_resume    : boolean;
+  signal inference_go       : boolean;
+  signal inference_stop     : boolean;
+  signal human_input        : playerinput_t;
+  signal human_input_valid  : boolean;
+  signal test_go            : boolean;
+  signal db_bram_dump       : boolean;
+  signal db_bram_dump_index : bram_index_t;
+  signal tilemap            : tilemap_t;
+  signal ga_config          : ga_config_t;
+  signal play_against_nn    : boolean;
 
   -- comms_tx signals
   signal ga_state_send : boolean;
@@ -47,6 +50,11 @@ architecture core_arch of core is
   signal transmit_gs        : boolean;
   signal ga_state           : ga_state_t;
 
+  -- debug
+  signal db_bram_dump_param       : param_t;
+  signal db_bram_dump_param_index : param_index_t;
+  signal db_bram_dump_param_valid : boolean;
+
   signal led_counter : unsigned(25 downto 0) := to_unsigned(0, 26);
 
 begin
@@ -55,9 +63,35 @@ begin
 
   ne_ent : entity work.neuroevolution
     port map (
+      clk                      => clk,
+      config                   => ga_config,
+      m                        => tilemap,
+      training_go              => training_go,
+      training_pause           => training_pause,
+      training_resume          => training_resume,
+      inference_go             => inference_go,
+      inference_stop           => inference_stop,
+      human_input              => human_input,
+      human_input_valid        => human_input_valid,
+      play_against_nn          => play_against_nn,
+      db_bram_dump             => db_bram_dump,
+      db_bram_dump_index       => db_bram_dump_index,
+      announce_new_state       => announce_new_state,
+      state                    => ne_state,
+      pg_gs                    => pg_gs,
+      transmit_gs              => transmit_gs,
+      ga_state                 => ga_state,
+      ga_state_send            => ga_state_send,
+      db_bram_dump_param       => db_bram_dump_param,
+      db_bram_dump_param_index => db_bram_dump_param_index,
+      db_bram_dump_param_valid => db_bram_dump_param_valid
+    );
+
+  comms_rx_ent : entity work.comms_rx
+    port map (
       clk                => clk,
-      config             => ga_config,
-      m                  => tilemap,
+      uart_rx            => o_rx_byte,
+      uart_rx_valid      => o_rx_dv,
       training_go        => training_go,
       training_pause     => training_pause,
       training_resume    => training_resume,
@@ -65,47 +99,31 @@ begin
       inference_stop     => inference_stop,
       human_input        => human_input,
       human_input_valid  => human_input_valid,
-      play_against_nn    => play_against_nn,
-      announce_new_state => announce_new_state,
-      state              => ne_state,
-      pg_gs              => pg_gs,
-      transmit_gs        => transmit_gs,
-      ga_state           => ga_state,
-      ga_state_send      => ga_state_send
-    );
-
-  comms_rx_ent : entity work.comms_rx
-    port map (
-      clk               => clk,
-      uart_rx           => o_rx_byte,
-      uart_rx_valid     => o_rx_dv,
-      training_go       => training_go,
-      training_pause    => training_pause,
-      training_resume   => training_resume,
-      inference_go      => inference_go,
-      inference_stop    => inference_stop,
-      human_input       => human_input,
-      human_input_valid => human_input_valid,
-      test_go           => test_go,
-      tilemap           => tilemap,
-      ga_config         => ga_config,
-      play_against_nn   => play_against_nn
+      test_go            => test_go,
+      db_bram_dump       => db_bram_dump,
+      db_bram_dump_index => db_bram_dump_index,
+      tilemap            => tilemap,
+      ga_config          => ga_config,
+      play_against_nn    => play_against_nn
     );
 
   comms_tx_ent : entity work.comms_tx
     port map (
-      clk                   => clk,
-      uart_tx               => i_tx_byte,
-      uart_tx_send          => i_tx_dv,
-      uart_done             => o_tx_done,
-      ga_state              => ga_state,
-      ga_state_send         => ga_state_send,
-      gamestate             => pg_gs,
-      gamestate_send        => transmit_gs,
-      test_go               => test_go,
-      ne_announce_new_state => announce_new_state,
-      ne_state              => ne_state,
-      ready                 => tx_ready
+      clk                      => clk,
+      uart_tx                  => i_tx_byte,
+      uart_tx_send             => i_tx_dv,
+      uart_done                => o_tx_done,
+      ga_state                 => ga_state,
+      ga_state_send            => ga_state_send,
+      gamestate                => pg_gs,
+      gamestate_send           => transmit_gs,
+      test_go                  => test_go,
+      db_bram_dump_param       => db_bram_dump_param,
+      db_bram_dump_param_index => db_bram_dump_param_index,
+      db_bram_dump_param_valid => db_bram_dump_param_valid,
+      ne_announce_new_state    => announce_new_state,
+      ne_state                 => ne_state,
+      ready                    => tx_ready
     );
 
   led_proc : process (clk) is

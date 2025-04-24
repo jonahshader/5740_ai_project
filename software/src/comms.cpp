@@ -214,6 +214,14 @@ std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
       // return the GameState
       return ret;
     } break;
+    case SEND_BRAM_MSG: {
+      std::vector<std::uint8_t> ret;
+      constexpr int BRAM_DEPTH = 4608;
+      for (int i = 0; i < BRAM_DEPTH; ++i) {
+        ret.emplace_back(get_fun_blocking());
+      }
+      return ret;
+    } break;
     default:
       // must be a state transition. return it as-is
       return msg.value();

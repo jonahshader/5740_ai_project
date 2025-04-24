@@ -30,6 +30,7 @@ entity bram_manager is
     param_index      : out param_index_t := to_unsigned(0, 14);
     param_valid_nn_1 : out boolean       := false;
     param_valid_nn_2 : out boolean       := false;
+    param_valid_dump : out boolean       := false;
 
     go   : in boolean;
     done : out boolean
@@ -60,6 +61,7 @@ begin
   param            <= dout_b_arr(to_integer(read_index_r));
   param_valid_nn_1 <= command_r = C_READ_TO_NN_1 and not done_r;
   param_valid_nn_2 <= command_r = C_READ_TO_NN_2 and not done_r;
+  param_valid_dump <= command_r = C_DUMP and not done_r;
   done             <= done_r and not go;
 
   bram_gen : for i in 0 to NUM_BRAMS - 1 generate
@@ -109,7 +111,7 @@ begin
             end if;
             addr_a                              <= param_index;
             we_a_arr(to_integer(write_index_r)) <= true;
-          when C_READ_TO_NN_1 | C_READ_TO_NN_2 =>
+          when C_READ_TO_NN_1 | C_READ_TO_NN_2 | C_DUMP =>
             if param_index < TOTAL_PARAMS - 1 then
               param_index <= param_index + 1;
             else     -- addr_a = TOTAL_PARAMS - 1, the last index

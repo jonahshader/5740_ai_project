@@ -27,7 +27,7 @@ template <typename... Ts> struct Overload : Ts... {
 };
 template <class... Ts> Overload(Ts...) -> Overload<Ts...>;
 
-using msg_obj = std::variant<GameState, GAStatus, std::uint8_t>;
+using msg_obj = std::variant<GameState, GAStatus, std::uint8_t, std::vector<std::uint8_t>>;
 
 constexpr size_t MAX_POPULATION_SIZE = 128;
 constexpr size_t MAP_MAX_SIZE_BITS = 4;
@@ -35,6 +35,7 @@ constexpr size_t MAP_MAX_SIZE_TILES = 1 << MAP_MAX_SIZE_BITS;
 
 constexpr size_t MAP_MAX_SPAWNS = MAP_MAX_SIZE_TILES * MAP_MAX_SIZE_TILES / 2;
 
+// comms_rx.vhd
 constexpr uint8_t TILEMAP_MSG = 1;
 constexpr uint8_t GA_CONFIG_MSG = 2;
 constexpr uint8_t TRAINING_STOP_MSG = 3;
@@ -46,13 +47,16 @@ constexpr uint8_t TRAINING_RESUME_MSG = 0x08;
 constexpr uint8_t INFERENCE_STOP_MSG = 0x07;
 constexpr uint8_t PLAY_AGAINST_NN_TRUE = 0x09;
 constexpr uint8_t PLAY_AGAINST_NN_FALSE = 0x0a;
+constexpr uint8_t BRAM_DUMP_MSG = 0x0C;
 
+// comms_tx.vhd
 constexpr uint8_t GA_STATUS_MSG = 1;
 constexpr uint8_t GAMESTATE_MSG = 2;
 constexpr uint8_t TEST_RESPONSE_MSG = 0x68;
 constexpr uint8_t NE_IS_IDLE = 0x03;
 constexpr uint8_t NE_IS_TRAINING = 0x04;
 constexpr uint8_t NE_IS_PLAYING = 0x05;
+constexpr uint8_t SEND_BRAM_MSG = 0x06;
 
 void send(const GAConfig &ga, const EvalConfig &eval, const set_uart_fun &send_fun);
 void send(const TileMap &map, const set_uart_fun &send_fun);

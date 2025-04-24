@@ -7,6 +7,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.game_types.all;
+use work.bram_types.all;
 use work.ga_types.all;
 
 entity comms_rx is
@@ -25,6 +26,9 @@ entity comms_rx is
     human_input       : out playerinput_t := default_playerinput_t;
     human_input_valid : out boolean       := false;
     test_go           : out boolean       := false;
+    -- debug
+    db_bram_dump       : out boolean      := false;
+    db_bram_dump_index : out bram_index_t := (others => '0');
 
     -- configs
     tilemap         : out tilemap_t   := test_tilemap_t;
@@ -60,7 +64,9 @@ architecture comms_rx_arch of comms_rx is
     TR_GA_FRAME_LIMIT,
     TR_GA_RECYCLE_SEEDS,
     -- player input transfers
-    TR_PLAYER_INPUT
+    TR_PLAYER_INPUT,
+    -- bram dump transfer
+    TR_BRAM_DUMP
   );
 
   signal state : state_t := IDLE_S;
@@ -81,7 +87,8 @@ architecture comms_rx_arch of comms_rx is
   constant TRAINING_RESUME_MSG   : msg_t := x"08"; -- resume training, only when stopped/paused early
   constant PLAY_AGAINST_NN_TRUE  : msg_t := x"09"; -- turn on play against nn
   constant PLAY_AGAINST_NN_FALSE : msg_t := x"0A"; -- turn off play against nn
-  constant TRAINING_GO_MSG : msg_t := x"0B";
+  constant TRAINING_GO_MSG       : msg_t := x"0B";
+  constant BRAM_DUMP_MSG         : msg_t := x"0C";
 
 begin
 
@@ -98,6 +105,7 @@ begin
       human_input       <= default_playerinput_t;
       human_input_valid <= false;
       test_go           <= false;
+      db_bram_dump      <= false;
 
       -- we only do anything when we recieve a valid message
       if uart_rx_valid = '1' then
@@ -128,12 +136,14 @@ begin
                 training_resume <= true;
               when PLAY_AGAINST_NN_TRUE =>
                 play_against_nn <= true;
-                inference_go <= true;
+                inference_go    <= true;
               when PLAY_AGAINST_NN_FALSE =>
                 play_against_nn <= false;
-                inference_go <= true;
+                inference_go    <= true;
               when TRAINING_GO_MSG =>
                 training_go <= true;
+              when BRAM_DUMP_MSG =>
+                state <= TR_BRAM_DUMP;
               when others =>
                 null;
             end case;
@@ -326,6 +336,12 @@ begin
             human_input_valid <= true;
 
             state <= IDLE_S;
+          when TR_BRAM_DUMP =>
+            -- dump index is just a byte
+            db_bram_dump_index <= unsigned(uart_rx);
+            state              <= IDLE_S;
+            -- also trigger dump
+            db_bram_dump <= true;
           when others =>
             null;
         end case;

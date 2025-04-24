@@ -25,7 +25,9 @@ entity neuroevolution is
     human_input       : in playerinput_t;
     human_input_valid : in boolean;
     -- when true, human_input_valid acts as a frame go pulse and human input is ignored
-    play_against_nn : in boolean;
+    play_against_nn    : in boolean;
+    db_bram_dump       : in boolean;
+    db_bram_dump_index : in bram_index_t;
 
     -- to comms_tx
     announce_new_state : out boolean    := false;
@@ -33,7 +35,11 @@ entity neuroevolution is
     pg_gs              : out gamestate_t;
     transmit_gs        : out boolean    := false;
     ga_state           : out ga_state_t;
-    ga_state_send      : out boolean
+    ga_state_send      : out boolean;
+
+    db_bram_dump_param       : out param_t;
+    db_bram_dump_param_index : out param_index_t;
+    db_bram_dump_param_valid : out boolean
   );
 end entity neuroevolution;
 
@@ -102,6 +108,10 @@ architecture neuroevolution_arch of neuroevolution is
   signal frame_end_pulse : boolean;
 
 begin
+
+  -- wire up bram debug dump straight to bram_manager signals
+  db_bram_dump_param       <= bm_param;
+  db_bram_dump_param_index <= bm_param_index;
 
   -- set frame limit to 0 to disable it when in playing state.
   frame_limit <= (others => '0') when state = NE_PLAYING_S else config.frame_limit;
@@ -196,6 +206,7 @@ begin
       param_index      => bm_param_index,
       param_valid_nn_1 => bm_param_valid_nn_1,
       param_valid_nn_2 => bm_param_valid_nn_2,
+      param_valid_dump => db_bram_dump_param_valid,
       go               => bm_go,
       done             => bm_done
     );
@@ -301,7 +312,9 @@ begin
       tn_winner_counts         => tn_winner_counts,
       fn_go                    => fn_go,
       fn_done                  => fn_done,
-      fn_reference_fitness_sum => fn_reference_fitness_sum
+      fn_reference_fitness_sum => fn_reference_fitness_sum,
+      db_bram_dump             => db_bram_dump,
+      db_bram_dump_index       => db_bram_dump_index
     );
 
 end architecture neuroevolution_arch;

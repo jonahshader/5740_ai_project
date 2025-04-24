@@ -4,6 +4,7 @@
 #include <memory>
 #include <chrono>
 #include <thread>
+#include <fstream>
 
 #include "lodepng.h"
 #include "imgui.h"
@@ -397,7 +398,8 @@ void imgui_training_config(GAConfig &ga_config, EvalConfig &eval_config) {
 }
 
 void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const TileMap &map,
-                         const GAConfig &ga_config, const EvalConfig &eval_config) {
+                         const GAConfig &ga_config, const EvalConfig &eval_config,
+                         int &bram_to_save) {
   ImGui::Begin("State Control");
   switch (pspl_state) {
     case IDLE:
@@ -423,6 +425,11 @@ void imgui_state_control(PSPLState &pspl_state, set_uart_fun set_uart, const Til
       }
       if (ImGui::Button("Send Config")) {
         send(ga_config, eval_config, set_uart);
+      }
+      // add slider for bram_to_save
+      ImGui::SliderInt("BRAM to dump", &bram_to_save, 0, 143);
+      if (ImGui::Button("Dump BRAM")) {
+        set_uart(BRAM_DUMP_MSG);
       }
       break;
     case TRAINING:
@@ -571,6 +578,7 @@ void run_on_pl(const std::string &map_filename) {
   auto ga_config = std::make_shared<GAConfig>();
   auto eval_config = std::make_shared<EvalConfig>();
   std::vector<float> fitness_history;
+  int bram_to_save{0};
 
   // Serial connection variables
   std::shared_ptr<serial_cpp::Serial> serial_connection = nullptr;
@@ -659,7 +667,8 @@ void run_on_pl(const std::string &map_filename) {
     }
 
     if (program_state != WAIT_FOR_UART_CONN) {
-      imgui_state_control(program_state, set_uart, state.map, *ga_config, *eval_config);
+      imgui_state_control(program_state, set_uart, state.map, *ga_config, *eval_config,
+                          bram_to_save);
     }
 
     // state transitions
@@ -686,47 +695,61 @@ void run_on_pl(const std::string &map_filename) {
     while (serial_connection != nullptr && serial_connection->isOpen() &&
            serial_connection->available() > 0) {
       std::optional<msg_obj> msg_maybe = receive(get_uart_blocking, get_uart_non_blocking);
-      auto overload =
-          Overload{[&](GameState gs) {
-                     std::cout << "Got GameState" << std::endl;
-                     // transfer relevant state
-                     state.p1 = gs.p1;
-                     state.p2 = gs.p2;
-                     state.coin_pos = gs.coin_pos;
-                     state.age = gs.age;
-                   },
-                   [&](GAStatus ga_status) {
-                     std::cout << "Gen " << ga_status.current_gen
-                               << " total ref. fit.: " << ga_status.reference_fitness << std::endl;
-                     fitness_history.emplace_back(static_cast<float>(ga_status.reference_fitness));
-                   },
-                   [&](std::uint8_t byte) {
-                     switch (byte) {
-                       case NE_IS_IDLE:
-                         std::cout << "NE is idle" << std::endl;
-                         program_state = IDLE;
-                         break;
-                       case NE_IS_TRAINING:
-                         std::cout << "NE is training" << std::endl;
-                         program_state = TRAINING;
-                         break;
-                       case NE_IS_PLAYING:
-                         std::cout << "NE is playing" << std::endl;
-                         program_state = PLAYING;
-                         break;
-                       case TEST_RESPONSE_MSG:
-                         std::cout << "Received test response: " << static_cast<int>(byte)
-                                   << std::endl;
-                         break;
-                       default:
-                         std::cerr << "Unknown message byte: " << byte << std::endl;
-                         break;
-                     }
-                   },
-                   [](auto) {
-                     // handle other types
-                     std::cerr << "Unknown message type" << std::endl;
-                   }};
+      auto overload = Overload{
+          [&](GameState gs) {
+            std::cout << "Got GameState" << std::endl;
+            // transfer relevant state
+            state.p1 = gs.p1;
+            state.p2 = gs.p2;
+            state.coin_pos = gs.coin_pos;
+            state.age = gs.age;
+          },
+          [&](GAStatus ga_status) {
+            std::cout << "Gen " << ga_status.current_gen
+                      << " total ref. fit.: " << ga_status.reference_fitness << std::endl;
+            fitness_history.emplace_back(static_cast<float>(ga_status.reference_fitness));
+          },
+          [&](std::vector<std::uint8_t> bram) {
+            // write to a file called bram_{bram_to_save}_num{num}.dat
+            static int num = 0;
+            std::ofstream bram_file("bram_" + std::to_string(bram_to_save) + "_num" +
+                                        std::to_string(num) + ".dat",
+                                    std::ios::binary);
+            if (bram_file.is_open()) {
+              bram_file.write(reinterpret_cast<const char *>(bram.data()), bram.size());
+              bram_file.close();
+              std::cout << "Wrote bram_" << num << ".dat" << std::endl;
+              num++;
+            } else {
+              std::cerr << "Error opening file for writing: bram_" << num << ".dat" << std::endl;
+            }
+          },
+          [&](std::uint8_t byte) {
+            switch (byte) {
+              case NE_IS_IDLE:
+                std::cout << "NE is idle" << std::endl;
+                program_state = IDLE;
+                break;
+              case NE_IS_TRAINING:
+                std::cout << "NE is training" << std::endl;
+                program_state = TRAINING;
+                break;
+              case NE_IS_PLAYING:
+                std::cout << "NE is playing" << std::endl;
+                program_state = PLAYING;
+                break;
+              case TEST_RESPONSE_MSG:
+                std::cout << "Received test response: " << static_cast<int>(byte) << std::endl;
+                break;
+              default:
+                std::cerr << "Unknown message byte: " << byte << std::endl;
+                break;
+            }
+          },
+          [](auto) {
+            // handle other types
+            std::cerr << "Unknown message type" << std::endl;
+          }};
 
       if (msg_maybe) {
         std::visit(overload, msg_maybe.value());

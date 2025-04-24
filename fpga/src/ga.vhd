@@ -39,7 +39,11 @@ entity ga is
     -- fitness (fn) io
     fn_go                    : out boolean := false;
     fn_done                  : in boolean;
-    fn_reference_fitness_sum : in signed(15 downto 0)
+    fn_reference_fitness_sum : in signed(15 downto 0);
+
+    -- debug (db) io
+    db_bram_dump       : in boolean;
+    db_bram_dump_index : in bram_index_t
   );
 end entity ga;
 
@@ -57,9 +61,14 @@ architecture ga_arch of ga is
     RUN_FITNESS_S,
     RUN_TOURNAMENT_S,
     RUN_VICTOR_COPY_S,
-    COPY_PRIOR_BEST_S
+    COPY_PRIOR_BEST_S,
+    DB_BRAM_DUMP_S
   );
   signal state : state_t := IDLE_S;
+
+  -- debug stuff
+  signal db_bram_dump_queued  : boolean      := false;
+  signal db_bram_dump_index_r : bram_index_t := (others => '0');
 
   signal init_bram_counter : bram_index_t          := (others => '0');
   signal current_gen       : unsigned(15 downto 0) := (others => '0');
@@ -158,6 +167,12 @@ begin
         pause_queued <= true;
       end if;
 
+      -- queue bram dump
+      if db_bram_dump then
+        db_bram_dump_queued  <= true;
+        db_bram_dump_index_r <= db_bram_dump_index;
+      end if;
+
       case state is
         when IDLE_S =>
           if go then
@@ -241,10 +256,24 @@ begin
             else
               -- incr gen
               current_gen <= current_gen + 1;
-              -- launch and go to fitness
+              -- launch and go to fitness, or dump bram
               fn_go <= true;
-              state <= RUN_FITNESS_S;
+              if db_bram_dump_queued then
+                db_bram_dump_queued <= false;
+                state               <= DB_BRAM_DUMP_S;
+                -- initiate dump
+                bm_command    <= C_DUMP;
+                bm_go         <= true;
+                bm_read_index <= db_bram_dump_index_r;
+              else
+                state <= RUN_FITNESS_S;
+              end if;
             end if;
+          end if;
+        when DB_BRAM_DUMP_S =>
+          if bm_done then
+            -- just wait for it to finish
+            state <= RUN_FITNESS_S;
           end if;
         when PAUSED_S =>
           if resume then

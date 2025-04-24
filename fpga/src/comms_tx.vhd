@@ -5,8 +5,10 @@ use ieee.fixed_pkg.all;
 use ieee.fixed_float_types.all;
 
 use work.game_types.all;
+use work.bram_types.all;
 use work.ga_types.all;
 use work.ne_types.all;
+use work.nn_types.total_params;
 
 entity comms_tx is
   port (
@@ -22,6 +24,11 @@ entity comms_tx is
     gamestate      : in gamestate_t;
     gamestate_send : in boolean;
     test_go        : in boolean;
+
+    -- debug
+    db_bram_dump_param       : in param_t;
+    db_bram_dump_param_index : in param_index_t;
+    db_bram_dump_param_valid : in boolean;
 
     -- from neuroevolution
     ne_announce_new_state : in boolean;
@@ -59,12 +66,22 @@ architecture comms_tx_arch of comms_tx is
     TR_COIN_X_S,
     TR_COIN_Y_S,
     TR_AGE_1_S,
-    TR_AGE_2_S
+    TR_AGE_2_S,
+    -- debug bram transfer
+    TR_BRAM_S
   );
 
   signal state : state_t := IDLE_S;
   -- goes high and stays high when uart_ready is pulsed
   signal uart_ready_r : boolean := true;
+
+  -- debug
+  signal db_bram_dump_param_valid_p    : boolean       := false;
+  signal db_queue_bram_serial_transfer : boolean       := false;
+  signal db_bram_param_index_send      : param_index_t := (others => '0');
+
+  type   bram_reg_t is array (0 to BRAM_DEPTH - 1) of param_t;
+  signal bram_reg : bram_reg_t := (others => (others => '0'));
 
   subtype  msg_t is std_logic_vector(7 downto 0);
   constant GA_STATUS_MSG  : msg_t := x"01";
@@ -73,6 +90,7 @@ architecture comms_tx_arch of comms_tx is
   constant NE_IS_TRAINING : msg_t := x"04";
   constant NE_IS_PLAYING  : msg_t := x"05";
   constant TEST_MSG       : msg_t := x"68"; -- 'h'
+  constant SEND_BRAM_MSG  : msg_t := x"06";
 
 begin
 
@@ -85,6 +103,20 @@ begin
       -- defaults
       uart_tx      <= (others => '0');
       uart_tx_send <= '0';
+
+      -- db_bram_dump_param_valid edge detection.
+      -- if we go from valid to not valid, that means
+      -- the bram transfer into the internal registers finished.
+      -- now we need to queue the transfer over uart.
+      if db_bram_dump_param_valid_p and not db_bram_dump_param_valid then
+        db_queue_bram_serial_transfer <= true;
+      end if;
+      db_bram_dump_param_valid_p <= db_bram_dump_param_valid;
+
+      -- bram reg is always hooked up to input
+      if db_bram_dump_param_valid then
+        bram_reg(to_integer(db_bram_dump_param_index)) <= db_bram_dump_param;
+      end if;
 
       -- grab uart_done pulse
       if uart_done = '1' then
@@ -110,6 +142,14 @@ begin
           uart_tx_send <= '1';
           uart_ready_r <= false;
         -- no state transition
+        elsif db_queue_bram_serial_transfer then
+          -- about to send the bram
+          uart_tx                       <= SEND_BRAM_MSG;
+          uart_tx_send                  <= '1';
+          uart_ready_r                  <= false;
+          state                         <= TR_BRAM_S;
+          db_bram_param_index_send      <= (others => '0');
+          db_queue_bram_serial_transfer <= false;
         elsif ne_announce_new_state then
           -- send messages indicating the current ne state.
           case ne_state is
@@ -210,6 +250,14 @@ begin
             -- take the lower byte
             uart_tx <= std_logic_vector(gamestate.age(7 downto 0));
             state   <= IDLE_S;
+          when TR_BRAM_S =>
+            uart_tx <= "0000" & bram_reg(to_integer(db_bram_param_index_send));
+            if db_bram_param_index_send = BRAM_DEPTH - 1 then
+              -- go idle
+              state <= IDLE_S;
+            else
+              db_bram_param_index_send <= db_bram_param_index_send + 1;
+            end if;
           when IDLE_S =>
             uart_tx_send <= '0';    -- don't send anything
           when others =>
