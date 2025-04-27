@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 use work.game_types.all;
 use work.ga_types.all;
+use work.bram_types.all;
+use work.ne_types.all;
 
 entity core is
   port (
@@ -23,107 +25,115 @@ end entity core;
 architecture core_arch of core is
 
   -- comms_rx signals
-  signal training_go       : boolean;
-  signal training_stop     : boolean;
-  signal inference_go      : boolean;
-  signal human_input       : playerinput_t;
-  signal human_input_valid : boolean;
-  signal test_go           : boolean;
-  signal tilemap           : tilemap_t;
-  signal ga_config         : ga_config_t;
+  signal training_go        : boolean;
+  signal training_pause     : boolean;
+  signal training_resume    : boolean;
+  signal inference_go       : boolean;
+  signal inference_stop     : boolean;
+  signal human_input        : playerinput_t;
+  signal human_input_valid  : boolean;
+  signal test_go            : boolean;
+  signal db_bram_dump       : boolean;
+  signal db_bram_dump_index : bram_index_t;
+  signal tilemap            : tilemap_t;
+  signal ga_config          : ga_config_t;
+  signal play_against_nn    : boolean;
 
   -- comms_tx signals
-  signal ga_state       : ga_state_t;
-  signal ga_state_send  : boolean;
-  signal gamestate      : gamestate_t;
-  signal gamestate_send : boolean := false;
-  signal tx_ready       : boolean;
+  signal ga_state_send : boolean;
+  signal tx_ready      : boolean;
 
-  signal test_go_out : boolean;
+  -- neuroevolution signals
+  signal announce_new_state : boolean;
+  signal ne_state           : ne_state_t;
+  signal pg_gs              : gamestate_t;
+  signal transmit_gs        : boolean;
+  signal ga_state           : ga_state_t;
 
-  -- game signals
-  signal game_done          : boolean;
-  signal p_game_done        : boolean := true;
-  signal queue_tr_gamestate : boolean := false;
+  -- debug
+  signal db_bram_dump_param       : param_t;
+  signal db_bram_dump_param_index : param_index_t;
+  signal db_bram_dump_param_valid : boolean;
 
-  signal temp_h_counter : unsigned(26 downto 0) := to_unsigned(0, 27);
+  signal led_counter : unsigned(25 downto 0) := to_unsigned(0, 26);
 
 begin
 
-  test_go_out <= temp_h_counter = 0 or test_go;
-  led_out     <= temp_h_counter(25);
+  led_out <= led_counter(25);
+
+  ne_ent : entity work.neuroevolution
+    port map (
+      clk                      => clk,
+      config                   => ga_config,
+      m                        => tilemap,
+      training_go              => training_go,
+      training_pause           => training_pause,
+      training_resume          => training_resume,
+      inference_go             => inference_go,
+      inference_stop           => inference_stop,
+      human_input              => human_input,
+      human_input_valid        => human_input_valid,
+      play_against_nn          => play_against_nn,
+      db_bram_dump             => db_bram_dump,
+      db_bram_dump_index       => db_bram_dump_index,
+      announce_new_state       => announce_new_state,
+      state                    => ne_state,
+      pg_gs                    => pg_gs,
+      transmit_gs              => transmit_gs,
+      ga_state                 => ga_state,
+      ga_state_send            => ga_state_send,
+      db_bram_dump_param       => db_bram_dump_param,
+      db_bram_dump_param_index => db_bram_dump_param_index,
+      db_bram_dump_param_valid => db_bram_dump_param_valid
+    );
 
   comms_rx_ent : entity work.comms_rx
     port map (
-      clk               => clk,
-      uart_rx           => o_rx_byte,
-      uart_rx_valid     => o_rx_dv,
-      training_go       => training_go,
-      training_stop     => training_stop,
-      inference_go      => inference_go,
-      human_input       => human_input,
-      human_input_valid => human_input_valid,
-      test_go           => test_go,
-      tilemap           => tilemap,
-      ga_config         => ga_config
+      clk                => clk,
+      uart_rx            => o_rx_byte,
+      uart_rx_valid      => o_rx_dv,
+      training_go        => training_go,
+      training_pause     => training_pause,
+      training_resume    => training_resume,
+      inference_go       => inference_go,
+      inference_stop     => inference_stop,
+      human_input        => human_input,
+      human_input_valid  => human_input_valid,
+      test_go            => test_go,
+      db_bram_dump       => db_bram_dump,
+      db_bram_dump_index => db_bram_dump_index,
+      tilemap            => tilemap,
+      ga_config          => ga_config,
+      play_against_nn    => play_against_nn
     );
 
   comms_tx_ent : entity work.comms_tx
     port map (
-      clk            => clk,
-      uart_tx        => i_tx_byte,
-      uart_tx_send   => i_tx_dv,
-      uart_done      => o_tx_done,
-      ga_state       => ga_state,
-      ga_state_send  => ga_state_send,
-      gamestate      => gamestate,
-      gamestate_send => gamestate_send,
-      test_go        => test_go_out,
-      ready          => tx_ready
+      clk                      => clk,
+      uart_tx                  => i_tx_byte,
+      uart_tx_send             => i_tx_dv,
+      uart_done                => o_tx_done,
+      ga_state                 => ga_state,
+      ga_state_send            => ga_state_send,
+      gamestate                => pg_gs,
+      gamestate_send           => transmit_gs,
+      test_go                  => test_go,
+      db_bram_dump_param       => db_bram_dump_param,
+      db_bram_dump_param_index => db_bram_dump_param_index,
+      db_bram_dump_param_valid => db_bram_dump_param_valid,
+      ne_announce_new_state    => announce_new_state,
+      ne_state                 => ne_state,
+      ready                    => tx_ready
     );
 
-  game_ent : entity work.game
-    port map (
-      clk        => clk,
-      init       => inference_go,
-      swap_start => false,
-      seed       => std_logic_vector(to_unsigned(1, 32)),
-      m          => tilemap,
-      p1_input   => human_input,
-      p2_input   => default_playerinput_t,
-      go         => human_input_valid,
-      done       => game_done,
-      gamestate  => gamestate
-    );
-
-  state_proc : process (clk) is
+  led_proc : process (clk) is
   begin
     if rising_edge(clk) then
-      -- default to no sending
-      gamestate_send <= false;
-
-      if temp_h_counter = (2 ** 27) - 1 then
-        temp_h_counter <= to_unsigned(0, 27);
+      -- counter for led sanity check
+      if led_counter = (2 ** 26) - 1 then
+        led_counter <= to_unsigned(0, 26);
       else
-        temp_h_counter <= temp_h_counter + 1;
-      end if;
-
-      -- get edge of game_done
-      p_game_done <= game_done;
-      if game_done and not p_game_done then
-        -- if we can send it now, then do it
-        if tx_ready then
-          gamestate_send <= true;
-        else
-          -- can't do it right away, so queue for it
-          queue_tr_gamestate <= true;
-        end if;
-      end if;
-
-      -- we are queued and ready, so send it
-      if queue_tr_gamestate and tx_ready then
-        gamestate_send     <= true;
-        queue_tr_gamestate <= false;
+        led_counter <= led_counter + 1;
       end if;
     end if;
   end process;

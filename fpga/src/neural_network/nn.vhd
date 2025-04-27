@@ -87,6 +87,14 @@ architecture nn_arch of nn is
     -- second dead flag
     observation(index) := to_signed(32, observation(0)'length) when second.dead_timeout = 0 else to_signed(-32, observation(0)'length);
     index              := index + 1;
+    -- deltas
+    observation(index) := to_signed(32, observation(0)'length) when to_signed(first.pos.x, observation(0)'length, fixed_wrap, fixed_truncate) < to_signed(second.pos.x, observation(0)'length, fixed_wrap, fixed_truncate) else to_signed(-32, observation(0)'length);
+    index              := index + 1;
+    observation(index) := to_signed(32, observation(0)'length) when to_signed(first.pos.y, observation(0)'length, fixed_wrap, fixed_truncate) < to_signed(second.pos.y, observation(0)'length, fixed_wrap, fixed_truncate) else to_signed(-32, observation(0)'length);
+    index              := index + 1;
+    observation(index) := to_signed(32, observation(0)'length) when to_signed(first.pos.x, observation(0)'length, fixed_wrap, fixed_truncate) < signed(shift_left(resize(gs.coin_pos.x, observation(0)'length), TILE_PX_BITS)) else to_signed(-32, observation(0)'length);
+    index              := index + 1;
+    observation(index) := to_signed(32, observation(0)'length) when to_signed(first.pos.y, observation(0)'length, fixed_wrap, fixed_truncate) < signed(shift_left(resize(gs.coin_pos.y, observation(0)'length), TILE_PX_BITS)) else to_signed(-32, observation(0)'length);
 
     return observation;
   end function;

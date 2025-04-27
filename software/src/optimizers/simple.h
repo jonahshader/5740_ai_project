@@ -56,6 +56,7 @@ struct GAState {
 struct EvalConfig {
   int seed_count{3};
   int frame_limit{400};
+  bool recycle_seeds{false};
 };
 
 struct GAConfig {

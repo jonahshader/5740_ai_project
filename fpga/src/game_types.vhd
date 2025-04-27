@@ -122,6 +122,7 @@ package game_types is
     height         : unsigned(MAP_TILES_BITS downto 0); -- in tiles
   end record tilemap_t;
   function default_tilemap_t return tilemap_t;
+  function test_tilemap_t return tilemap_t;
 
   subtype pixelcoord_t is signed(MAP_MAX_SIZE_PX_BITS downto 0);
 
@@ -229,6 +230,62 @@ package body game_types is
                                 );
   begin
     return val;
+  end function;
+
+  function test_tilemap_t return tilemap_t is
+    variable m : tilemap_t := default_tilemap_t;
+  begin
+    m.width  := to_unsigned(8, m.width'length);
+    m.height := to_unsigned(8, m.height'length);
+
+    -- loop through and set them all to TILE_AIR
+    for x in 0 to 7 loop
+      for y in 0 to 7 loop
+        m.m(y, x) := TILE_AIR;
+      end loop;
+    end loop;
+
+    -- set the ground to TILE_GROUND
+    -- note: this is in y-down, so the ground is at y = 7
+    for x in 0 to 7 loop
+      m.m(7, x) := TILE_GROUND;
+    end loop;
+
+    -- make a floating platform
+    for x in 3 to 5 loop
+      m.m(4, x) := TILE_GROUND;
+    end loop;
+
+    -- extend with ice
+    m.m(4, 6) := TILE_ICE;
+
+    -- replace a ground tile with TILE_SPRING
+    m.m(7, 0) := TILE_SPRING;
+
+    -- replace the next ground tile with TILE_WATER_TOP
+    m.m(7, 1) := TILE_WATER_TOP;
+
+    -- set spawns, which are the 6 remaining ground tiles
+    for i in 0 to 5 loop
+      m.spawn(i) :=
+      (
+        x => to_unsigned(i+2, m.spawn(0).x'length),
+        y => to_unsigned(1, m.spawn(0).y'length)
+      );
+    end loop;
+    -- TEST: set all spawns, so that none are zero
+    for i in 0 to MAP_MAX_SPAWNS -1 loop
+      m.spawn(i) := m.spawn(i mod 6);
+    end loop;
+    -- set the number of spawns
+    m.num_spawn := to_unsigned(6, m.num_spawn'length);
+    -- set the bits required to store num_spawn
+    -- TODO: really i should be doing something like ceil(log2(num_spawn))
+    -- m.num_spawn_bits := to_unsigned(3, m.num_spawn_bits'length);
+    -- dear god...
+    m.num_spawn_bits := to_unsigned(integer(ceil(log2(real(to_integer(m.num_spawn))))), m.num_spawn_bits'length);
+
+    return m;
   end function;
 
   -- helper functions

@@ -14,7 +14,7 @@ void send(const GAConfig &ga, const EvalConfig &eval, const set_uart_fun &send_f
   // the hardware expects an array of mutation rates, which allows us to bake in
   // tapering, or any other curves (TODO: try quadratic tapering?)
   for (int i = 0; i < MAX_POPULATION_SIZE; ++i) {
-    float mr = ga.mutation_rate;
+    float mr = ga.mutation_rate * 255;
     if (ga.taper_mutation_rate) {
       mr *= (i / (ga.population_size - 1.0f));
     }
@@ -62,6 +62,8 @@ void send(const GAConfig &ga, const EvalConfig &eval, const set_uart_fun &send_f
   // send upper byte first
   send_fun(static_cast<uint8_t>(eval.frame_limit >> 8));
   send_fun(static_cast<uint8_t>(eval.frame_limit));
+  // TR_GA_RECYCLE_SEEDS
+  send_fun(static_cast<uint8_t>(eval.recycle_seeds));
   // done
 }
 
@@ -71,9 +73,9 @@ void send(const TileMap &map, const set_uart_fun &send_fun) {
 
   // TR_MAP_S
   // iterate over the max size of the map, sending NOTHING for out-of-bound tiles
-  for (int y = 0; y < MAP_MAX_SIZE_TILES; ++y) {
-    for (int x = 0; x < MAP_MAX_SIZE_TILES; ++x) {
-      if (x < map.width && y < map.height) {
+  for (int x = 0; x < MAP_MAX_SIZE_TILES; ++x) {
+    for (int y = 0; y < MAP_MAX_SIZE_TILES; ++y) {
+      if (y < map.height && x < map.width) {
         // send the tile
         send_fun(static_cast<uint8_t>(map.tiles[y][x]));
       } else {
@@ -86,15 +88,10 @@ void send(const TileMap &map, const set_uart_fun &send_fun) {
   // TR_MAP_SPAWNS_S
   // map spawns is 1d, but there are two numbers per coord.
   for (int i = 0; i < MAP_MAX_SPAWNS; ++i) {
-    if (i >= map.spawns.size()) {
-      // send 0 0
-      send_fun(0);
-      send_fun(0);
-    } else {
-      // send the spawn
-      send_fun(map.spawns[i].x);
-      send_fun(map.spawns[i].y);
-    }
+    // send the spawn.
+    // using modulus to fill the entire PL buffer
+    send_fun(map.spawns[i % map.spawns.size()].x);
+    send_fun(map.spawns[i % map.spawns.size()].y);
   }
 
   // TR_MAP_NUM_SPAWN_S
@@ -128,25 +125,32 @@ std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
 
   // if we got nothing, return nothing
   if (!msg) {
+    std::cout << "Receive function got nothing, so returning nullopt." << std::endl;
     return std::nullopt;
   }
 
   // check the message type
   switch (msg.value()) {
     case GA_STATUS_MSG: {
+      std::cout << "Got GA_STATUS_MSG, so next serial receieves will go to GAStatus" << std::endl;
       // variant is GAStatus
       GAStatus ret;
       // TR_CURRENT_GEN_1_S
       // 2 bytes
+      std::cout << "Receiving current_gen upper" << std::endl;
       ret.current_gen = get_fun_blocking() << 8;
       // TR_CURRENT_GEN_2_S
+      std::cout << "Receiving current_gen lower" << std::endl;
       ret.current_gen |= get_fun_blocking();
       // TR_REFERENCE_FITNESS_1_S
       // 2 bytes
+      std::cout << "Receiving reference_fitness upper" << std::endl;
       ret.reference_fitness = get_fun_blocking() << 8;
       // TR_REFERENCE_FITNESS_2_S
+      std::cout << "Receiving reference_fitness lower" << std::endl;
       ret.reference_fitness |= get_fun_blocking();
       // return the GAStatus
+      std::cout << "Returning GAStatus" << std::endl;
       return ret;
     } break;
     case GAMESTATE_MSG: {
@@ -210,18 +214,17 @@ std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
       // return the GameState
       return ret;
     } break;
-    case TEST_MSG:
-      // variant is char
-      char ret;
-      // TR_TEST_MSG
-      // 1 byte
-      ret = get_fun_blocking();
-      // return the char
+    case SEND_BRAM_MSG: {
+      std::vector<std::uint8_t> ret;
+      constexpr int BRAM_DEPTH = 4608;
+      for (int i = 0; i < BRAM_DEPTH; ++i) {
+        ret.emplace_back(get_fun_blocking());
+      }
       return ret;
-      break;
+    } break;
     default:
-      // throw runtime exception
-      throw std::runtime_error("Unknown message type");
+      // must be a state transition. return it as-is
+      return msg.value();
   }
 
   // if we get here, we didn't return anything

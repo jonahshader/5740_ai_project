@@ -9,6 +9,8 @@ use ieee.math_real.ceil;
 package ga_types is
 
   constant MAX_POPULATION_SIZE : integer := 128;
+  constant SEED_COUNT_BITS     : integer := 8;
+  constant MAX_SEED_COUNT      : integer := 2 ** SEED_COUNT_BITS;
 
   subtype mutation_rate_t is unsigned(7 downto 0);
   type    mutation_rates_t is array (0 to MAX_POPULATION_SIZE - 1) of mutation_rate_t;
@@ -24,10 +26,11 @@ package ga_types is
     model_history_interval : unsigned(7 downto 0);
     seed                   : std_logic_vector(31 downto 0);
     reference_count        : unsigned(7 downto 0);
-    eval_interval          : unsigned(7 downto 0);
+    eval_interval          : unsigned(7 downto 0); -- 0 indicates no eval.
 
-    seed_count  : unsigned(7 downto 0);
+    seed_count  : unsigned(SEED_COUNT_BITS - 1 downto 0); -- seed_count is interpreted from (1 to 2^SEED_COUNT_BITS) not from 0
     frame_limit : unsigned(15 downto 0);
+    recycle_seeds : boolean;
   end record ga_config_t;
   function default_ga_config_t return ga_config_t;
 
@@ -55,29 +58,30 @@ package body ga_types is
   function default_ga_config_t return ga_config_t is
     variable val : ga_config_t := (
     -- TODO: use reasonable defaults, or require PS to configure?
-      mutation_rates => default_mutation_rates_t,
-      max_gen => to_unsigned(0, 16),
-      run_until_stop_cmd => false,
-      tournament_size => to_unsigned(0, 8),
-      population_size_exp => to_unsigned(0, 8),
-      model_history_size => to_unsigned(0, 8),
-      model_history_interval => to_unsigned(0, 8),
-      seed => (others => '0'),
-      reference_count => to_unsigned(0, 8),
-      eval_interval => to_unsigned(0, 8),
-      
-      seed_count => to_unsigned(0, 8),
-      frame_limit => to_unsigned(0, 16)
-    );
+                                   mutation_rates => default_mutation_rates_t,
+                                   max_gen => to_unsigned(0, 16),
+                                    run_until_stop_cmd => false,
+                                   tournament_size => to_unsigned(0, 8),
+                                    population_size_exp => to_unsigned(0, 8),
+                                    model_history_size => to_unsigned(0, 8),
+                                    model_history_interval => to_unsigned(0, 8),
+                                    seed => (others => '0'),
+                                    reference_count => to_unsigned(0, 8),
+                                    eval_interval => to_unsigned(0, 8),
+
+                                   seed_count => to_unsigned(0, 8),
+                                    frame_limit => to_unsigned(0, 16),
+                                    recycle_seeds => false
+                                  );
   begin
     return val;
   end function;
 
   function default_ga_state_t return ga_state_t is
     variable val : ga_state_t := (
-      current_gen => to_unsigned(0, 16),
-      reference_fitness => to_signed(0, 16)
-    );
+                                   current_gen => to_unsigned(0, 16),
+                                   reference_fitness => to_signed(0, 16)
+                                 );
   begin
     return val;
   end function;

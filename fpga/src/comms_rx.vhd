@@ -7,6 +7,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.game_types.all;
+use work.bram_types.all;
 use work.ga_types.all;
 
 entity comms_rx is
@@ -18,15 +19,21 @@ entity comms_rx is
 
     -- system controls
     training_go       : out boolean       := false;
-    training_stop     : out boolean       := false;
+    training_pause    : out boolean       := false; -- TODO: double-check logic on this
+    training_resume   : out boolean       := false; -- TODO: implement here and in c++
     inference_go      : out boolean       := false;
+    inference_stop    : out boolean       := false;
     human_input       : out playerinput_t := default_playerinput_t;
     human_input_valid : out boolean       := false;
     test_go           : out boolean       := false;
+    -- debug
+    db_bram_dump       : out boolean      := false;
+    db_bram_dump_index : out bram_index_t := (others => '0');
 
     -- configs
-    tilemap   : out tilemap_t   := default_tilemap_t;
-    ga_config : out ga_config_t := default_ga_config_t
+    tilemap         : out tilemap_t   := test_tilemap_t;
+    ga_config       : out ga_config_t := default_ga_config_t;
+    play_against_nn : out boolean     := false
   );
 end entity comms_rx;
 
@@ -55,8 +62,11 @@ architecture comms_rx_arch of comms_rx is
     TR_GA_EVAL_INTERVAL,
     TR_GA_SEED_COUNT,
     TR_GA_FRAME_LIMIT,
+    TR_GA_RECYCLE_SEEDS,
     -- player input transfers
-    TR_PLAYER_INPUT
+    TR_PLAYER_INPUT,
+    -- bram dump transfer
+    TR_BRAM_DUMP
   );
 
   signal state : state_t := IDLE_S;
@@ -68,11 +78,17 @@ architecture comms_rx_arch of comms_rx is
   -- to transition to other states
   constant TILEMAP_MSG       : msg_t := x"01"; -- start tilemap transfer
   constant GA_CONFIG_MSG     : msg_t := x"02"; -- start ga_config transfer
-  constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop the training early
+  constant TRAINING_STOP_MSG : msg_t := x"03"; -- stop/pause the training early
   -- TODO: look into strategies for resetting/flushing state machine
-  constant PLAYER_INPUT_MSG : msg_t := x"04"; -- human player input transfer
-  constant TEST_MSG         : msg_t := x"05"; -- test print to serial
-  constant INFERENCE_GO_MSG : msg_t := x"06"; -- init game, configure to use player input
+  constant PLAYER_INPUT_MSG      : msg_t := x"04"; -- human player input transfer
+  constant TEST_MSG              : msg_t := x"05"; -- test print to serial
+  constant INFERENCE_GO_MSG      : msg_t := x"06"; -- init game, configure to use player input
+  constant INFERENCE_STOP_MSG    : msg_t := x"07"; -- stop game
+  constant TRAINING_RESUME_MSG   : msg_t := x"08"; -- resume training, only when stopped/paused early
+  constant PLAY_AGAINST_NN_TRUE  : msg_t := x"09"; -- turn on play against nn
+  constant PLAY_AGAINST_NN_FALSE : msg_t := x"0A"; -- turn off play against nn
+  constant TRAINING_GO_MSG       : msg_t := x"0B";
+  constant BRAM_DUMP_MSG         : msg_t := x"0C";
 
 begin
 
@@ -82,11 +98,14 @@ begin
       -- these are related to system control.
       -- they should be default until addressed via a message.
       training_go       <= false;
-      training_stop     <= false;
+      training_pause    <= false;
+      training_resume   <= false;
       inference_go      <= false;
+      inference_stop    <= false;
       human_input       <= default_playerinput_t;
       human_input_valid <= false;
       test_go           <= false;
+      db_bram_dump      <= false;
 
       -- we only do anything when we recieve a valid message
       if uart_rx_valid = '1' then
@@ -104,13 +123,27 @@ begin
               when TRAINING_STOP_MSG =>
                 -- no state transition required here. we are just
                 -- passing it along through training_stop.
-                training_stop <= true;
+                training_pause <= true;
               when PLAYER_INPUT_MSG =>
                 state <= TR_PLAYER_INPUT;
               when TEST_MSG =>
                 test_go <= true;
               when INFERENCE_GO_MSG =>
                 inference_go <= true;
+              when INFERENCE_STOP_MSG =>
+                inference_stop <= true;
+              when TRAINING_RESUME_MSG =>
+                training_resume <= true;
+              when PLAY_AGAINST_NN_TRUE =>
+                play_against_nn <= true;
+                inference_go    <= true;
+              when PLAY_AGAINST_NN_FALSE =>
+                play_against_nn <= false;
+                inference_go    <= true;
+              when TRAINING_GO_MSG =>
+                training_go <= true;
+              when BRAM_DUMP_MSG =>
+                state <= TR_BRAM_DUMP;
               when others =>
                 null;
             end case;
@@ -279,13 +312,21 @@ begin
             end if;
 
             if tr_counter = 1 then
-              -- go back to idle
-              state      <= IDLE_S;
+              -- go next
+              state      <= TR_GA_RECYCLE_SEEDS;
               tr_counter <= to_unsigned(0, 16);
             else
               tr_counter <= tr_counter + 1;
             end if;
-
+          when TR_GA_RECYCLE_SEEDS =>
+            -- boolean
+            if uart_rx(0) = '0' then
+              ga_config.recycle_seeds <= false;
+            else
+              ga_config.recycle_seeds <= true;
+            end if;
+            -- go back to idle
+            state <= IDLE_S;
           -- player input transfer
           when TR_PLAYER_INPUT =>
             -- three bools. just unpack from one byte.
@@ -295,6 +336,12 @@ begin
             human_input_valid <= true;
 
             state <= IDLE_S;
+          when TR_BRAM_DUMP =>
+            -- dump index is just a byte
+            db_bram_dump_index <= unsigned(uart_rx);
+            state              <= IDLE_S;
+            -- also trigger dump
+            db_bram_dump <= true;
           when others =>
             null;
         end case;

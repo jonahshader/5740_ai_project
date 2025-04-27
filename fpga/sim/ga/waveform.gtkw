@@ -1,0 +1,27 @@
+[*]
+[*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
+[*] Wed Apr 23 18:27:37 2025
+[*]
+[dumpfile] "/home/jonah/repos/5740_ai_project/fpga/sim/ga/vunit_out/test_output/lib.tb_ga.test_prior_best_preservation_858f300b40312f8e369ceacd1ca1db2cee897c66/ghdl/wave.ghw"
+[dumpfile_mtime] "Wed Apr 23 18:22:58 2025"
+[dumpfile_size] 45133
+[savefile] "/home/jonah/repos/5740_ai_project/fpga/sim/ga/waveform.gtkw"
+[timestart] 439000000
+[size] 1920 985
+[pos] -27 -24
+*-25.752155 648000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb_ga.
+[sst_width] 297
+[signals_width] 158
+[sst_expanded] 1
+[sst_vpaned_height] 330
+@28
+top.tb_ga.clk
+@420
+top.tb_ga.bm_go
+top.tb_ga.bm_done
+top.tb_ga.prior_best_count
+top.tb_ga.dut.state
+[pattern_trace] 1
+[pattern_trace] 0

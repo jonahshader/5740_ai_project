@@ -6,9 +6,10 @@ package nn_types is
 
   constant WEIGHT_BITS       : integer := 3;
   constant BIAS_BITS         : integer := 4;
-  constant NEURON_DATA_WIDTH : integer := 10;
+  constant NEURON_DATA_WIDTH : integer := 12;
 
-  constant WEIGHTS_PER_NEURON_EXP : integer := 5; -- 2 ** 5 = 32
+  -- temp: turned this way down
+  constant WEIGHTS_PER_NEURON_EXP : integer := 5; -- was 2 ** 5 = 32. now its 2 ** 4 = 16 lol
   constant WEIGHTS_PER_NEURON     : integer := 2 ** WEIGHTS_PER_NEURON_EXP;
   -- refers to the number of weights per layer
   -- number of layers, excluding input layer
@@ -54,7 +55,7 @@ package body nn_types is
 
   function default_neuron_t return neuron_t is
     variable val : neuron_t := (weights => default_weights_t,
-                                 bias => (others => '0'));
+      bias => (others => '0'));
   begin
     return val;
   end function;
@@ -116,11 +117,15 @@ package body nn_types is
     variable sum   : signed(2 + NEURON_DATA_WIDTH + WEIGHTS_PER_NEURON_EXP - 1 downto 0) := (others => '0');
     variable logit : neuron_logit_t; -- scaled output
 
-    constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 3;
+    -- constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 3;
+    constant SUM_TO_LOGIT_SHIFT : integer := sum'length - NEURON_DATA_WIDTH - 5;
   begin
     for i in 0 to WEIGHTS_PER_NEURON - 1 loop
       sum := sum + weight_mult(logits(i), neuron.weights(i));
     end loop;
+
+    -- add bias
+    sum := sum + neuron.bias;
 
     if activate and sum < 0 then
       sum := to_signed(0, sum'length);
@@ -149,7 +154,7 @@ package body nn_types is
     -- 11111
 
     -- logit := sum(sum'length - 1) & sum(sum'length - 1 - 3 - 1 downto sum'length - NEURON_DATA_WIDTH - 3);
-
+    -- TODO: shift sum right -> saturate -> resize
     logit := resize(
         shift_right(sum, SUM_TO_LOGIT_SHIFT),
         NEURON_DATA_WIDTH

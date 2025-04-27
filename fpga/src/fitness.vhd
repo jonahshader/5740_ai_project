@@ -3,104 +3,198 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.game_types.all;
 use work.ga_types.all;
+use work.bram_types.all;
 
 entity fitness is
   port (
     clk : in std_logic;
+    rng : in std_logic_vector(31 downto 0);
+
+    -- interface with bram_manager (bm)
+    bm_command    : out bram_command_t := C_READ_TO_NN_1; -- can be C_READ_TO_NN_1 or C_READ_TO_NN_2
+    bm_read_index : out bram_index_t   := (others => '0');
+    -- (no write_index)
+    bm_go   : out boolean := false;
+    bm_done : in boolean;
 
     -- interface with GA controller
-    ga_config    : in ga_config_t; -- population_size_exp, model_history_size, reference_count, seed, frame_limit
+    ga_config    : in ga_config_t; -- population_size_exp, model_history_size, reference_count, seed
     fitness_go   : in boolean;
     fitness_done : out boolean;
 
     -- interface with playagame
-    nn1_index      : out unsigned(7 downto 0);          -- index of bram to be loaded in nn1
-    nn2_index      : out unsigned(7 downto 0);          -- index of bram to be loaded in nn2
-    seed           : out std_logic_vector(31 downto 0); -- seed from ga_config
-    frame_limit    : out unsigned(15 downto 0);         -- frame_limit from ga_config
+    seed           : out std_logic_vector(31 downto 0) := (others => '0'); -- seed from seed_array
     init_playagame : out boolean;
+    swap_start     : out boolean;
 
     playagame_done : in boolean;             -- goes high when playagame is done playing two players from both start locations
     game_score     : in signed(15 downto 0); -- score from playagame, (p1 vs p2 score + p2 vs p1 score)
 
     -- results
-    output_population_fitness : out fitness_array_t -- an array of size 2^population_size_exp, each index has the fitness of the respective choromosome
+    output_population_fitness : out fitness_array_t     := default_fitness_array_t; -- an array of size 2^population_size_exp, each index has the fitness of the respective choromosome
+    reference_fitness_sum     : out signed(15 downto 0) := (others => '0')
   );
 end entity fitness;
 
 architecture fitness_arch of fitness is
 
-  -- looping limits
-  signal population_size : unsigned(7 downto 0) := shift_left(to_unsigned(1, 8), to_integer(ga_config.population_size_exp)); -- 2^population_size_exp
-  signal total_opponents : unsigned(7 downto 0) := ga_config.model_history_size + ga_config.reference_count;
-  signal nn1_start       : unsigned(7 downto 0) := ga_config.model_history_size + ga_config.reference_count - 1;
-  signal nn1_end         : unsigned(7 downto 0) := (ga_config.model_history_size + ga_config.reference_count - 1) + shift_left(to_unsigned(1, 8), to_integer(ga_config.population_size_exp));
+  type   seeds_array_t is array(0 to MAX_SEED_COUNT - 1) of std_logic_vector(31 downto 0);
+  signal seeds_array : seeds_array_t := (others => (others => '0'));
 
-  -- loop counters
-  signal nn1_ctr : unsigned(7 downto 0) := ga_config.model_history_size + ga_config.reference_count - 1;
-  signal nn2_ctr : unsigned(7 downto 0) := (others => '0');
+  signal current_chromosome : unsigned(7 downto 0)                  := (others => '0');
+  signal current_opponent   : unsigned(7 downto 0)                  := (others => '0');
+  signal seed_ctr           : integer range 0 to MAX_SEED_COUNT - 1 := 0;
+  signal swap_state         : boolean                               := FALSE;
 
-  signal done_r           : boolean := false; -- done with everything
-  signal init_playagame_r : boolean := false; -- pulse to playagame to start a game
+  signal current_nn1_index : bram_index_t := (others => '0');
+  signal current_nn2_index : bram_index_t := (others => '0');
 
-  type   state_t is (IDLE_S, INIT_S, WAIT_S);
-  signal state : state_t := IDLE_S;
+  signal fitness_accumulator : signed(15 downto 0) := (others => '0');
+
+  type   state_t is (
+    IDLE_S, INIT_SEEDS_S,
+    CHECK_NN1_S, WAIT_NN1_S,
+    CHECK_NN2_S, WAIT_NN2_S,
+    START_GAME_S, WAIT_GAME_S,
+    ACCUMULATE_S, ADVANCE_S,
+    DONE_S
+  );
+  signal state         : state_t                           := IDLE_S;
+  signal seed_rng      : std_logic_vector(31 downto 0);
+  signal seed_init_ctr : integer range 0 to MAX_SEED_COUNT := 0;
 
 begin
 
-  -- Output assignments
-  seed        <= ga_config.seed;
-  frame_limit <= ga_config.frame_limit;
-  nn1_index   <= nn1_ctr;
-  nn2_index   <= nn2_ctr;
-
-  init_playagame <= init_playagame_r;
-  fitness_done   <= done_r;
-
   process (clk) is
+
+    variable population_size : unsigned(7 downto 0);
+    variable total_opponents : unsigned(7 downto 0);
+    variable opponent_start  : unsigned(7 downto 0);
+    variable nn1_end         : unsigned(7 downto 0);
+
+    variable reference_start       : unsigned(7 downto 0);
+    variable reference_end         : unsigned(7 downto 0);
+    variable is_reference_opponent : boolean;
+
   begin
     if rising_edge(clk) then
+      population_size := shift_left(to_unsigned(1, 8), to_integer(ga_config.population_size_exp));
+      total_opponents := ga_config.model_history_size + ga_config.reference_count;
+      opponent_start  := population_size;
+      nn1_end         := population_size - 1;
+
+      reference_start := population_size + ga_config.model_history_size;
+      reference_end   := population_size + ga_config.model_history_size + ga_config.reference_count - 1;
+
+      -- Compute if current opponent is a reference opponent
+      is_reference_opponent := (current_opponent >= reference_start) and
+      (current_opponent <= reference_end);
+
+      init_playagame <= false;
+      bm_go          <= false;
+      fitness_done   <= false;
+
       case state is
         when IDLE_S =>
-          done_r           <= false;
-          init_playagame_r <= false;
           if fitness_go then
-            nn2_ctr          <= (others => '0');
-            nn1_ctr          <= ga_config.model_history_size + ga_config.reference_count - 1;
-            done_r           <= false;
-            init_playagame_r <= true;
-            for i in 0 to MAX_POPULATION_SIZE - 1 loop
-              output_population_fitness(i) <= (others => '0');
-            end loop;
-            state <= INIT_S;
-          end if;
-        when INIT_S =>
-          init_playagame_r <= false; -- pulse done
-          state            <= WAIT_S;
-        when WAIT_S =>
-          if playagame_done then
-            -- Store score
-            output_population_fitness(to_integer(nn1_ctr) - to_integer(nn1_start)) <= output_population_fitness(to_integer(nn1_ctr) - to_integer(nn1_start)) + game_score;
-
-            if nn2_ctr = total_opponents - 1 then
-              if nn1_ctr = nn1_end then
-                done_r <= true;
-                state  <= IDLE_S; -- wait for new fitness_go
-              else
-                nn1_ctr          <= nn1_ctr + 1;
-                nn2_ctr          <= (others => '0');
-                init_playagame_r <= true;
-                state            <= INIT_S;
-              end if;
+            current_chromosome    <= (others => '0');
+            current_opponent      <= population_size;
+            seed_ctr              <= 0;
+            swap_state            <= FALSE;
+            fitness_accumulator   <= (others => '0');
+            reference_fitness_sum <= (others => '0'); -- Reset reference fitness sum at start
+            if ga_config.recycle_seeds then
+              seed_rng              <= ga_config.seed;
             else
-              nn2_ctr          <= nn2_ctr + 1;
-              init_playagame_r <= true;
-              state            <= INIT_S;
+              seed_rng              <= rng;
             end if;
+            seed_init_ctr         <= 0;
+            state                 <= INIT_SEEDS_S;
+          end if;
+        when INIT_SEEDS_S =>
+          seeds_array(seed_init_ctr) <= seed_rng;
+          seed_rng                   <= std_logic_vector(unsigned(seed_rng) + 1);
+          if seed_init_ctr = ga_config.seed_count - 1 then
+            state <= CHECK_NN1_S;
+          else
+            seed_init_ctr <= seed_init_ctr + 1;
+          end if;
+        when CHECK_NN1_S =>
+          if current_chromosome /= current_nn1_index then
+            bm_command    <= C_READ_TO_NN_1;
+            bm_read_index <= current_chromosome;
+            bm_go         <= true;
+            state         <= WAIT_NN1_S;
+          else
+            state <= CHECK_NN2_S;
+          end if;
+        when WAIT_NN1_S =>
+          if bm_done then
+            current_nn1_index <= current_chromosome;
+            state             <= CHECK_NN2_S;
+          end if;
+        when CHECK_NN2_S =>
+          if current_opponent /= current_nn2_index then
+            bm_command    <= C_READ_TO_NN_2;
+            bm_read_index <= current_opponent;
+            bm_go         <= true;
+            state         <= WAIT_NN2_S;
+          else
+            state <= START_GAME_S;
+          end if;
+        when WAIT_NN2_S =>
+          if bm_done then
+            current_nn2_index <= current_opponent;
+            state             <= START_GAME_S;
+          end if;
+        when START_GAME_S =>
+          init_playagame <= true;
+          seed           <= seeds_array(seed_ctr);
+          swap_start     <= swap_state;
+          state          <= WAIT_GAME_S;
+        when WAIT_GAME_S =>
+          if playagame_done then
+            state <= ACCUMULATE_S;
+          end if;
+        when ACCUMULATE_S =>
+          fitness_accumulator <= fitness_accumulator + game_score;
+          -- If it's a reference opponent, also add to reference_fitness_sum
+          if is_reference_opponent then
+            reference_fitness_sum <= reference_fitness_sum + game_score;
+          end if;
+          state <= ADVANCE_S;
+        when ADVANCE_S =>
+          if swap_state = FALSE then
+            swap_state <= TRUE;
+            state      <= START_GAME_S;               -- re-trigger game
+          elsif seed_ctr < ga_config.seed_count - 1 then
+            seed_ctr   <= seed_ctr + 1;
+            swap_state <= FALSE;
+            state      <= START_GAME_S;               -- re-trigger game
+          elsif current_opponent < opponent_start + total_opponents - 1 then
+            current_opponent <= current_opponent + 1;
+            seed_ctr         <= 0;
+            swap_state       <= FALSE;
+            state            <= CHECK_NN2_S;          -- may need to reload NN2
+          elsif current_chromosome < nn1_end then
+            output_population_fitness(to_integer(current_chromosome)) <= fitness_accumulator;
+            current_chromosome                                        <= current_chromosome + 1;
+            current_opponent                                          <= opponent_start;
+            seed_ctr                                                  <= 0;
+            swap_state                                                <= FALSE;
+            fitness_accumulator                                       <= (others => '0');
+            state                                                     <= CHECK_NN1_S;
+          else
+            output_population_fitness(to_integer(current_chromosome)) <= fitness_accumulator;
+            fitness_done                                              <= true;
+            state                                                     <= DONE_S;
+          end if;
+        when DONE_S =>
+          if not fitness_go then
+            state <= IDLE_S;
           end if;
         when others =>
-          null;
-
+          state <= IDLE_S;
       end case;
     end if;
   end process;
