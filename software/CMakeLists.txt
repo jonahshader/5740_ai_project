@@ -97,6 +97,10 @@ find_package(OpenMP REQUIRED)
 
 # Define common source files (excluding main.cpp)
 set(COMMON_SOURCES
+  src/games/core_render.cpp
+  src/games/core_render.h
+  src/games/core.cpp
+  src/games/core.h
   src/models/human.cpp
   src/models/human.h
   src/models/mlp_map_lut.cpp
@@ -109,10 +113,6 @@ set(COMMON_SOURCES
   src/optimizers/simple.h
   src/comms.cpp
   src/comms.h
-  src/core_render.cpp
-  src/core_render.h
-  src/core.cpp
-  src/core.h
   src/fixed_point.h
   src/interfaces.h
   src/neural_net.h
@@ -128,6 +128,7 @@ set(COMMON_SOURCES
 set(COMMON_INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/src
   ${CMAKE_CURRENT_SOURCE_DIR}/src/models
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/games
   ${lodepng_SOURCE_DIR}
   ${serialport_SOURCE_DIR}/include
   ${glad_SOURCE_DIR}/include
