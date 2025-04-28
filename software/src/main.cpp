@@ -3,7 +3,7 @@
 #include <memory>
 #include <random>
 
-#include "core_render.h"
+#include "jnb_render.h"
 #include "models/human.h"
 #include "models/mlp_simple.h"
 #include "models/mlp_map_lut.h"

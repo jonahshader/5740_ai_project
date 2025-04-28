@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "core.h"
+#include "jnb.h"
 #include "neural_net.h"
 #include "interfaces.h"
 

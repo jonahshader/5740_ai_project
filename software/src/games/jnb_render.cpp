@@ -1,4 +1,4 @@
-#include "core_render.h"
+#include "jnb_render.h"
 
 #include <iostream>
 #include <memory>

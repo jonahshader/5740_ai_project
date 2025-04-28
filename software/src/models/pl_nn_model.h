@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "core.h"
+#include "jnb.h"
 #include "pl_nn.h"
 #include "interfaces.h"
 

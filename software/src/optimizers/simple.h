@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "core.h"
+#include "jnb.h"
 #include "interfaces.h"
 
 namespace jnb {

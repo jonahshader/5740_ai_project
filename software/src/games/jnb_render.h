@@ -7,7 +7,7 @@
 
 #include <SDL2/SDL.h>
 
-#include "core.h"
+#include "jnb.h"
 #include "interfaces.h"
 #include "pixel_game.h"
 

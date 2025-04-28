@@ -1,4 +1,4 @@
-#include "core.h"
+#include "jnb.h"
 
 #include <cmath>
 #include <functional>

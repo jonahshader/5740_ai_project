@@ -4,7 +4,7 @@
 
 #include <SDL2/SDL.h>
 
-#include "core.h"
+#include "jnb.h"
 #include "interfaces.h"
 
 namespace jnb {
@@ -19,7 +19,8 @@ public:
   std::shared_ptr<Model> clone() const override;
   std::string get_name() const override;
 
-  std::function<void(SDL_Event &)> get_input_handler(SDL_KeyCode left, SDL_KeyCode right, SDL_KeyCode jump);
+  std::function<void(SDL_Event &)> get_input_handler(SDL_KeyCode left, SDL_KeyCode right,
+                                                     SDL_KeyCode jump);
 
 private:
   PlayerInput input;

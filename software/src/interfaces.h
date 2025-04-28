@@ -4,7 +4,7 @@
 #include <random>
 #include <string>
 
-#include "core.h"
+#include "jnb.h"
 
 namespace jnb {
 

@@ -97,10 +97,10 @@ find_package(OpenMP REQUIRED)
 
 # Define common source files (excluding main.cpp)
 set(COMMON_SOURCES
-  src/games/core_render.cpp
-  src/games/core_render.h
-  src/games/core.cpp
-  src/games/core.h
+  src/games/jnb_render.cpp
+  src/games/jnb_render.h
+  src/games/jnb.cpp
+  src/games/jnb.h
   src/models/human.cpp
   src/models/human.h
   src/models/mlp_map_lut.cpp
