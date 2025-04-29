@@ -31,12 +31,18 @@ public:
   // Fill the inputs vector with observations for each player
   virtual void observe(std::vector<std::vector<float>> &inputs) = 0;
 
+  // Get the size of an observation vector
+  virtual size_t get_observation_size() = 0;
+
   // Get the game name (for logging/identification)
   virtual std::string get_name() = 0;
 
   // Render the game state to a pixel buffer
-  virtual void render(std::vector<uint8_t> &pixels) = 0;
+  virtual void render(std::vector<uint32_t> &pixels) = 0;
 
   // Get the rendering resolution (width, height)
   virtual std::pair<int, int> get_resolution() = 0;
+
+  // Clone the game state (deep copy)
+  virtual std::unique_ptr<Game> clone() const = 0;
 };

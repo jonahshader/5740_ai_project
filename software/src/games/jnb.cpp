@@ -1,8 +1,13 @@
 #include "jnb.h"
 
+#include "lodepng.h"
+
+#include <cassert>
 #include <cmath>
 #include <functional>
 #include <vector>
+
+#include "rendering.h"
 
 namespace jnb {
 
@@ -14,42 +19,6 @@ TilePos get_random_spawn_pos(std::mt19937 &rng, const TileMap &map) {
   std::uniform_int_distribution<int> dist(0, map.spawns.size() - 1);
   auto coin_pos_index = dist(rng);
   return map.spawns[coin_pos_index];
-}
-
-GameState init(const std::string &map_filename, uint64_t seed) {
-  GameState state{};
-  // load map
-  state.map.load_from_file(map_filename);
-  // init the rest of state
-  reinit(state, seed);
-  return state;
-}
-
-void reinit(GameState &state, uint64_t seed) {
-  // clear some things
-  state.p1 = {};
-  state.p2 = {};
-  state.age = 0;
-
-  // create rng from seed
-  state.rng = std::mt19937(seed);
-  // pick random position for coin
-  state.coin_pos = get_random_spawn_pos(state.rng, state.map);
-  // pick random positions for p1, p2
-  std::uniform_int_distribution<int> spawn_index_dist(0, state.map.spawns.size() - 1);
-  auto spawn_index = spawn_index_dist(state.rng);
-  auto spawn = state.map.spawns[spawn_index];
-  state.p1.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
-  state.p1.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
-  auto spawn_index_2 = spawn_index_dist(state.rng);
-  // ensure p2 doesn't spawn on p1
-  // TODO: extend to coin logic? or is this needlessly complicated for FPGA impl?
-  if (spawn_index_2 == spawn_index) {
-    spawn_index_2 = (spawn_index + 1) % state.map.spawns.size();
-  }
-  spawn = state.map.spawns[spawn_index_2];
-  state.p2.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
-  state.p2.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
 }
 
 int get_tile_id(int pos) {
@@ -297,34 +266,6 @@ make_player_phases(const Player &_p, GameState &state) {
   return {phase1, phase2};
 }
 
-void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2) {
-  // updating can happen in parallel in FPGA
-  auto p1_phases = make_player_phases(state.p1, state);
-  auto p2_phases = make_player_phases(state.p2, state);
-
-  // run each phase for each player
-  bool p1_coin_collected = false;
-  bool p2_coin_collected = false;
-  for (int i = 0; i < p1_phases.size(); ++i) {
-    // these can be concurrent on FPGA
-    p1_phases[i](state.p1, state.p2, in1, p1_coin_collected);
-    p2_phases[i](state.p2, state.p1, in2, p2_coin_collected);
-  }
-
-  // some other ideas: maybe the player could place a temporary ground tile
-  // beneath them, at the expense of one point (the coin reward would have to
-  // be much higher, so that its still worth placing ground tiles if it means
-  // increased likelyhood of getting the coin)
-
-  // if the coin was collected,
-  // pick a new location from the valid coin spawn locations randomly.
-  // this must happen on a new cycle, so the number of cycles on fpga is phases.size() + 1
-  if (p1_coin_collected || p2_coin_collected) {
-    state.coin_pos = get_random_spawn_pos(state.rng, state.map);
-  }
-  ++state.age;
-}
-
 void observe_state_simple(const GameState &state, std::vector<F4> &observation,
                           bool p1_perspective) {
   observation.resize(SIMPLE_INPUT_COUNT);
@@ -390,6 +331,155 @@ int get_fitness(const GameState &state, bool p1_perspective) {
   } else {
     return state.p2.score - state.p1.score;
   }
+}
+
+JnBGame::JnBGame(const std::string &map_filename, int frame_limit) : frame_limit(frame_limit) {
+  // load map
+  state.map.load_from_file(map_filename);
+
+  // load spritesheet
+  spritesheet = std::make_shared<std::vector<uint8_t>>();
+  uint32_t w, h;
+  auto error = lodepng::decode(*spritesheet, w, h, "tiles.png"); // TODO: move path to constexpr
+  if (error) {
+    std::cerr << "Error loading spritesheet: " << lodepng_error_text(error) << std::endl;
+    throw std::runtime_error("Failed to load spritesheet");
+  }
+  std::cout << "Loaded tiles.png" << std::endl;
+  std::cout << "Width: " << w << ", Height: " << h << std::endl;
+}
+
+void JnBGame::init(uint64_t seed) {
+  // clear some things
+  state.p1 = {};
+  state.p2 = {};
+  state.age = 0;
+
+  // create rng from seed
+  state.rng = std::mt19937(seed);
+  // pick random position for coin
+  state.coin_pos = get_random_spawn_pos(state.rng, state.map);
+  // pick random positions for p1, p2
+  std::uniform_int_distribution<int> spawn_index_dist(0, state.map.spawns.size() - 1);
+  auto spawn_index = spawn_index_dist(state.rng);
+  auto spawn = state.map.spawns[spawn_index];
+  state.p1.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
+  state.p1.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
+  auto spawn_index_2 = spawn_index_dist(state.rng);
+  // ensure p2 doesn't spawn on p1
+  // TODO: extend to coin logic? or is this needlessly complicated for FPGA impl?
+  if (spawn_index_2 == spawn_index) {
+    spawn_index_2 = (spawn_index + 1) % state.map.spawns.size();
+  }
+  spawn = state.map.spawns[spawn_index_2];
+  state.p2.x = F4(static_cast<int16_t>(spawn.x * CELL_SIZE));
+  state.p2.y = F4(static_cast<int16_t>(spawn.y * CELL_SIZE));
+}
+
+void JnBGame::update(const std::vector<std::vector<float>> &actions) {
+  assert(actions.size() == 2); // this version of JnB is strictly 2 player (for now).
+
+  // discretize actions
+  PlayerInput in1, in2;
+  in1.left = actions[0][0] > 0;
+  in1.right = actions[0][1] > 0;
+  in1.jump = actions[0][2] > 0;
+  in2.left = actions[1][0] > 0;
+  in2.right = actions[1][1] > 0;
+  in2.jump = actions[1][2] > 0;
+
+  // update game state
+  // updating can happen in parallel in FPGA
+  auto p1_phases = make_player_phases(state.p1, state);
+  auto p2_phases = make_player_phases(state.p2, state);
+
+  // run each phase for each player
+  bool p1_coin_collected = false;
+  bool p2_coin_collected = false;
+  for (int i = 0; i < p1_phases.size(); ++i) {
+    // these can be concurrent on FPGA
+    p1_phases[i](state.p1, state.p2, in1, p1_coin_collected);
+    p2_phases[i](state.p2, state.p1, in2, p2_coin_collected);
+  }
+
+  // some other ideas: maybe the player could place a temporary ground tile
+  // beneath them, at the expense of one point (the coin reward would have to
+  // be much higher, so that its still worth placing ground tiles if it means
+  // increased likelyhood of getting the coin)
+
+  // if the coin was collected,
+  // pick a new location from the valid coin spawn locations randomly.
+  // this must happen on a new cycle, so the number of cycles on fpga is phases.size() + 1
+  if (p1_coin_collected || p2_coin_collected) {
+    state.coin_pos = get_random_spawn_pos(state.rng, state.map);
+  }
+  ++state.age;
+}
+
+void JnBGame::get_fitness(std::vector<int32_t> &fitness) {
+  if (fitness.size() != 2) {
+    fitness.resize(2);
+  }
+  fitness[0] = state.p1.score - state.p2.score;
+  fitness[1] = state.p2.score - state.p1.score;
+}
+
+bool JnBGame::is_done() {
+  return frame_limit > 0 && state.age >= frame_limit;
+}
+
+void JnBGame::observe(std::vector<std::vector<float>> &inputs) {
+  observe_state_simple(state, inputs[0], true);
+  observe_state_simple(state, inputs[1], false);
+}
+
+size_t JnBGame::get_observation_size() {
+  return SIMPLE_INPUT_COUNT;
+}
+
+void JnBGame::render(std::vector<uint32_t> &pixels) {
+  // ensure pixels is the right size
+  pixels.resize(state.map.width * CELL_SIZE * state.map.height * CELL_SIZE);
+
+  // draw background, effectively clearing the screen
+  rendering::draw_map(pixels, get_resolution(), *spritesheet, state.map.tiles, CELL_SIZE);
+
+  // draw coin
+  rendering::draw_tile(pixels, get_resolution(), *spritesheet, state.coin_pos.x,
+                       state.map.height - state.coin_pos.y - 1, CELL_SIZE,
+                       static_cast<int>(Tile::COIN) - 1);
+
+  // draw players
+  // p1 is light red
+  int32_t p1_col = rendering::make_color(255, 80, 80, 255);
+  rendering::draw_rect(pixels, get_resolution(), state.p1.x.to_integer_floor(),
+                       state.map.height * CELL_SIZE - state.p1.y.to_integer_floor() - PLAYER_HEIGHT,
+                       PLAYER_WIDTH, PLAYER_HEIGHT, p1_col);
+
+  // p2 is light blue
+  int32_t p2_col = rendering::make_color(80, 80, 255, 255);
+  rendering::draw_rect(pixels, get_resolution(), state.p2.x.to_integer_floor(),
+                       state.map.height * CELL_SIZE - state.p2.y.to_integer_floor() - PLAYER_HEIGHT,
+                       PLAYER_WIDTH, PLAYER_HEIGHT, p2_col);
+
+  // draw score
+  for (int i = 0; i < std::min(state.p1.score, state.map.width * CELL_SIZE); ++i) {
+    pixels[i] = p1_col;
+  }
+  for (int i = 0; i < std::min(state.p2.score, state.map.width * CELL_SIZE); ++i) {
+    // pixels[(((state.map.width) * CELL_SIZE) * 2 - i - 1)] = p2_col;
+    pixels[i + state.map.width * CELL_SIZE] = p2_col;
+  }
+}
+
+std::pair<int, int> JnBGame::get_resolution() {
+  return {state.map.width * CELL_SIZE, state.map.height * CELL_SIZE};
+}
+
+std::unique_ptr<Game> JnBGame::clone() const {
+  auto new_game = std::make_unique<JnBGame>(*this);
+  new_game->state = state;
+  return new_game;
 }
 
 } // namespace jnb

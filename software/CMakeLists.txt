@@ -97,6 +97,7 @@ find_package(OpenMP REQUIRED)
 
 # Define common source files (excluding main.cpp)
 set(COMMON_SOURCES
+  src/games/game.h
   src/games/jnb_render.cpp
   src/games/jnb_render.h
   src/games/jnb.cpp
@@ -121,6 +122,8 @@ set(COMMON_SOURCES
   src/pixel_game.h
   src/pl_nn.cpp
   src/pl_nn.h
+  src/rendering.cpp
+  src/rendering.h
   ${lodepng_SOURCE_DIR}/lodepng.cpp
 )
 

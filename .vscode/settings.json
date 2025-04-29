@@ -86,7 +86,8 @@
     "numbers": "cpp",
     "cinttypes": "cpp",
     "bitset": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "cassert": "cpp"
   },
   "cmake.ignoreCMakeListsMissing": true
 }
