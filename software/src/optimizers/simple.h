@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "jnb.h"
-#include "interfaces.h"
+#include "model.h"
 
 namespace jnb {
 
@@ -64,7 +64,7 @@ struct GAConfig {
   bool taper_mutation_rate{true};
   int max_gen{128};
   bool run_until_stop{false};
-  int tournament_size{2}; // TODO: integrate into system
+  int tournament_size{2}; // TODO: this is used in hardware, but select_fun is used in software
   int population_size{64};
   int model_history_size{5};
   int model_history_interval{5};

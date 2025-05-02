@@ -5,6 +5,7 @@
 #include <string>
 #include <functional>
 #include <glad/glad.h>
+#include <utility>
 #include <vector>
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
@@ -50,24 +51,19 @@ private:
   bool create_shader_program();
 
   // Handle window resize
-  void handle_resize(int width, int height);
+  void handle_resize(int width, int height, int internal_width, int internal_height);
 
 public:
-  int internal_width;
-  int internal_height;
-
   /**
    * Constructor - Initialize the PixelGame
    *
    * @param title Window title
-   * @param internal_width The internal rendering width
-   * @param internal_height The internal rendering height
    * @param initial_window_width The initial window width
    * @param initial_window_height The initial window height
    * @param target_fps Target frames per second
    */
-  PixelGame(const std::string &title, int internal_width, int internal_height,
-            int initial_window_width, int initial_window_height, int target_fps);
+  PixelGame(const std::string &title, int initial_window_width, int initial_window_height,
+            int target_fps);
 
   /**
    * Destructor - Clean up SDL and OpenGL resources
@@ -84,7 +80,7 @@ public:
    */
   void run(
       std::function<void()> update_func,
-      std::function<void(std::vector<uint32_t> &pixels)> render_func,
+      std::function<std::pair<int, int>(std::vector<uint32_t> &pixels)> render_func,
       std::function<void(SDL_Event &)> handle_input,
       std::function<void()> imgui_update_func = []() {});
 

@@ -115,7 +115,7 @@ set(COMMON_SOURCES
   src/comms.cpp
   src/comms.h
   src/fixed_point.h
-  src/interfaces.h
+  src/models.h
   src/neural_net.h
   src/parse_map.h
   src/pixel_game.cpp

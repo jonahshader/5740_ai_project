@@ -1,6 +1,7 @@
 // OpenGL implementation of the PixelGame class
 #include "pixel_game.h"
 #include <iostream>
+#include <tuple>
 
 // Vertex shader source code
 const char *vertex_shader_source = R"(
@@ -32,11 +33,8 @@ const char *fragment_shader_source = R"(
     }
 )";
 
-PixelGame::PixelGame(const std::string &title, int internal_width, int internal_height,
-                     int initial_window_width, int initial_window_height, int target_fps) {
-
-  this->internal_width = internal_width;
-  this->internal_height = internal_height;
+PixelGame::PixelGame(const std::string &title, int initial_window_width, int initial_window_height,
+                     int target_fps) {
   this->window_width = initial_window_width;
   this->window_height = initial_window_height;
   this->target_fps = target_fps;
@@ -64,9 +62,6 @@ PixelGame::PixelGame(const std::string &title, int internal_width, int internal_
   } else {
     std::cout << "Window created successfully!" << std::endl;
   }
-
-  // Calculate the initial viewport
-  handle_resize(initial_window_width, initial_window_height);
 
   // Create OpenGL context
   gl_context = SDL_GL_CreateContext(window);
@@ -197,8 +192,8 @@ bool PixelGame::init_opengl() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
   // Allocate texture data
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, internal_width, internal_height, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
+  // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, internal_width, internal_height, 0, GL_RGBA,
+  //              GL_UNSIGNED_BYTE, nullptr);
 
   // Use shader program
   glUseProgram(shader_program);
@@ -266,7 +261,7 @@ bool PixelGame::create_shader_program() {
 }
 
 void PixelGame::run(std::function<void()> update_func,
-                    std::function<void(std::vector<uint32_t> &pixels)> render_func,
+                    std::function<std::pair<int, int>(std::vector<uint32_t> &pixels)> render_func,
                     std::function<void(SDL_Event &)> handle_input,
                     std::function<void()> imgui_update_func) {
 
@@ -276,7 +271,9 @@ void PixelGame::run(std::function<void()> update_func,
   }
 
   // Create pixel buffer
-  std::vector<uint32_t> pixels(internal_width * internal_height, 0);
+  std::vector<uint32_t> pixels;
+  int internal_width = 0;
+  int internal_height = 0;
 
   // Main game loop
   while (running) {
@@ -294,7 +291,7 @@ void PixelGame::run(std::function<void()> update_func,
         // Handle window resize
         window_width = e.window.data1;
         window_height = e.window.data2;
-        handle_resize(window_width, window_height);
+
       } else {
         // Pass other events to the provided input handler
         handle_input(e);
@@ -325,10 +322,19 @@ void PixelGame::run(std::function<void()> update_func,
       std::fill(pixels.begin(), pixels.end(), 0);
 
       // Let the game render to the pixel buffer
-      render_func(pixels);
+      auto [new_internal_width, new_internal_height] = render_func(pixels);
 
       // Update the texture with the new pixel data
       glBindTexture(GL_TEXTURE_2D, texture);
+      // Reallocate texture memory if necessary
+      if (new_internal_width != internal_width || new_internal_height != internal_height) {
+        // Resize the texture if dimensions have changed
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, new_internal_width, new_internal_height, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, nullptr);
+        internal_width = new_internal_width;
+        internal_height = new_internal_height;
+      }
+      handle_resize(window_width, window_height, internal_width, internal_height);
       glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, internal_width, internal_height, GL_RGBA,
                       GL_UNSIGNED_BYTE, pixels.data());
     }
@@ -355,7 +361,7 @@ void PixelGame::run(std::function<void()> update_func,
   }
 }
 
-void PixelGame::handle_resize(int width, int height) {
+void PixelGame::handle_resize(int width, int height, int internal_width, int internal_height) {
   // Calculate the aspect ratios
   float window_aspect = (float)width / (float)height;
   float game_aspect = (float)internal_width / (float)internal_height;

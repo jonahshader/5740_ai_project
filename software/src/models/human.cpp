@@ -4,8 +4,10 @@ namespace jnb {
 
 HumanModel::HumanModel() : input{} {}
 
-PlayerInput HumanModel::forward(const GameState &state, bool p1_perspective) {
-  return input;
+void HumanModel::forward(const std::vector<float> &observation, std::vector<float> &action) {
+  action[0] = input.left ? 1 : 0;
+  action[1] = input.right ? 1 : 0;
+  action[2] = input.jump ? 1 : 0;
 }
 
 void HumanModel::mutate(std::mt19937 &rng, float mutation_rate) {}

@@ -6,13 +6,11 @@
 
 #include "jnb.h"
 
-namespace jnb {
-
 class Model {
 public:
   virtual ~Model() = default;
 
-  virtual PlayerInput forward(const GameState &state, bool p1_perspective) = 0;
+  virtual void forward(const std::vector<float> &observation, std::vector<float> &action) = 0;
   virtual void mutate(std::mt19937 &rng, float mutation_rate) = 0;
   // reset internal state. used when a model has recurrent connections or is otherwise stateful in
   // some way.
@@ -20,5 +18,3 @@ public:
   virtual std::shared_ptr<Model> clone() const = 0;
   virtual std::string get_name() const = 0;
 };
-
-} // namespace jnb

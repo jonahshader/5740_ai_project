@@ -10,7 +10,7 @@
 #include "imgui.h"
 #include "serial_cpp/serial.h"
 
-#include "interfaces.h"
+#include "model.h"
 #include "models/human.h"
 #include "optimizers/simple.h"
 #include "comms.h"
@@ -19,81 +19,6 @@
 // constexpr int asdf = 0;
 
 namespace jnb {
-
-void run_game_with_models(const std::string &map_filename, uint64_t seed,
-                          std::shared_ptr<Model> model1, std::shared_ptr<Model> model2) {
-  // initialize game state
-  GameState state = init(map_filename, seed);
-
-  PixelGame game("JnB Sim", state.map.width * CELL_SIZE, state.map.height * CELL_SIZE, 640, 480,
-                 60);
-
-  std::vector<uint8_t> spritesheet;
-  uint32_t w, h;
-  auto error = lodepng::decode(spritesheet, w, h, "tiles.png"); // TODO: move path to constexpr
-  if (error) {
-    std::cerr << "Error loading spritesheet: " << lodepng_error_text(error) << std::endl;
-    throw std::runtime_error("Failed to load spritesheet");
-  }
-  std::cout << "Loaded tiles.png" << std::endl;
-  std::cout << "Width: " << w << ", Height: " << h << std::endl;
-
-  auto update_lambda = [&state, model1, model2]() {
-    auto p1_input = model1->forward(state, true);
-    auto p2_input = model2->forward(state, false);
-    update(state, p1_input, p2_input);
-  };
-
-  // auto render_lambda = [&state, &spritesheet](SDL_Renderer *renderer) {
-  //   render(state, renderer, spritesheet);
-  // };
-  auto render_lambda = [&state, &spritesheet](std::vector<uint32_t> &pixels) {
-    render(state, spritesheet, pixels);
-  };
-
-  auto imgui_lambda = [&state, map_filename, seed]() {
-    ImGui::Begin("Inference");
-
-    if (ImGui::Button("Reset")) {
-      state = init(map_filename, seed);
-    }
-
-    ImGui::End();
-  };
-
-  std::vector<std::function<void(SDL_Event &)>> input_handlers;
-
-  // try downcasting each model to HumanModel.
-  // if we can, then grab it's input handler
-  // and add it to the input_handlers vector
-  auto human_model1 = std::dynamic_pointer_cast<HumanModel>(model1);
-  if (human_model1) {
-    auto handle_input_lambda = human_model1->get_input_handler(SDLK_LEFT, SDLK_RIGHT, SDLK_UP);
-    input_handlers.push_back(handle_input_lambda);
-  }
-  auto human_model2 = std::dynamic_pointer_cast<HumanModel>(model2);
-  if (human_model2) {
-    auto handle_input_lambda = human_model2->get_input_handler(SDLK_a, SDLK_d, SDLK_w);
-    input_handlers.push_back(handle_input_lambda);
-  }
-  input_handlers.push_back([&state, &seed](SDL_Event &event) {
-    auto k = event.key.keysym.sym;
-    if (event.type == SDL_KEYDOWN) {
-      if (k == SDLK_r) {
-        reinit(state, ++seed);
-      }
-    }
-  });
-
-  auto handle_input_lambda = [&](SDL_Event &event) {
-    // run all input handlers
-    for (auto &handler : input_handlers) {
-      handler(event);
-    }
-  };
-
-  game.run(update_lambda, render_lambda, handle_input_lambda, imgui_lambda);
-}
 
 void imgui_training_config(GAConfig &ga_config, EvalConfig &eval_config) {
   ImGui::Begin("Training Config");
@@ -347,8 +272,7 @@ void run_on_pl(const std::string &map_filename) {
   // initialize game state
   GameState state = init(map_filename, 1);
 
-  PixelGame game("JnB Sim", state.map.width * CELL_SIZE, state.map.height * CELL_SIZE, 640, 480,
-                 60);
+  PixelGame game("JnB Sim", 640, 480, 60);
 
   PSPLState program_state{PSPLState::WAIT_FOR_UART_CONN};
 

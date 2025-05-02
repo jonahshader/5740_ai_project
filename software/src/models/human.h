@@ -5,7 +5,7 @@
 #include <SDL2/SDL.h>
 
 #include "jnb.h"
-#include "interfaces.h"
+#include "model.h"
 
 namespace jnb {
 
@@ -13,7 +13,7 @@ class HumanModel : public Model {
 public:
   HumanModel();
 
-  PlayerInput forward(const GameState &state, bool p1_perspective) override;
+  void forward(const std::vector<float> &observation, std::vector<float> &action) override;
   void mutate(std::mt19937 &rng, float mutation_rate) override;
   void reset() override;
   std::shared_ptr<Model> clone() const override;
