@@ -5,7 +5,7 @@
 
 #include <cassert>
 
-std::vector<int> play(Game &game, const std::vector<std::shared_ptr<Model>> &models) {
+std::vector<int> play(Game &game, const std::vector<std::shared_ptr<model::Model>> &models) {
   assert(game.get_player_count() == models.size());
 
   // build io vectors, fitness vector
@@ -38,7 +38,7 @@ std::vector<int> play(Game &game, const std::vector<std::shared_ptr<Model>> &mod
   return fitness;
 }
 
-std::vector<int> play_and_render(Game &game, const std::vector<std::shared_ptr<Model>> &models) {
+std::vector<int> play_and_render(Game &game, const std::vector<std::shared_ptr<model::Model>> &models) {
   assert(game.get_player_count() == models.size());
 
   // build io vectors, fitness vector
@@ -80,18 +80,28 @@ std::vector<int> play_and_render(Game &game, const std::vector<std::shared_ptr<M
   };
 
   std::vector<std::function<void(SDL_Event &)>> input_handlers;
-  // try downcasting each model to HumanModel.
+  // try downcasting each model to Keyboard.
   // if we can, then grab it's input handler
   // and add it to the input_handlers vector
-  auto human_model1 = std::dynamic_pointer_cast<HumanModel>(model1);
-  if (human_model1) {
-    auto handle_input_lambda = human_model1->get_input_handler(SDLK_LEFT, SDLK_RIGHT, SDLK_UP);
-    input_handlers.push_back(handle_input_lambda);
-  }
-  auto human_model2 = std::dynamic_pointer_cast<HumanModel>(model2);
-  if (human_model2) {
-    auto handle_input_lambda = human_model2->get_input_handler(SDLK_a, SDLK_d, SDLK_w);
-    input_handlers.push_back(handle_input_lambda);
+  size_t human_model_count = 0;
+  for (auto &model : models) {
+    auto kb_model = std::dynamic_pointer_cast<model::Keyboard>(model);
+    if (kb_model) {
+      switch (human_model_count) {
+        case 0:
+          // player 0 uses arrow keys
+          input_handlers.push_back(kb_model->get_input_handler(SDLK_LEFT, SDLK_RIGHT, SDLK_UP));
+          break;
+        case 1:
+          // player 1 uses wasd
+          input_handlers.push_back(kb_model->get_input_handler(SDLK_a, SDLK_d, SDLK_w));
+          break;
+        default:
+          // currently don't support more than 2 human players
+          break;
+      }
+      ++human_model_count;
+    }
   }
 
   auto handle_input_lambda = [&](SDL_Event &event) {
@@ -103,5 +113,6 @@ std::vector<int> play_and_render(Game &game, const std::vector<std::shared_ptr<M
 
   window.run(update_lambda, render_lambda, handle_input_lambda);
 
-  return game.get_fitness();
+  game.get_fitness(fitness);
+  return fitness;
 }

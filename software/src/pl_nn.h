@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <iostream>
 
-namespace jnb {
+namespace model {
 
 using p_t = std::int8_t;
 
@@ -137,4 +137,4 @@ template <int hidden_size, int layer_count> struct StaticPLNet {
   }
 };
 
-} // namespace jnb
+} // namespace model

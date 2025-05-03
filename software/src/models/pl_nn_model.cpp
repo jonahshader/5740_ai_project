@@ -1,12 +1,12 @@
 #include "pl_nn_model.h"
 
-namespace jnb {
+namespace model {
 
 PLNNModel::PLNNModel(std::mt19937 &rng) {
   net.init(rng);
 }
 
-PlayerInput PLNNModel::forward(const GameState &state, bool p1_perspective) {
+jnb::PlayerInput PLNNModel::forward(const jnb::GameState &state, bool p1_perspective) {
   int observation[32];
   int output[32];
 
@@ -17,8 +17,8 @@ PlayerInput PLNNModel::forward(const GameState &state, bool p1_perspective) {
   // init to zero
   std::fill_n(observation, 32, 0);
 
-  observation[index++] = state.coin_pos.x * CELL_SIZE;
-  observation[index++] = state.coin_pos.y * CELL_SIZE;
+  observation[index++] = state.coin_pos.x * jnb::CELL_SIZE;
+  observation[index++] = state.coin_pos.y * jnb::CELL_SIZE;
   // first
   observation[index++] = first.x.to_float();
   observation[index++] = first.y.to_float();
@@ -38,14 +38,14 @@ PlayerInput PLNNModel::forward(const GameState &state, bool p1_perspective) {
   // observation[index++] = first.y.to_float() - state.coin_pos.y * CELL_SIZE > 0 ? 32 : -32;
   observation[index++] = (first.x.to_float() - second.x.to_float()) * 2;
   observation[index++] = (first.y.to_float() - second.y.to_float()) * 2;
-  observation[index++] = (first.x.to_float() - state.coin_pos.x * CELL_SIZE) * 2;
-  observation[index++] = (first.y.to_float() - state.coin_pos.y * CELL_SIZE) * 2;
+  observation[index++] = (first.x.to_float() - state.coin_pos.x * jnb::CELL_SIZE) * 2;
+  observation[index++] = (first.y.to_float() - state.coin_pos.y * jnb::CELL_SIZE) * 2;
 
   // run nn
   net.forward(observation, output, false);
 
   // interpret output as a playerinput
-  PlayerInput pl_input;
+  jnb::PlayerInput pl_input;
   pl_input.left = output[0] > 0;
   pl_input.right = output[1] > 0;
   pl_input.jump = output[2] > 0;
@@ -69,4 +69,4 @@ std::string PLNNModel::get_name() const {
   return "PLNNModel";
 }
 
-} // namespace jnb
+} // namespace model

@@ -3,7 +3,7 @@
 #include <random>
 #include <vector>
 
-namespace jnb {
+namespace model {
 
 // a staticly allocated neural network with a generic parameter type
 template <typename T, int inputs, int outputs> struct StaticLayer {
@@ -138,7 +138,7 @@ struct DynamicLayer {
     }
   }
 
-  void forward(T *input, T *output, bool activate = true) {
+  void forward(const T *input, T *output, bool activate = true) {
     for (int i = 0; i < outputs; ++i) {
       output[i] = bias[i];
       for (int j = 0; j < inputs; ++j) {
@@ -184,7 +184,7 @@ struct DynamicNeuralNet {
     layers[hidden_count].init(rng, hidden_size, outputs);
   }
 
-  void forward(T *input, T *output) {
+  void forward(const T *input, T *output) {
     // allocate buffers with maximum required size
     std::vector<T> buffer_a(layers[0].outputs);
     std::vector<T> buffer_b(layers[0].outputs);
@@ -212,6 +212,17 @@ struct DynamicNeuralNet {
     for (auto &layer : layers) {
       layer.mutate(rng, mutation_rate);
     }
+  }
+
+  std::string get_shape() {
+    std::string shape = "DynamicNeuralNet: ";
+    for (size_t i = 0; i < layers.size(); ++i) {
+      shape += std::to_string(layers[i].inputs) + "x" + std::to_string(layers[i].outputs);
+      if (i < layers.size() - 1) {
+        shape += " -> ";
+      }
+    }
+    return shape;
   }
 };
 

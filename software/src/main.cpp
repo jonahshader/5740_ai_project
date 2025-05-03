@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 
   //   auto p1 = std::make_shared<jnb::HumanModel>();
   //   // auto p2 = std::make_shared<jnb::HumanModel>();
-  //   // auto p2 = std::make_shared<jnb::SimpleMLPModel>(rng);
+  //   // auto p2 = std::make_shared<jnb::SimpleMLP>(rng);
   //   // auto p2 = std::make_shared<jnb::MLPMapLutModel>(rng, map.width, map.height);
   //   auto p2 = std::make_shared<jnb::PLNNModel>(rng);
 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
   //     // model_type = (model_type + 1) % 3;
   //     // switch (model_type) {
   //     //   case 0:
-  //     //     return std::make_shared<jnb::SimpleMLPModel>(rng);
+  //     //     return std::make_shared<jnb::SimpleMLP>(rng);
   //     //     break;
   //     //   case 1:
   //     //     return std::make_shared<jnb::MLPMapLutModel>(rng, width, height);
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   //     //     return std::make_shared<jnb::PLNNModel>(rng);
   //     //     break;
   //     //   default:
-  //     //     return std::make_shared<jnb::SimpleMLPModel>(rng);
+  //     //     return std::make_shared<jnb::SimpleMLP>(rng);
   //     //     break;
   //     // }
   //     return std::make_shared<jnb::PLNNModel>(rng);

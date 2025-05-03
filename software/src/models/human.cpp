@@ -1,52 +1,49 @@
 #include "human.h"
 
-namespace jnb {
+namespace model {
 
-HumanModel::HumanModel() : input{} {}
+Keyboard::Keyboard() {}
 
-void HumanModel::forward(const std::vector<float> &observation, std::vector<float> &action) {
-  action[0] = input.left ? 1 : 0;
-  action[1] = input.right ? 1 : 0;
-  action[2] = input.jump ? 1 : 0;
+void Keyboard::forward(const std::vector<float> &observation, std::vector<float> &action) {
+  action[0] = left ? 1 : 0;
+  action[1] = right ? 1 : 0;
+  action[2] = jump ? 1 : 0;
 }
 
-void HumanModel::mutate(std::mt19937 &rng, float mutation_rate) {}
+void Keyboard::mutate(std::mt19937 &rng, float mutation_rate) {}
 
-void HumanModel::reset() {
-  // not necessary at all...
-  input = PlayerInput{};
+void Keyboard::reset() {}
+
+std::shared_ptr<Model> Keyboard::clone() const {
+  return std::make_shared<Keyboard>(*this);
 }
 
-std::shared_ptr<Model> HumanModel::clone() const {
-  return std::make_shared<HumanModel>(*this);
+std::string Keyboard::get_name() const {
+  return "Human";
 }
 
-std::string HumanModel::get_name() const {
-  return "HumanModel";
-}
-
-std::function<void(SDL_Event &)> HumanModel::get_input_handler(SDL_KeyCode left, SDL_KeyCode right,
-                                                               SDL_KeyCode jump) {
-  auto handle_input_lambda = [left, right, jump, &input = input](SDL_Event &event) {
+std::function<void(SDL_Event &)> Keyboard::get_input_handler(SDL_KeyCode left, SDL_KeyCode right,
+                                                             SDL_KeyCode jump) {
+  auto handle_input_lambda = [&](SDL_Event &event) {
     auto k = event.key.keysym.sym;
     if (event.type == SDL_KEYDOWN) {
       if (k == left)
-        input.left = true;
+        this->left = true;
       else if (k == right)
-        input.right = true;
+        this->right = true;
       else if (k == jump)
-        input.jump = true;
+        this->jump = true;
 
     } else if (event.type == SDL_KEYUP) {
       if (k == left)
-        input.left = false;
+        this->left = false;
       else if (k == right)
-        input.right = false;
+        this->right = false;
       else if (k == jump)
-        input.jump = false;
+        this->jump = false;
     }
   };
   return handle_input_lambda;
 }
 
-} // namespace jnb
+} // namespace model

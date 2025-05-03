@@ -4,22 +4,22 @@
 
 #include "jnb.h"
 #include "neural_net.h"
-#include "interfaces.h"
+#include "model.h"
 
-namespace jnb {
+namespace model {
 
-class SimpleMLPModel : public Model {
+class SimpleMLP : public SimpleModel {
 public:
-  SimpleMLPModel(std::mt19937 &rng);
-  ~SimpleMLPModel() = default;
-  PlayerInput forward(const GameState &state, bool p1_perspective) override;
+  SimpleMLP(std::mt19937 &rng, int observation_size, int action_size);
+  ~SimpleMLP() = default;
+  void forward(const std::vector<float> &observation, std::vector<float> &action) override;
   void mutate(std::mt19937 &rng, float mutation_rate) override;
   void reset() override;
   std::shared_ptr<Model> clone() const override;
   std::string get_name() const override;
 
 private:
-  StaticNeuralNet<float, SIMPLE_INPUT_COUNT, 32, 2, SIMPLE_OUTPUT_COUNT> net{};
+  DynamicNeuralNet<float> net{};
 };
 
-} // namespace jnb
+} // namespace model

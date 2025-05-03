@@ -1,13 +1,14 @@
 #pragma once
 
 #include <random>
+#include <memory>
 #include <vector>
 
 #include "jnb.h"
 #include "neural_net.h"
-#include "interfaces.h"
+#include "model.h"
 
-namespace jnb {
+namespace model {
 
 struct TileEmbeddings {
   int width;
@@ -48,21 +49,30 @@ struct TileEmbeddings {
   }
 };
 
-class MLPMapLutModel : public Model {
+class SimpleModelTileEmb : public Model {
 public:
-  MLPMapLutModel(std::mt19937 &rng, int map_width_tiles, int map_height_tiles);
-  ~MLPMapLutModel() = default;
+  SimpleModelTileEmb(size_t map_width_tiles, size_t map_height_tiles, size_t embedding_vec_size,
+                     size_t embedding_coord_count, bool separate_embeddings_per_coord,
+                     std::shared_ptr<SimpleModel> base_model);
+  ~SimpleModelTileEmb() = default;
 
-  PlayerInput forward(const GameState &state, bool p1_perspective) override;
+  void forward(const std::vector<std::pair<int, int>> &lut_coords,
+               const std::vector<float> &observation, std::vector<float> &action);
   void mutate(std::mt19937 &rng, float mutation_rate) override;
   void reset() override;
+  void init(size_t input_size, size_t output_size, std::mt19937 &rng) override;
   std::shared_ptr<Model> clone() const override;
   std::string get_name() const override;
 
 private:
-  DynamicNeuralNet<float> net{};
-  TileEmbeddings player_embeddings{};
-  TileEmbeddings coin_embeddings{};
+  size_t map_width_tiles;
+  size_t map_height_tiles;
+  size_t embedding_vec_size;
+  size_t embedding_coord_count;
+  bool separate_embeddings_per_coord;
+  std::shared_ptr<SimpleModel> base_model{};
+  std::vector<TileEmbeddings> embeddings{};
+  std::vector<float> observation_with_embeddings{};
 };
 
-} // namespace jnb
+} // namespace model

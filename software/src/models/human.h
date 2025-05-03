@@ -7,11 +7,11 @@
 #include "jnb.h"
 #include "model.h"
 
-namespace jnb {
+namespace model {
 
-class HumanModel : public Model {
+class Keyboard : public SimpleModel {
 public:
-  HumanModel();
+  Keyboard();
 
   void forward(const std::vector<float> &observation, std::vector<float> &action) override;
   void mutate(std::mt19937 &rng, float mutation_rate) override;
@@ -23,7 +23,9 @@ public:
                                                      SDL_KeyCode jump);
 
 private:
-  PlayerInput input;
+  bool left{false};
+  bool right{false};
+  bool jump{false};
 };
 
-} // namespace jnb
+} // namespace model

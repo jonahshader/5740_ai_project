@@ -4,15 +4,17 @@
 
 #include "jnb.h"
 #include "pl_nn.h"
-#include "interfaces.h"
+#include "model.h"
 
-namespace jnb {
+namespace model {
 
+// TODO: make a version of this that is a SimpleModel.
+// so just a StaticPLNet wrapper
 class PLNNModel : public Model {
 public:
   PLNNModel(std::mt19937 &rng);
   ~PLNNModel() = default;
-  PlayerInput forward(const GameState &state, bool p1_perspective) override;
+  jnb::PlayerInput forward(const jnb::GameState &state, bool p1_perspective);
   void mutate(std::mt19937 &rng, float mutation_rate) override;
   void reset() override;
   std::shared_ptr<Model> clone() const override;
@@ -22,4 +24,4 @@ private:
   StaticPLNet<32, 2> net;
 };
 
-} // namespace jnb
+} // namespace model
