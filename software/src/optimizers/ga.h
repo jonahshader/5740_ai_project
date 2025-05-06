@@ -6,6 +6,8 @@
 
 #include "model.h"
 
+using model::Model;
+
 namespace ga {
 
 // a struct to keep track of various fitness values associated with a model
