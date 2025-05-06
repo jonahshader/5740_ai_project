@@ -14,7 +14,7 @@ public:
   // reset internal state. used when a model has recurrent connections or is otherwise stateful in
   // some way.
   virtual void reset() = 0;
-  virtual void init(size_t input_size, size_t output_size, std::mt19937 &rng);
+  virtual void init(size_t input_size, size_t output_size, std::mt19937 &rng) = 0;
   virtual std::shared_ptr<Model> clone() const = 0;
   virtual std::string get_name() const = 0;
 };

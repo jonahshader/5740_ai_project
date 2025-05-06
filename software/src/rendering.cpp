@@ -14,7 +14,7 @@ void draw_tile(std::vector<uint32_t> &pixels, std::pair<int, int> pixels_res,
     for (int x = 0; x < tile_size; ++x) {
       const uint8_t *rgb = &spritesheet[4 * (x + (y + t_id * tile_size) * tile_size)];
       size_t index =
-          (x + x_tile * tile_size) + (y + y_tile * tile_size) * pixels_res.first * tile_size;
+          (x + x_tile * tile_size) + (y + y_tile * tile_size) * pixels_res.first;
       pixels[index] = make_color(rgb[0], rgb[1], rgb[2], 255);
     }
   }

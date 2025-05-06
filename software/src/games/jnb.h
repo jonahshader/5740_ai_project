@@ -110,12 +110,13 @@ public:
   std::pair<int, int> get_resolution() override;
   std::unique_ptr<Game> clone() const override;
 
+  // game state is public for PL interop
+  GameState state{};
+
 private:
   // resources
   std::shared_ptr<std::vector<uint8_t>> spritesheet{nullptr};
 
-  // game state
-  GameState state{};
   int frame_limit;
 };
 

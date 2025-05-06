@@ -1,6 +1,6 @@
 #include "pl_nn.h"
 
-namespace jnb {
+namespace model {
 p_t mutate_param(p_t param, std::mt19937 &rng, float mutation_rate, bool is_bias) {
   std::uniform_real_distribution mutation_chance(0.0f, 1.0f);
   std::uniform_int_distribution<int> mutation_type(0, 7);
@@ -73,4 +73,4 @@ int compute_sum_abs_activation(int *inputs, int input_count) {
   return sum / input_count;
 }
 
-} // namespace jnb
+} // namespace model

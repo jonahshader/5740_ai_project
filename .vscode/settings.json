@@ -89,5 +89,29 @@
     "variant": "cpp",
     "cassert": "cpp"
   },
-  "cmake.ignoreCMakeListsMissing": true
+  "cmake.buildDirectory": "${workspaceFolder}/software/build-${buildType}",
+  "cmake.defaultVariants": {
+      "buildType": {
+          "default": "debug",
+          "description": "The build type.",
+          "choices": {
+              "debug": {
+                  "short": "Debug",
+                  "long": "Disable optimizations - include debug information",
+                  "buildType": "Debug"
+              },
+              "release": {
+                  "short": "Release",
+                  "long": "Optimize for speed - exclude debug information",
+                  "buildType": "Release"
+              }
+          }
+      }
+  },
+  "cmake.configureSettings": {
+      "CMAKE_CXX_STANDARD": "20"
+  },
+  "cmake.cmakePath": "cmake",
+"cmake.configureOnOpen": true,
+"cmake.sourceDirectory": "C:/Users/jonah/Documents/programming/5740_ai_project/software"
 }

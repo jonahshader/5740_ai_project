@@ -16,7 +16,8 @@ public:
   ~PLNNModel() = default;
   jnb::PlayerInput forward(const jnb::GameState &state, bool p1_perspective);
   void mutate(std::mt19937 &rng, float mutation_rate) override;
-  void reset() override;
+  void reset() override {} // not stateful
+  void init(size_t input_size, size_t output_size, std::mt19937 &rng) override;
   std::shared_ptr<Model> clone() const override;
   std::string get_name() const override;
 

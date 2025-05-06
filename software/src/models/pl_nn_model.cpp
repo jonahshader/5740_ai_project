@@ -57,8 +57,8 @@ void PLNNModel::mutate(std::mt19937 &rng, float mutation_rate) {
   net.mutate(rng, mutation_rate);
 }
 
-void PLNNModel::reset() {
-  // nothing to reset. this model is not stateful
+void PLNNModel::init(size_t input_size, size_t output_size, std::mt19937 &rng) {
+  net.init(rng);
 }
 
 std::shared_ptr<Model> PLNNModel::clone() const {

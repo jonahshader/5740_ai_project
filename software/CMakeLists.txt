@@ -108,14 +108,13 @@ set(COMMON_SOURCES
   src/models/mlp_map_lut.h
   src/models/mlp_simple.cpp
   src/models/mlp_simple.h
+  src/models/model.h
   src/models/pl_nn_model.cpp
   src/models/pl_nn_model.h
-  src/optimizers/simple.cpp
   src/optimizers/simple.h
   src/comms.cpp
   src/comms.h
   src/fixed_point.h
-  src/models.h
   src/neural_net.h
   src/parse_map.h
   src/pixel_game.cpp

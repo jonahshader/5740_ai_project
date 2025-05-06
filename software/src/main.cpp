@@ -26,9 +26,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // load map
-  jnb::TileMap map;
-  map.load_from_file(map_file);
+  // // load map
+  // jnb::TileMap map;
+  // map.load_from_file(map_file);
 
   // {
   //   // human vs randomly init model

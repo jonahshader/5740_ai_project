@@ -1,0 +1,42 @@
+{
+  "configurations": [
+      {
+          "name": "Linux",
+          "includePath": [
+              "${workspaceFolder}/**",
+              "${workspaceFolder}/software/**",
+              "${workspaceFolder}/software/src/**",
+              "${workspaceFolder}/software/src/models/**",
+              "${workspaceFolder}/software/src/games/**"
+          ],
+          "defines": [],
+          "compilerPath": "/usr/bin/g++",
+          "cStandard": "c11",
+          "cppStandard": "c++20",
+          "intelliSenseMode": "linux-gcc-x64",
+          "configurationProvider": "ms-vscode.cmake-tools"
+      },
+      {
+          "name": "Win32",
+          "includePath": [
+              "${workspaceFolder}/**",
+              "${workspaceFolder}/software/**",
+              "${workspaceFolder}/software/src/**",
+              "${workspaceFolder}/software/src/models/**",
+              "${workspaceFolder}/software/src/games/**"
+          ],
+          "defines": [
+              "_DEBUG",
+              "UNICODE",
+              "_UNICODE"
+          ],
+          "windowsSdkVersion": "10.0.19041.0",
+          "compilerPath": "cl.exe",
+          "cStandard": "c11",
+          "cppStandard": "c++20",
+          "intelliSenseMode": "windows-msvc-x64",
+          "configurationProvider": "ms-vscode.cmake-tools"
+      }
+  ],
+  "version": 4
+}

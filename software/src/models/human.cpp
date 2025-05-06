@@ -10,10 +10,6 @@ void Keyboard::forward(const std::vector<float> &observation, std::vector<float>
   action[2] = jump ? 1 : 0;
 }
 
-void Keyboard::mutate(std::mt19937 &rng, float mutation_rate) {}
-
-void Keyboard::reset() {}
-
 std::shared_ptr<Model> Keyboard::clone() const {
   return std::make_shared<Keyboard>(*this);
 }

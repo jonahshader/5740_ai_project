@@ -270,9 +270,10 @@ void imgui_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection,
 
 void run_on_pl(const std::string &map_filename) {
   // initialize game state
-  GameState state = init(map_filename, 1);
+  // GameState state = jnb::init(map_filename, 1);
+  JnBGame game(map_filename, -1);
 
-  PixelGame game("JnB Sim", 640, 480, 60);
+  PixelGame window("JnB Sim", 640, 480, 60);
 
   PSPLState program_state{PSPLState::WAIT_FOR_UART_CONN};
 
@@ -381,7 +382,7 @@ void run_on_pl(const std::string &map_filename) {
     }
 
     if (program_state != WAIT_FOR_UART_CONN) {
-      imgui_state_control(program_state, set_uart, state.map, *ga_config, *eval_config,
+      imgui_state_control(program_state, set_uart, game.state.map, *ga_config, *eval_config,
                           bram_to_save);
     }
 
@@ -413,10 +414,10 @@ void run_on_pl(const std::string &map_filename) {
           [&](GameState gs) {
             std::cout << "Got GameState" << std::endl;
             // transfer relevant state
-            state.p1 = gs.p1;
-            state.p2 = gs.p2;
-            state.coin_pos = gs.coin_pos;
-            state.age = gs.age;
+            game.state.p1 = gs.p1;
+            game.state.p2 = gs.p2;
+            game.state.coin_pos = gs.coin_pos;
+            game.state.age = gs.age;
           },
           [&](GAStatus ga_status) {
             std::cout << "Gen " << ga_status.current_gen
@@ -511,9 +512,12 @@ void run_on_pl(const std::string &map_filename) {
     }
   };
   std::cout << "Launching game..." << std::endl;
-  game.run(
+  window.run(
       update_lambda,
-      [&state, &spritesheet](std::vector<uint32_t> &pixels) { render(state, spritesheet, pixels); },
+      [&game](std::vector<uint32_t> &pixels) {
+        game.render(pixels);
+        return game.get_resolution();
+      },
       handle_input_lambda, combined_imgui_lambda);
 }
 
