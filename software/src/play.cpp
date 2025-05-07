@@ -5,7 +5,7 @@
 
 #include <cassert>
 
-std::vector<int> play(Game &game, const std::vector<std::shared_ptr<model::Model>> &models) {
+std::vector<int> play(Game &game, const std::vector<std::shared_ptr<model::SimpleModel>> &models) {
   assert(game.get_player_count() == models.size());
 
   // build io vectors, fitness vector
@@ -38,7 +38,7 @@ std::vector<int> play(Game &game, const std::vector<std::shared_ptr<model::Model
   return fitness;
 }
 
-std::vector<int> play_and_render(Game &game, const std::vector<std::shared_ptr<model::Model>> &models) {
+std::vector<int> play_and_render(Game &game, const std::vector<std::shared_ptr<model::SimpleModel>> &models) {
   assert(game.get_player_count() == models.size());
 
   // build io vectors, fitness vector

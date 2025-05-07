@@ -121,6 +121,8 @@ set(COMMON_SOURCES
   src/pixel_game.h
   src/pl_nn.cpp
   src/pl_nn.h
+  src/play.cpp
+  src/play.h
   src/rendering.cpp
   src/rendering.h
   ${lodepng_SOURCE_DIR}/lodepng.cpp

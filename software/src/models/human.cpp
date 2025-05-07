@@ -8,6 +8,7 @@ void Keyboard::forward(const std::vector<float> &observation, std::vector<float>
   action[0] = left ? 1 : 0;
   action[1] = right ? 1 : 0;
   action[2] = jump ? 1 : 0;
+  // std::cout << action[0] << " " << action[1] << " " << action[2] << std::endl;
 }
 
 std::shared_ptr<Model> Keyboard::clone() const {
@@ -15,12 +16,12 @@ std::shared_ptr<Model> Keyboard::clone() const {
 }
 
 std::string Keyboard::get_name() const {
-  return "Human";
+  return "Keyboard";
 }
 
 std::function<void(SDL_Event &)> Keyboard::get_input_handler(SDL_KeyCode left, SDL_KeyCode right,
                                                              SDL_KeyCode jump) {
-  auto handle_input_lambda = [&](SDL_Event &event) {
+  auto handle_input_lambda = [=](SDL_Event &event) {
     auto k = event.key.keysym.sym;
     if (event.type == SDL_KEYDOWN) {
       if (k == left)

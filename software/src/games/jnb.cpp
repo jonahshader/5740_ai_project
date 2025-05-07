@@ -452,15 +452,19 @@ void JnBGame::render(std::vector<uint32_t> &pixels) {
   // draw players
   // p1 is light red
   int32_t p1_col = rendering::make_color(255, 80, 80, 255);
-  rendering::draw_rect(pixels, get_resolution(), state.p1.x.to_integer_floor(),
-                       state.map.height * CELL_SIZE - state.p1.y.to_integer_floor() - PLAYER_HEIGHT,
-                       PLAYER_WIDTH, PLAYER_HEIGHT, p1_col);
+  if (state.p1.dead_timeout == 0)
+    rendering::draw_rect(pixels, get_resolution(), state.p1.x.to_integer_floor(),
+                         state.map.height * CELL_SIZE - state.p1.y.to_integer_floor() -
+                             PLAYER_HEIGHT,
+                         PLAYER_WIDTH, PLAYER_HEIGHT, p1_col);
 
   // p2 is light blue
   int32_t p2_col = rendering::make_color(80, 80, 255, 255);
-  rendering::draw_rect(pixels, get_resolution(), state.p2.x.to_integer_floor(),
-                       state.map.height * CELL_SIZE - state.p2.y.to_integer_floor() - PLAYER_HEIGHT,
-                       PLAYER_WIDTH, PLAYER_HEIGHT, p2_col);
+  if (state.p2.dead_timeout == 0)
+    rendering::draw_rect(pixels, get_resolution(), state.p2.x.to_integer_floor(),
+                         state.map.height * CELL_SIZE - state.p2.y.to_integer_floor() -
+                             PLAYER_HEIGHT,
+                         PLAYER_WIDTH, PLAYER_HEIGHT, p2_col);
 
   // draw score
   for (int i = 0; i < std::min(state.p1.score, state.map.width * CELL_SIZE); ++i) {

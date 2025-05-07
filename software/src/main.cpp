@@ -1,6 +1,7 @@
 #include <string>
 #include <cstring>
 #include <memory>
+#include <vector>
 #include <random>
 
 #include "jnb_render.h"
@@ -11,6 +12,7 @@
 #include "optimizers/simple.h"
 #include "pixel_game.h"
 #include "lodepng.h"
+#include "play.h"
 
 int main(int argc, char *argv[]) {
   std::string map_file = "jnb_map_tb.tmx"; // default map file
@@ -44,7 +46,17 @@ int main(int argc, char *argv[]) {
   //   jnb::run_game_with_models(map_file, 0, p1, p2);
   // }
 
-  jnb::run_on_pl(map_file);
+  // make players
+  std::vector<std::shared_ptr<model::SimpleModel>> players;
+  players.emplace_back(std::make_shared<model::Keyboard>());
+  players.emplace_back(std::make_shared<model::Keyboard>());
+  // make game
+  jnb::JnBGame game(map_file, -1); // framelimit of -1 means run forever
+  game.init(123);
+  // play game
+  play_and_render(game, players);
+
+  // jnb::run_on_pl(map_file);
 
   // std::shared_ptr<jnb::Model> trained;
   // {
