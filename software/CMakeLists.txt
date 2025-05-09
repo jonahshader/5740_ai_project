@@ -111,6 +111,10 @@ set(COMMON_SOURCES
   src/models/model.h
   src/models/pl_nn_model.cpp
   src/models/pl_nn_model.h
+  src/optimizers/ga_funs.cpp
+  src/optimizers/ga_funs.h
+  src/optimizers/ga.cpp
+  src/optimizers/ga.h
   src/optimizers/simple.h
   src/comms.cpp
   src/comms.h

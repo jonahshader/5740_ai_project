@@ -30,9 +30,9 @@ using PriorBestSelect = std::function<Solution(const Population &evaled_pop, std
 
 using ModelBuilder = std::function<std::shared_ptr<Model>(std::mt19937 &)>;
 
-using Fitness =
-    std::function<int(Solution &sol, std::vector<std::shared_ptr<Model>> refs,
-                      std::vector<std::shared_ptr<Model>> prior_best, std::vector<uint64_t> seeds)>;
+using Fitness = std::function<void(Solution &sol, std::vector<std::shared_ptr<Model>> &refs,
+                                   std::vector<std::shared_ptr<Model>> &prior_best,
+                                   const std::vector<uint64_t> &seeds)>;
 
 using Logger = std::function<void(size_t current_gen, const Population &pop)>;
 
@@ -58,7 +58,7 @@ struct Config {
   size_t references_size{4};
   uint64_t seed{0};
   Populate populate_fun{nullptr};
-  Fitness fitness_fun{};
+  Fitness fitness_fun{nullptr};
   ModelBuilder model_builder{nullptr};
   size_t seeds_per_eval{4};
   SeedChange seed_change{NEVER};
