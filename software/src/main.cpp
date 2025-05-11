@@ -13,6 +13,7 @@
 #include "pixel_game.h"
 #include "lodepng.h"
 #include "play.h"
+#include "observation_types.h"
 
 int main(int argc, char *argv[]) {
   std::string map_file = "jnb_map_tb.tmx"; // default map file
@@ -47,11 +48,17 @@ int main(int argc, char *argv[]) {
   // }
 
   // make players
-  std::vector<std::shared_ptr<model::SimpleModel>> players;
-  players.emplace_back(std::make_shared<model::Keyboard>());
-  players.emplace_back(std::make_shared<model::Keyboard>());
+  std::mt19937 rng(0);
+  std::vector<std::shared_ptr<model::Model<obs::Simple>>> players;
+  players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
+  // players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
+  auto test_mlp = std::make_shared<model::SimpleMLP>(rng, 32, 2);
+  players.emplace_back(test_mlp);
+
   // make game
   jnb::JnBGame game(map_file, -1); // framelimit of -1 means run forever
+  std::vector<std::vector<float>> sample_observations = game.build_observation();
+  test_mlp->init(sample_observations[0], game.get_action_count(), rng);
   game.init(123);
   // play game
   play_and_render(game, players);

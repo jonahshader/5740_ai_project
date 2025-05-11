@@ -102,7 +102,6 @@ set(COMMON_SOURCES
   src/games/jnb_render.h
   src/games/jnb.cpp
   src/games/jnb.h
-  src/models/human.cpp
   src/models/human.h
   src/models/mlp_map_lut.cpp
   src/models/mlp_map_lut.h
@@ -120,12 +119,12 @@ set(COMMON_SOURCES
   src/comms.h
   src/fixed_point.h
   src/neural_net.h
+  src/observation_types.h
   src/parse_map.h
   src/pixel_game.cpp
   src/pixel_game.h
   src/pl_nn.cpp
   src/pl_nn.h
-  src/play.cpp
   src/play.h
   src/rendering.cpp
   src/rendering.h

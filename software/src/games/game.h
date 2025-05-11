@@ -6,7 +6,7 @@
 #include <vector>
 #include <utility>
 
-class Game {
+template <typename ObsType> class Game {
 public:
   virtual ~Game() = default;
 
@@ -29,10 +29,10 @@ public:
   virtual bool is_done() = 0;
 
   // Fill the inputs vector with observations for each player
-  virtual void observe(std::vector<std::vector<float>> &inputs) = 0;
+  virtual void observe(std::vector<ObsType> &inputs) = 0;
 
-  // Get the size of an observation vector
-  virtual size_t get_observation_size() = 0;
+  // Create an initial observation vector, which is reused in the gameplay loop
+  virtual std::vector<ObsType> build_observation() = 0;
 
   // Get the game name (for logging/identification)
   virtual std::string get_name() = 0;
@@ -44,5 +44,5 @@ public:
   virtual std::pair<int, int> get_resolution() = 0;
 
   // Clone the game state (deep copy)
-  virtual std::unique_ptr<Game> clone() const = 0;
+  virtual std::unique_ptr<Game<ObsType>> clone() const = 0;
 };

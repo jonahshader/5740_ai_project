@@ -7,6 +7,7 @@
 #include "jnb.h"
 #include "neural_net.h"
 #include "model.h"
+#include "observation_types.h"
 
 namespace model {
 
@@ -49,20 +50,32 @@ struct TileEmbeddings {
   }
 };
 
-class SimpleModelTileEmb : public Model {
+class SimpleModelTileEmb : public Model<obs::TileCoords> {
 public:
   SimpleModelTileEmb(size_t map_width_tiles, size_t map_height_tiles, size_t embedding_vec_size,
                      size_t embedding_coord_count, bool separate_embeddings_per_coord,
-                     std::shared_ptr<SimpleModel> base_model);
+                     std::shared_ptr<Model<obs::Simple>> base_model);
   ~SimpleModelTileEmb() = default;
 
-  void forward(const std::vector<std::pair<int, int>> &lut_coords,
-               const std::vector<float> &observation, std::vector<float> &action);
+  void forward(const obs::TileCoords &observation, std::vector<float> &action);
   void mutate(std::mt19937 &rng, float mutation_rate) override;
-  void reset() override;
-  void init(size_t input_size, size_t output_size, std::mt19937 &rng) override;
-  std::shared_ptr<Model> clone() const override;
-  std::string get_name() const override;
+  void init(const obs::TileCoords &sample_observation, size_t output_size,
+            std::mt19937 &rng) override;
+  void reset() override {
+    // embeddings are not stateful, but the base model could be
+    base_model->reset();
+  }
+  std::shared_ptr<Model<obs::TileCoords>> clone() const override {
+    // make a copy with the built-in copy constructor
+    auto clone = std::make_shared<SimpleModelTileEmb>(*this);
+    // since the copy constructor copies by value, that means the shared_ptr of
+    // the base model is copied, not the model itself, so I need to clone that here:
+    clone->base_model = clone->base_model->clone();
+    return clone;
+  }
+  std::string get_name() const override {
+    return "SimpleModelTileEmb";
+  }
 
 private:
   size_t map_width_tiles;
@@ -70,7 +83,7 @@ private:
   size_t embedding_vec_size;
   size_t embedding_coord_count;
   bool separate_embeddings_per_coord;
-  std::shared_ptr<SimpleModel> base_model{};
+  std::shared_ptr<Model<obs::Simple>> base_model{};
   std::vector<TileEmbeddings> embeddings{};
   std::vector<float> observation_with_embeddings{};
 };

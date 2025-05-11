@@ -428,13 +428,9 @@ bool JnBGame::is_done() {
   return frame_limit > 0 && state.age >= frame_limit;
 }
 
-void JnBGame::observe(std::vector<std::vector<float>> &inputs) {
+void JnBGame::observe(std::vector<obs::Simple> &inputs) {
   observe_state_simple(state, inputs[0], true);
   observe_state_simple(state, inputs[1], false);
-}
-
-size_t JnBGame::get_observation_size() {
-  return SIMPLE_INPUT_COUNT;
 }
 
 void JnBGame::render(std::vector<uint32_t> &pixels) {
@@ -478,12 +474,6 @@ void JnBGame::render(std::vector<uint32_t> &pixels) {
 
 std::pair<int, int> JnBGame::get_resolution() {
   return {state.map.width * CELL_SIZE, state.map.height * CELL_SIZE};
-}
-
-std::unique_ptr<Game> JnBGame::clone() const {
-  auto new_game = std::make_unique<JnBGame>(*this);
-  new_game->state = state;
-  return new_game;
 }
 
 } // namespace jnb
