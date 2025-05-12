@@ -23,5 +23,7 @@ IndentCaseLabels: true
 SpaceBeforeParens: ControlStatements
 # Spaces in parentheses
 SpacesInParentheses: false
-# Don't sort includes
-SortIncludes: false
+# Sort includes
+SortIncludes: true
+# Always break template declarations
+AlwaysBreakTemplateDeclarations: Yes

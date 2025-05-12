@@ -9,6 +9,8 @@
 
 #include "fixed_point.h"
 #include "parse_map.h"
+#include "game.h"
+#include "observation_types.h"
 
 namespace jnb {
 
@@ -74,17 +76,61 @@ struct PlayerInput {
   bool jump{false};
 };
 
-// create and instantiate a GameState instance
-GameState init(const std::string &map_filename, uint64_t seed);
-// take an existing GameState and re-init all but the map
-void reinit(GameState &state, uint64_t seed);
-void update(GameState &state, const PlayerInput &in1, const PlayerInput &in2);
-
 void observe_state_simple(const GameState &state, std::vector<F4> &observation,
                           bool p1_perspective);
 void observe_state_simple(const GameState &state, std::vector<float> &observation,
                           bool p1_perspective);
 int get_fitness(const GameState &state, bool p1_perspective);
 // void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);
+
+class JnBGame : public Game<obs::Simple> {
+public:
+  // negative frame_limit means unlimited
+  JnBGame(const std::string &map_filename, int frame_limit = 400);
+
+  void init(uint64_t seed) override;
+  void update(const std::vector<std::vector<float>> &actions);
+  void get_fitness(std::vector<int32_t> &fitness) override;
+  bool is_done() override;
+  void observe(std::vector<obs::Simple> &inputs) override;
+
+  std::vector<obs::Simple> build_observation() override {
+    std::vector<obs::Simple> obs;
+    obs.resize(get_player_count());
+    for (size_t i = 0; i < get_player_count(); ++i) {
+      obs[i].resize(SIMPLE_INPUT_COUNT);
+    }
+    return obs;
+  }
+
+  size_t get_action_count() override {
+    return 3;
+  }
+
+  size_t get_player_count() override {
+    return 2;
+  }
+
+  std::string get_name() override {
+    return "JnB";
+  }
+
+  void render(std::vector<uint32_t> &pixels) override;
+  std::pair<int, int> get_resolution() override;
+  std::unique_ptr<Game<obs::Simple>> clone() const override {
+    auto new_game = std::make_unique<JnBGame>(*this);
+    new_game->state = state;
+    return new_game;
+  }
+
+  // game state is public for PL interop
+  GameState state{};
+
+private:
+  // resources
+  std::shared_ptr<std::vector<uint8_t>> spritesheet{nullptr};
+
+  int frame_limit;
+};
 
 } // namespace jnb

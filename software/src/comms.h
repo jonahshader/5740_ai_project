@@ -5,7 +5,7 @@
 #include <optional>
 #include <variant>
 
-#include "core.h"
+#include "jnb.h"
 #include "parse_map.h"
 #include "optimizers/simple.h"
 

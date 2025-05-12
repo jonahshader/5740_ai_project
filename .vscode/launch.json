@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+      {
+          "name": "Debug sim (Linux)",
+          "type": "cppdbg",
+          "request": "launch",
+          "program": "${workspaceFolder}/software/build-debug/sim",
+          "args": [],
+          "stopAtEntry": false,
+          "cwd": "${workspaceFolder}/software/resources",
+          "environment": [],
+          "externalConsole": false,
+          "MIMode": "gdb",
+          "setupCommands": [
+              {
+                  "description": "Enable pretty-printing for gdb",
+                  "text": "-enable-pretty-printing",
+                  "ignoreFailures": true
+              }
+          ],
+          "preLaunchTask": "cmake-build",
+          "miDebuggerPath": "/usr/bin/gdb"
+      },
+      {
+          "name": "Debug sim (Windows)",
+          "type": "cppvsdbg",
+          "request": "launch",
+          "program": "${workspaceFolder}/software/build-debug/Debug/sim.exe",
+          "args": [],
+          "stopAtEntry": false,
+          "cwd": "${workspaceFolder}/software/resources",
+          "environment": [],
+          "externalConsole": false,
+          "preLaunchTask": "cmake-build"
+      }
+  ]
+}

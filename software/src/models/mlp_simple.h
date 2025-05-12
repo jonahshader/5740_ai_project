@@ -2,24 +2,36 @@
 
 #include <random>
 
-#include "core.h"
+#include "jnb.h"
+#include "model.h"
 #include "neural_net.h"
-#include "interfaces.h"
+#include "observation_types.h"
 
-namespace jnb {
+namespace model {
 
-class SimpleMLPModel : public Model {
+// TODO: expose  DynamicNeuralNet datatype as template T?
+class SimpleMLP : public Model<obs::Simple> {
 public:
-  SimpleMLPModel(std::mt19937 &rng);
-  ~SimpleMLPModel() = default;
-  PlayerInput forward(const GameState &state, bool p1_perspective) override;
+  SimpleMLP(size_t hidden_size, size_t hidden_count);
+  ~SimpleMLP() = default;
+  void forward(const obs::Simple &observation, std::vector<float> &action) override {
+    net.forward(observation.data(), action.data());
+  }
   void mutate(std::mt19937 &rng, float mutation_rate) override;
-  void reset() override;
-  std::shared_ptr<Model> clone() const override;
-  std::string get_name() const override;
+  void init(const obs::Simple &sample_observation, size_t output_size, std::mt19937 &rng) override {
+    net.init(rng, sample_observation.size(), hidden_size, hidden_count, output_size);
+  }
+  std::shared_ptr<Model<obs::Simple>> clone() const override {
+    return std::make_shared<SimpleMLP>(*this);
+  }
+  std::string get_name() const override {
+    return "SimpleMLP";
+  }
 
 private:
-  StaticNeuralNet<float, SIMPLE_INPUT_COUNT, 32, 2, SIMPLE_OUTPUT_COUNT> net{};
+  size_t hidden_size;
+  size_t hidden_count;
+  DynamicNeuralNet<float> net{};
 };
 
-} // namespace jnb
+} // namespace model

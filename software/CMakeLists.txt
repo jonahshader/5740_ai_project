@@ -97,30 +97,39 @@ find_package(OpenMP REQUIRED)
 
 # Define common source files (excluding main.cpp)
 set(COMMON_SOURCES
-  src/models/human.cpp
+  src/games/game.h
+  src/games/jnb_render.cpp
+  src/games/jnb_render.h
+  src/games/jnb.cpp
+  src/games/jnb.h
   src/models/human.h
   src/models/mlp_map_lut.cpp
   src/models/mlp_map_lut.h
   src/models/mlp_simple.cpp
   src/models/mlp_simple.h
+  src/models/model.h
   src/models/pl_nn_model.cpp
   src/models/pl_nn_model.h
-  src/optimizers/simple.cpp
+  src/optimizers/ga_funs.cpp
+  src/optimizers/ga_funs.h
+  src/optimizers/ga.cpp
+  src/optimizers/ga.h
   src/optimizers/simple.h
   src/comms.cpp
   src/comms.h
-  src/core_render.cpp
-  src/core_render.h
-  src/core.cpp
-  src/core.h
   src/fixed_point.h
-  src/interfaces.h
   src/neural_net.h
+  src/observation_types.h
   src/parse_map.h
   src/pixel_game.cpp
   src/pixel_game.h
   src/pl_nn.cpp
   src/pl_nn.h
+  src/play.h
+  src/rendering.cpp
+  src/rendering.h
+  src/training.cpp
+  src/training.h
   ${lodepng_SOURCE_DIR}/lodepng.cpp
 )
 
@@ -128,6 +137,7 @@ set(COMMON_SOURCES
 set(COMMON_INCLUDE_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/src
   ${CMAKE_CURRENT_SOURCE_DIR}/src/models
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/games
   ${lodepng_SOURCE_DIR}
   ${serialport_SOURCE_DIR}/include
   ${glad_SOURCE_DIR}/include
