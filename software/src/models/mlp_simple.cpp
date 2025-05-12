@@ -2,7 +2,7 @@
 
 namespace model {
 
-SimpleMLP::SimpleMLP(std::mt19937 &rng, size_t hidden_size, size_t hidden_count)
+SimpleMLP::SimpleMLP(size_t hidden_size, size_t hidden_count)
     : hidden_size(hidden_size), hidden_count(hidden_count) {}
 
 

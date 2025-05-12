@@ -6,7 +6,8 @@
 
 namespace model {
 
-template <typename ObsType> class Model {
+template <typename ObsType>
+class Model {
 public:
   virtual ~Model() = default;
 
@@ -14,6 +15,9 @@ public:
   // reset internal state. used when a model has recurrent connections or is otherwise stateful in
   // some way.
   virtual void reset() {}
+  virtual bool is_stateful() const {
+    return false;
+  }
   // sample_observation is purely just for the model to see the shape of a sample
   virtual void init(const ObsType &sample_observation, size_t output_size, std::mt19937 &rng) {}
   virtual void forward(const ObsType &observation, std::vector<float> &action) {}

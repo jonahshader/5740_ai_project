@@ -128,6 +128,8 @@ set(COMMON_SOURCES
   src/play.h
   src/rendering.cpp
   src/rendering.h
+  src/training.cpp
+  src/training.h
   ${lodepng_SOURCE_DIR}/lodepng.cpp
 )
 

@@ -87,8 +87,10 @@
     "cinttypes": "cpp",
     "bitset": "cpp",
     "variant": "cpp",
-    "cassert": "cpp"
-  },
+    "cassert": "cpp",
+    "*.rh": "cpp",
+    "shared_mutex": "cpp"
+},
   "cmake.buildDirectory": "${workspaceFolder}/software/build-${buildType}",
   "cmake.defaultVariants": {
       "buildType": {

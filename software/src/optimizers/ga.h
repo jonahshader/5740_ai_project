@@ -167,7 +167,7 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
 }
 
 template <typename ObsType>
-void ga(State<ObsType> &state, const Config<ObsType> &config) {
+void run(State<ObsType> &state, const Config<ObsType> &config) {
   do {
     step(state, config);
   } while (state.gen < config.max_gen);

@@ -3,16 +3,16 @@
 #include <random>
 
 #include "jnb.h"
-#include "neural_net.h"
 #include "model.h"
+#include "neural_net.h"
 #include "observation_types.h"
 
 namespace model {
 
-// TODO: expose DynamicNeuralNet datatype as template T?
+// TODO: expose  DynamicNeuralNet datatype as template T?
 class SimpleMLP : public Model<obs::Simple> {
 public:
-  SimpleMLP(std::mt19937 &rng, size_t hidden_size, size_t hidden_count);
+  SimpleMLP(size_t hidden_size, size_t hidden_count);
   ~SimpleMLP() = default;
   void forward(const obs::Simple &observation, std::vector<float> &action) override {
     net.forward(observation.data(), action.data());

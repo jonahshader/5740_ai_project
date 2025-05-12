@@ -3,10 +3,11 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
-template <typename ObsType> class Game {
+template <typename ObsType>
+class Game {
 public:
   virtual ~Game() = default;
 

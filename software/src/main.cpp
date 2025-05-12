@@ -14,6 +14,7 @@
 #include "lodepng.h"
 #include "play.h"
 #include "observation_types.h"
+#include "training.h"
 
 int main(int argc, char *argv[]) {
   std::string map_file = "jnb_map_tb.tmx"; // default map file
@@ -28,6 +29,8 @@ int main(int argc, char *argv[]) {
       }
     }
   }
+
+  train(map_file);
 
   // // load map
   // jnb::TileMap map;
@@ -47,21 +50,21 @@ int main(int argc, char *argv[]) {
   //   jnb::run_game_with_models(map_file, 0, p1, p2);
   // }
 
-  // make players
-  std::mt19937 rng(0);
-  std::vector<std::shared_ptr<model::Model<obs::Simple>>> players;
-  players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
+  // // make players
+  // std::mt19937 rng(0);
+  // std::vector<std::shared_ptr<model::Model<obs::Simple>>> players;
   // players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
-  auto test_mlp = std::make_shared<model::SimpleMLP>(rng, 32, 2);
-  players.emplace_back(test_mlp);
+  // // players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
+  // auto test_mlp = std::make_shared<model::SimpleMLP>(rng, 32, 2);
+  // players.emplace_back(test_mlp);
 
-  // make game
-  jnb::JnBGame game(map_file, -1); // framelimit of -1 means run forever
-  std::vector<std::vector<float>> sample_observations = game.build_observation();
-  test_mlp->init(sample_observations[0], game.get_action_count(), rng);
-  game.init(123);
-  // play game
-  play_and_render(game, players);
+  // // make game
+  // jnb::JnBGame game(map_file, -1); // framelimit of -1 means run forever
+  // std::vector<std::vector<float>> sample_observations = game.build_observation();
+  // test_mlp->init(sample_observations[0], game.get_action_count(), rng);
+  // game.init(123);
+  // // play game
+  // play_and_render(game, players);
 
   // jnb::run_on_pl(map_file);
 

@@ -4,4 +4,4 @@
 
 using namespace ga;
 
-void train();
+void train(const std::string &map_filename);
