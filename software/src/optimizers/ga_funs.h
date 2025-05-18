@@ -6,11 +6,16 @@
 
 #include "ga.h"
 #include "game.h"
+#include "model.h"
 #include "play.h"
 
 namespace ga {
 
-// TODO: this can be private
+// file-private declarations
+namespace {
+
+using model::ParamSpan;
+
 template <typename ObsType>
 Solution<ObsType> tournament_select_single(const Population<ObsType> &evaled_pop,
                                            size_t tournament_size, std::mt19937 &rng) {
@@ -24,6 +29,8 @@ Solution<ObsType> tournament_select_single(const Population<ObsType> &evaled_pop
   }
   return evaled_pop[best_idx];
 }
+
+} // namespace
 
 template <typename ObsType>
 Populate<ObsType> make_tournament(size_t size) {
