@@ -48,6 +48,12 @@ struct TileEmbeddings {
       val += dist(rng);
     }
   }
+
+  std::vector<ParamSpan> get_spans() {
+    std::vector<ParamSpan> spans;
+    spans.push_back(std::span<float>(data.data(), data.size()));
+    return spans;
+  }
 };
 
 class SimpleModelTileEmb : public Model<obs::TileCoords> {
@@ -75,6 +81,21 @@ public:
   }
   std::string get_name() const override {
     return "SimpleModelTileEmb";
+  }
+  std::vector<ParamSpan> get_spans() override {
+    std::vector<ParamSpan> spans;
+    auto base_model_spans = base_model->get_spans();
+    spans.insert(spans.end(), base_model_spans.begin(), base_model_spans.end());
+    for (auto &embedding : embeddings) {
+      auto embedding_spans = embedding.get_spans();
+      spans.insert(spans.end(), embedding_spans.begin(), embedding_spans.end());
+    }
+    return spans;
+  }
+
+  void apply_spans() override {
+    // tile embeddings don't need to be constrained, but base_model might
+    base_model->apply_spans();
   }
 
 private:

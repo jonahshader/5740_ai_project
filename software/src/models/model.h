@@ -1,10 +1,17 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <random>
+#include <span>
 #include <string>
+#include <variant>
+#include <vector>
 
 namespace model {
+
+// Covers all the possible parameter types that models use. Add more as needed.
+using ParamSpan = std::variant<std::span<float>, std::span<int8_t>>;
 
 template <typename ObsType>
 class Model {
@@ -23,6 +30,10 @@ public:
   virtual void forward(const ObsType &observation, std::vector<float> &action) {}
   virtual std::shared_ptr<Model<ObsType>> clone() const = 0;
   virtual std::string get_name() const = 0;
+  virtual std::vector<ParamSpan> get_spans() {
+    return {};
+  };
+  virtual void apply_spans() {};
 };
 
 } // namespace model

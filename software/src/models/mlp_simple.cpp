@@ -10,4 +10,8 @@ void SimpleMLP::mutate(std::mt19937 &rng, float mutation_rate) {
   net.mutate(rng, mutation_rate);
 }
 
+std::vector<ParamSpan> SimpleMLP::get_spans() {
+  return net.get_spans();
+}
+
 } // namespace model

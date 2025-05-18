@@ -1,3 +1,6 @@
+// this model was backported from our pl implementation for debugging purposes.
+// it should no longer be used. TODO: remove this and make the quinary nn generic enough
+// to fully replace this.
 #pragma once
 
 #include <cassert>
