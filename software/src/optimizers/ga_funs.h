@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "crossover_types.h"
 #include "ga.h"
 #include "game.h"
 #include "model.h"
@@ -39,6 +40,34 @@ Populate<ObsType> make_tournament(size_t size) {
     for (size_t i = 0; i < current.size(); ++i) {
       // run a tournament and store the winner
       next.emplace_back(tournament_select_single(current, size, rng));
+    }
+  };
+}
+
+template <typename ObsType>
+Populate<ObsType> make_tournament_with_crossover(size_t tournament_size,
+                                                 SolCrossover<ObsType> crossover,
+                                                 float crossover_p) {
+  assert(crossover_p >= 0);
+  return [=](const Population<ObsType> &current, Population<ObsType> &next, std::mt19937 &rng) {
+    next.clear();
+    // determine how many to produce from crossover vs just copying
+    size_t crossover_count = static_cast<size_t>(crossover_p * current.size());
+    size_t non_crossover_count = current.size() - crossover_count;
+
+    // populate with crossover solutions
+    for (size_t i = 0; i < crossover_count; ++i) {
+      // grab two parents and perform crossover
+      auto parent1 = tournament_select_single(current, tournament_size, rng);
+      auto parent2 = tournament_select_single(current, tournament_size, rng);
+      auto child = crossover(parent1, parent2, rng);
+      // child is a model, not a solution, so we need to wrap it
+      next.emplace_back(Solution<ObsType>{child, 0, 0, 0});
+    }
+
+    // populate with non-crossover solutions
+    for (size_t i = 0; i < non_crossover_count; ++i) {
+      next.emplace_back(tournament_select_single(current, tournament_size, rng));
     }
   };
 }

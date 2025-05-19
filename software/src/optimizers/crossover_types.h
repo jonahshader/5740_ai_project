@@ -28,6 +28,9 @@ template <typename T>
 using ParamCrossover =
     std::function<T(T param1, T param2, float sol1_relative_perf, std::mt19937 &rng)>;
 
+bool check_spans_compatible(const std::vector<ParamSpan> &spans1,
+                            const std::vector<ParamSpan> &spans2);
+
 // helper that turns a VectorCrossover into a SolCrossover
 template <typename ObsType>
 SolCrossover<ObsType> to_sol_crossover(VectorCrossover vec_cross) {
@@ -46,7 +49,10 @@ SolCrossover<ObsType> to_sol_crossover(VectorCrossover vec_cross) {
     // parents are compatible so move on to the crossover
     auto child = sol1.model->clone();
     float sol1_relative_perf = static_cast<float>(sol1.fitness) / (sol1.fitness + sol2.fitness);
-    vec_cross(sol1.model->get_spans(), sol2.model->get_spans(), child->get_spans(),
+    auto s1_spans = sol1.model->get_spans();
+    auto s2_spans = sol2.model->get_spans();
+    auto c_spans = child->get_spans();
+    vec_cross(s1_spans, s2_spans, c_spans,
               sol1_relative_perf, rng);
     // apply child crossover
     child->apply_spans();
@@ -55,16 +61,7 @@ SolCrossover<ObsType> to_sol_crossover(VectorCrossover vec_cross) {
 }
 
 // helper that turns a SpanCrossover into a VectorCrossover
-VectorCrossover to_vec_crossover(SpanCrossover span_cross) {
-  return [span_cross](const std::vector<ParamSpan> &spans1, const std::vector<ParamSpan> &spans2,
-                      std::vector<ParamSpan> &child_spans, float sol1_relative_perf,
-                      std::mt19937 &rng) {
-    // apply the span crossover to each span pair
-    for (size_t i = 0; i < spans1.size(); ++i) {
-      span_cross(spans1[i], spans2[i], child_spans[i], sol1_relative_perf, rng);
-    }
-  };
-}
+VectorCrossover to_vec_crossover(SpanCrossover span_cross);
 
 // helper that turns a ParamCrossover into a SpanCrossover
 template <typename F>
@@ -82,39 +79,6 @@ SpanCrossover to_span_crossover(F param_cross) {
         },
         span1, span2, child_span);
   };
-}
-
-template <typename ObsType>
-bool check_spans_compatible(const std::vector<ParamSpan> &spans1,
-                            const std::vector<ParamSpan> &spans2) {
-  // check if number of spans is equal
-  if (spans1.size() != spans2.size()) {
-    return false;
-  }
-
-  // check compatibility of each span
-  // TODO: use C++23 and use https://en.cppreference.com/w/cpp/ranges/zip_view
-  for (size_t i = 0; i < spans1.size(); ++i) {
-    const ParamSpan &span1 = spans1[i];
-    const ParamSpan &span2 = spans2[i];
-
-    // check type compatibility
-    if (span1.index() != span2.index()) {
-      return false;
-    }
-
-    // check length compatibility
-    bool same_size =
-        std::visit([](const auto &s1, const auto &s2) -> bool { return s1.size() == s2.size(); },
-                   span1, span2);
-
-    if (!same_size) {
-      return false;
-    }
-  }
-
-  // everything above matched, so they are compatible.
-  return true;
 }
 
 } // namespace ga

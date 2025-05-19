@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  train(map_file);
+  train_crossover_example(map_file);
 
   // // load map
   // jnb::TileMap map;
