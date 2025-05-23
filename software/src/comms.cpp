@@ -162,43 +162,43 @@ std::optional<msg_obj> receive(const get_uart_blocking_fun &get_fun_blocking,
       v = get_fun_blocking() << 8;
       // TR_P1_X_2_S
       v |= get_fun_blocking();
-      ret.p1.x = F4(static_cast<int16_t>(v));
+      ret.players[0].x = F4(static_cast<int16_t>(v));
       // TR_P1_Y_1_S
       // 2 bytes
       v = get_fun_blocking() << 8;
       // TR_P1_Y_2_S
       v |= get_fun_blocking();
-      ret.p1.y = F4(static_cast<int16_t>(v));
+      ret.players[0].y = F4(static_cast<int16_t>(v));
       // TR_P1_SCORE_1_S
       // 2 bytes
       v = get_fun_blocking() << 8;
       // TR_P1_SCORE_2_S
       v |= get_fun_blocking();
-      ret.p1.score = static_cast<int16_t>(v);
+      ret.players[0].score = static_cast<int16_t>(v);
       // TR_P1_DEAD_TIMEOUT_S
       // 1 byte
-      ret.p1.dead_timeout = get_fun_blocking();
+      ret.players[0].dead_timeout = get_fun_blocking();
       // TR_P2_X_1_S
       // 2 bytes
       v = get_fun_blocking() << 8;
       // TR_P2_X_2_S
       v |= get_fun_blocking();
-      ret.p2.x = F4(static_cast<int16_t>(v));
+      ret.players[1].x = F4(static_cast<int16_t>(v));
       // TR_P2_Y_1_S
       // 2 bytes
       v = get_fun_blocking() << 8;
       // TR_P2_Y_2_S
       v |= get_fun_blocking();
-      ret.p2.y = F4(static_cast<int16_t>(v));
+      ret.players[1].y = F4(static_cast<int16_t>(v));
       // TR_P2_SCORE_1_S
       // 2 bytes
       v = get_fun_blocking() << 8;
       // TR_P2_SCORE_2_S
       v |= get_fun_blocking();
-      ret.p2.score = static_cast<int16_t>(v);
+      ret.players[1].score = static_cast<int16_t>(v);
       // TR_P2_DEAD_TIMEOUT_S
       // 1 byte
-      ret.p2.dead_timeout = get_fun_blocking();
+      ret.players[1].dead_timeout = get_fun_blocking();
       // TR_COIN_X_S
       // 1 byte
       ret.coin_pos.x = get_fun_blocking();

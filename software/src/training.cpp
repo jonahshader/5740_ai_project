@@ -12,7 +12,7 @@
 using namespace ga;
 
 void train(const std::string &map_filename) {
-  jnb::JnBGame game(map_filename, 400);
+  jnb::JnBGame game(map_filename, 2, 400);
 
   auto sample_obs = game.build_observation();
 
@@ -41,7 +41,7 @@ void train(const std::string &map_filename) {
 void train_crossover_example(const std::string &map_filename) {
   // define the game that the agents are to play in.
   // this hooks into the fitness function.
-  jnb::JnBGame game(map_filename, 400); // framelimit set to 400
+  jnb::JnBGame game(map_filename, 2, 400); // framelimit set to 400
 
   // the models need to know the shape of the game's observation,
   // so we build one and pass it to the model initialization.

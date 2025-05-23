@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "fixed_point.h"
-#include "parse_map.h"
 #include "game.h"
 #include "observation_types.h"
+#include "parse_map.h"
 
 namespace jnb {
 
@@ -63,8 +63,7 @@ struct Player {
 
 struct GameState {
   TileMap map{};
-  Player p1{};
-  Player p2{};
+  std::vector<Player> players{};
   TilePos coin_pos{0, 0};
   std::mt19937 rng{0};
   uint32_t age{0};
@@ -76,17 +75,15 @@ struct PlayerInput {
   bool jump{false};
 };
 
-void observe_state_simple(const GameState &state, std::vector<F4> &observation,
-                          bool p1_perspective);
-void observe_state_simple(const GameState &state, std::vector<float> &observation,
-                          bool p1_perspective);
-int get_fitness(const GameState &state, bool p1_perspective);
+void observe_state_simple(const GameState &state, std::vector<F4> &observation, int player);
+void observe_state_simple(const GameState &state, std::vector<float> &observation, int player);
+int get_fitness(const GameState &state, int player);
 // void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);
 
 class JnBGame : public Game<obs::Simple> {
 public:
   // negative frame_limit means unlimited
-  JnBGame(const std::string &map_filename, int frame_limit = 400);
+  JnBGame(const std::string &map_filename, int players, int frame_limit);
 
   void init(uint64_t seed) override;
   void update(const std::vector<std::vector<float>> &actions);
@@ -98,7 +95,8 @@ public:
     std::vector<obs::Simple> obs;
     obs.resize(get_player_count());
     for (size_t i = 0; i < get_player_count(); ++i) {
-      obs[i].resize(SIMPLE_INPUT_COUNT);
+      constexpr int INPUTS_PER_PLAYER = 5;
+      obs[i].resize(2 + INPUTS_PER_PLAYER * state.players.size());
     }
     return obs;
   }
@@ -108,7 +106,7 @@ public:
   }
 
   size_t get_player_count() override {
-    return 2;
+    return state.players.size();
   }
 
   std::string get_name() override {

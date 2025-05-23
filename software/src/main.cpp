@@ -1,19 +1,19 @@
-#include <string>
 #include <cstring>
 #include <memory>
-#include <vector>
 #include <random>
+#include <string>
+#include <vector>
 
 #include "jnb_render.h"
+#include "lodepng.h"
 #include "models/human.h"
-#include "models/mlp_simple.h"
 #include "models/mlp_map_lut.h"
+#include "models/mlp_simple.h"
 #include "models/pl_nn_model.h"
+#include "observation_types.h"
 #include "optimizers/simple.h"
 #include "pixel_game.h"
-#include "lodepng.h"
 #include "play.h"
-#include "observation_types.h"
 #include "training.h"
 
 int main(int argc, char *argv[]) {
@@ -30,11 +30,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  train_crossover_example(map_file);
+  // train_crossover_example(map_file);
 
-  // // load map
-  // jnb::TileMap map;
-  // map.load_from_file(map_file);
+  // load map
+  jnb::TileMap map;
+  map.load_from_file(map_file);
 
   // {
   //   // human vs randomly init model
@@ -50,21 +50,28 @@ int main(int argc, char *argv[]) {
   //   jnb::run_game_with_models(map_file, 0, p1, p2);
   // }
 
-  // // make players
-  // std::mt19937 rng(0);
-  // std::vector<std::shared_ptr<model::Model<obs::Simple>>> players;
+  // make players
+  std::mt19937 rng(0);
+  std::vector<std::shared_ptr<model::Model<obs::Simple>>> players;
+  players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
   // players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
-  // // players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
-  // auto test_mlp = std::make_shared<model::SimpleMLP>(rng, 32, 2);
-  // players.emplace_back(test_mlp);
+  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
+  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
+  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
+  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
+  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
+  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
 
-  // // make game
-  // jnb::JnBGame game(map_file, -1); // framelimit of -1 means run forever
-  // std::vector<std::vector<float>> sample_observations = game.build_observation();
-  // test_mlp->init(sample_observations[0], game.get_action_count(), rng);
-  // game.init(123);
-  // // play game
-  // play_and_render(game, players);
+  // make game
+  jnb::JnBGame game(map_file, players.size(), -1); // framelimit of -1 means run forever
+  std::vector<std::vector<float>> sample_observations = game.build_observation();
+  for (auto &player : players) {
+    player->init(sample_observations[0], game.get_action_count(), rng);
+  }
+
+  game.init(123);
+  // play game
+  play_and_render(game, players);
 
   // jnb::run_on_pl(map_file);
 

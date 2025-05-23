@@ -271,7 +271,7 @@ void imgui_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection,
 void run_on_pl(const std::string &map_filename) {
   // initialize game state
   // GameState state = jnb::init(map_filename, 1);
-  JnBGame game(map_filename, -1);
+  JnBGame game(map_filename, 2, -1);
 
   PixelGame window("JnB Sim", 640, 480, 60);
 
@@ -414,8 +414,8 @@ void run_on_pl(const std::string &map_filename) {
           [&](GameState gs) {
             std::cout << "Got GameState" << std::endl;
             // transfer relevant state
-            game.state.p1 = gs.p1;
-            game.state.p2 = gs.p2;
+            game.state.players[0] = gs.players[0];
+            game.state.players[1] = gs.players[1];
             game.state.coin_pos = gs.coin_pos;
             game.state.age = gs.age;
           },

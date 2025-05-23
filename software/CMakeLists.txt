@@ -97,6 +97,7 @@ find_package(OpenMP REQUIRED)
 
 # Define common source files (excluding main.cpp)
 set(COMMON_SOURCES
+  src/games/color.h
   src/games/game.h
   src/games/jnb_render.cpp
   src/games/jnb_render.h
