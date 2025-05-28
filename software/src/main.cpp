@@ -17,7 +17,7 @@
 #include "training.h"
 
 int main(int argc, char *argv[]) {
-  std::string map_file = "jnb_map_tb.tmx"; // default map file
+  std::string map_file = "jnb_map3.tmx"; // default map file
 
   // parse command line arguments
   for (int i = 1; i < argc; i++) {
