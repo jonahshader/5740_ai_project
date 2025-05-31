@@ -40,6 +40,8 @@ Populate<ObsType> make_tournament(size_t size) {
     for (size_t i = 0; i < current.size(); ++i) {
       // run a tournament and store the winner
       next.emplace_back(tournament_select_single(current, size, rng));
+      // clone the model
+      next.back().model = next.back().model->clone();
     }
   };
 }
@@ -156,6 +158,33 @@ Fitness<ObsType> make_game_fitness_2p(std::shared_ptr<Game<ObsType>> game) {
         sol.fitness += episode_fitness;
         sol.ref_fitness += episode_fitness;
       }
+    }
+  };
+}
+
+/**
+ * @brief Creates a fitness function for one player games.
+ *
+ * @param game the game
+ * @return The constructed fitness function
+ */
+template <typename ObsType>
+Fitness<ObsType> make_game_fitness_1p(std::shared_ptr<Game<ObsType>> game) {
+  assert(game->get_player_count() == 1);
+  return [=](Solution<ObsType> &sol, std::vector<std::shared_ptr<Model<ObsType>>> &refs,
+             std::vector<std::shared_ptr<Model<ObsType>>> &prior_best,
+             const std::vector<uint64_t> &seeds) {
+    sol.prior_best_fitness = 0;
+    sol.ref_fitness = 0;
+    sol.fitness = 0;
+
+    // play on a clone of the game to allow this lambda to run in parallel
+    auto game_clone = game->clone();
+
+    // run a single game per seed
+    for (auto seed : seeds) {
+      game_clone->init(seed);
+      sol.fitness += play(*game_clone, {sol.model})[0];
     }
   };
 }

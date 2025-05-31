@@ -92,7 +92,7 @@ void train_crossover_example(const std::string &map_filename) {
   auto crossover_25 = [](auto p1, auto p2, float sol1_relative_perf, std::mt19937 &rng) {
     // 25% p1, 75% p2
     // TODO: this might break on non-float models
-    return (p1 / 4) + (3 * p2/4);
+    return (p1 / 4) + (3 * p2 / 4);
   };
   // i still need to convert this:
   auto sol_crossover_25 =
@@ -105,4 +105,42 @@ void train_crossover_example(const std::string &map_filename) {
   init(state, config);
   run(state, config);
   // should be training now
+}
+
+Solution<obs::Simple> train_1_player_example(const std::string &map_filename) {
+  auto game = std::make_shared<jnb::JnBGame>(map_filename, 1, 300);
+
+  auto sample_obs = game->build_observation();
+
+  ModelBuilder<obs::Simple> build_model =
+      [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
+    auto new_model = std::make_shared<model::SimpleMLP>(64, 2);
+    new_model->init(sample_obs[0], game->get_action_count(), rng);
+    return new_model;
+  };
+
+  Config<obs::Simple> config;
+  config.population_size = 64;
+  config.max_gen = 256;
+  config.seeds_per_eval = 1;
+  config.seed = 32517;
+  config.populate_fun = make_tournament<obs::Simple>(3);
+  // config.populate_fun = make_tournament_with_crossover(
+  //     4, to_sol_crossover<obs::Simple>(to_vec_crossover(to_span_crossover(uniform_crossover))),
+  //     0.8f);
+  config.model_builder = build_model;
+  // its single player, so no opponents needed
+  config.prior_best_size = 0;
+  config.references_size = 0;
+  config.mutation_rate = 0.3f;
+  config.fitness_fun = make_game_fitness_1p<obs::Simple>(game);
+  config.fitness_logger = fitness_printer<obs::Simple>;
+  config.seed_change = PER_GEN;
+
+  State<obs::Simple> state;
+  init(state, config);
+  run(state, config);
+
+  return best_prior_best<obs::Simple>(state.next, state.rng);
+  // return state.current[5];
 }

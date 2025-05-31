@@ -32,46 +32,30 @@ int main(int argc, char *argv[]) {
 
   // train_crossover_example(map_file);
 
-  // load map
-  jnb::TileMap map;
-  map.load_from_file(map_file);
-
-  // {
-  //   // human vs randomly init model
-  //   std::mt19937 rng(0);
-
-  //   auto p1 = std::make_shared<jnb::HumanModel>();
-  //   // auto p2 = std::make_shared<jnb::HumanModel>();
-  //   // auto p2 = std::make_shared<jnb::SimpleMLP>(rng);
-  //   // auto p2 = std::make_shared<jnb::MLPMapLutModel>(rng, map.width, map.height);
-  //   auto p2 = std::make_shared<jnb::PLNNModel>(rng);
-
-  //   // jnb::run_game(map_file.c_str(), 0);
-  //   jnb::run_game_with_models(map_file, 0, p1, p2);
-  // }
+  auto trained_sol = train_1_player_example(map_file);
+  std::cout << "Final trained model performance: " << trained_sol.fitness << std::endl;
 
   // make players
   std::mt19937 rng(0);
   std::vector<std::shared_ptr<model::Model<obs::Simple>>> players;
-  players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
   // players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
-  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
-  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
-  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
-  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
-  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
-  // players.emplace_back(std::make_shared<model::SimpleMLP>(32, 2));
+  players.push_back(trained_sol.model);
 
   // make game
-  jnb::JnBGame game(map_file, players.size(), -1); // framelimit of -1 means run forever
+  jnb::JnBGame game(map_file, players.size(), 500);
   std::vector<std::vector<float>> sample_observations = game.build_observation();
-  for (auto &player : players) {
-    player->init(sample_observations[0], game.get_action_count(), rng);
-  }
+  std::cout << "Sample observations: " << sample_observations.size() << std::endl;
+  std::cout << "Sample observation size: " << sample_observations[0].size() << std::endl;
+  // for (auto &player : players) {
+  //   player->init(sample_observations[0], game.get_action_count(), rng);
+  // }
 
-  game.init(123);
-  // play game
-  play_and_render(game, players);
+  std::uint64_t seed = 123;
+  while (true) {
+    game.init(seed++);
+    // play game
+    play_and_render(game, players);
+  }
 
   // jnb::run_on_pl(map_file);
 

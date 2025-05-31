@@ -147,10 +147,11 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
   }
 
   // add to prior best
-  if (state.gen % config.prior_best_interval == 0) {
+  if (config.prior_best_select && config.prior_best_size > 0 &&
+      state.gen % config.prior_best_interval == 0) {
     auto best = config.prior_best_select(state.next, state.rng);
     // push best, pop oldest
-    state.prior_best.push_back(best.model);
+    state.prior_best.push_back(best.model->clone());
     state.prior_best.erase(state.prior_best.begin());
   }
 

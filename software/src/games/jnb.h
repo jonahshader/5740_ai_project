@@ -75,7 +75,7 @@ struct PlayerInput {
   bool jump{false};
 };
 
-void observe_state_simple(const GameState &state, std::vector<F4> &observation, int player);
+// void observe_state_simple(const GameState &state, std::vector<F4> &observation, int player);
 void observe_state_simple(const GameState &state, std::vector<float> &observation, int player);
 int get_fitness(const GameState &state, int player);
 // void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);
@@ -95,8 +95,8 @@ public:
     std::vector<obs::Simple> obs;
     obs.resize(get_player_count());
     for (size_t i = 0; i < get_player_count(); ++i) {
-      constexpr int INPUTS_PER_PLAYER = 5;
-      obs[i].resize(2 + INPUTS_PER_PLAYER * state.players.size());
+      constexpr int INPUTS_PER_PLAYER = 7;
+      obs[i].resize(9 + INPUTS_PER_PLAYER * (state.players.size() - 1));
     }
     return obs;
   }

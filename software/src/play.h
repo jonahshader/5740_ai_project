@@ -6,8 +6,8 @@
 
 #include "game.h"
 #include "model.h"
-#include "pixel_game.h"
 #include "models/human.h"
+#include "pixel_game.h"
 
 template <typename ObsType>
 std::vector<int> play(Game<ObsType> &game,
