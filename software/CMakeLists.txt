@@ -124,6 +124,8 @@ set(COMMON_SOURCES
   src/fixed_point.h
   src/neural_net.h
   src/observation_types.h
+  src/param_ops.cpp
+  src/param_ops.h
   src/parse_map.h
   src/pixel_game.cpp
   src/pixel_game.h

@@ -12,6 +12,10 @@ namespace model {
 
 // Covers all the possible parameter types that models use. Add more as needed.
 using ParamSpan = std::variant<std::span<float>, std::span<int8_t>>;
+using ParamVec = std::variant<std::vector<float>, std::vector<int8_t>>;
+
+using ParamSpans = std::vector<ParamSpan>;
+using ParamVecs = std::vector<ParamVec>;
 
 // TODO: Might be able to have a CoreModel that has everything but the
 // template stuff, then have Model extend CoreModel and add the template stuff.
@@ -20,7 +24,7 @@ using ParamSpan = std::variant<std::span<float>, std::span<int8_t>>;
 // a beneficiary is the crossover functions, which at the highest level
 // take in two solutions and spit out a model, where all three are templated.
 // these functions only care about getting the spans of the models, which
-// doesn't require templates. 
+// doesn't require templates.
 template <typename ObsType>
 class Model {
 public:
@@ -38,7 +42,7 @@ public:
   virtual void forward(const ObsType &observation, std::vector<float> &action) {}
   virtual std::shared_ptr<Model<ObsType>> clone() const = 0;
   virtual std::string get_name() const = 0;
-  virtual std::vector<ParamSpan> get_spans() {
+  virtual ParamSpans get_spans() {
     return {};
   };
   virtual void apply_spans() {};

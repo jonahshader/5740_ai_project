@@ -205,7 +205,7 @@ void fitness_printer(size_t current_gen, const Population<ObsType> &pop) {
     }
     sum += sol.fitness;
   }
-  int avg = sum / pop.size();
+  float avg = sum / static_cast<float>(pop.size());
   std::cout << "Min: " << min << ", Max: " << max << ", Avg: " << avg << std::endl;
 }
 
