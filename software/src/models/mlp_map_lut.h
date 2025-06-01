@@ -1,12 +1,12 @@
 #pragma once
 
-#include <random>
 #include <memory>
+#include <random>
 #include <vector>
 
 #include "jnb.h"
-#include "neural_net.h"
 #include "model.h"
+#include "neural_net.h"
 #include "observation_types.h"
 
 namespace model {
@@ -70,6 +70,14 @@ public:
   void reset() override {
     // embeddings are not stateful, but the base model could be
     base_model->reset();
+  }
+  std::shared_ptr<BaseModel> base_clone() const override {
+    // make a copy with the built-in copy constructor
+    auto clone = std::make_shared<SimpleModelTileEmb>(*this);
+    // since the copy constructor copies by value, that means the shared_ptr of
+    // the base model is copied, not the model itself, so I need to clone that here:
+    clone->base_model = clone->base_model->clone();
+    return clone;
   }
   std::shared_ptr<Model<obs::TileCoords>> clone() const override {
     // make a copy with the built-in copy constructor

@@ -13,13 +13,15 @@ namespace model {
 class SimpleMLP : public Model<obs::Simple> {
 public:
   SimpleMLP(size_t hidden_size, size_t hidden_count);
-  ~SimpleMLP() = default;
   void forward(const obs::Simple &observation, std::vector<float> &action) override {
     net.forward(observation.data(), action.data());
   }
   void mutate(std::mt19937 &rng, float mutation_rate) override;
   void init(const obs::Simple &sample_observation, size_t output_size, std::mt19937 &rng) override {
     net.init(rng, sample_observation.size(), hidden_size, hidden_count, output_size);
+  }
+  std::shared_ptr<BaseModel> base_clone() const override {
+    return std::make_shared<SimpleMLP>(*this);
   }
   std::shared_ptr<Model<obs::Simple>> clone() const override {
     return std::make_shared<SimpleMLP>(*this);

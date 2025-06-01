@@ -14,7 +14,8 @@
 // also a min and max for each value.
 namespace model {
 
-template <typename ObsType> class Keyboard : public Model<ObsType> {
+template <typename ObsType>
+class Keyboard : public Model<ObsType> {
 public:
   Keyboard() {}
 
@@ -24,9 +25,14 @@ public:
     action[2] = jump ? 1 : 0;
   }
 
+  std::shared_ptr<BaseModel> base_clone() const override {
+    return std::make_shared<Keyboard>(*this);
+  }
+
   std::shared_ptr<Model<ObsType>> clone() const override {
     return std::make_shared<Keyboard>(*this);
   }
+
   std::string get_name() const override {
     return "Keyboard";
   }

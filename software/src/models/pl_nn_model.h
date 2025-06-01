@@ -7,9 +7,9 @@
 #include <random>
 
 #include "jnb.h"
-#include "pl_nn.h"
 #include "model.h"
 #include "observation_types.h"
+#include "pl_nn.h"
 
 namespace model {
 
@@ -18,7 +18,6 @@ namespace model {
 class PLNNModel : public Model<obs::Simple> {
 public:
   PLNNModel() {}
-  ~PLNNModel() = default;
   void forward(const obs::Simple &observation, std::vector<float> &action) {
     int observation_int[32];
     int output_int[32];
@@ -86,6 +85,9 @@ public:
   }
   void init(const obs::Simple &sample_observation, size_t output_size, std::mt19937 &rng) override {
     net.init(rng);
+  }
+  std::shared_ptr<BaseModel> base_clone() const override {
+    return std::make_shared<PLNNModel>(*this);
   }
   std::shared_ptr<Model<obs::Simple>> clone() const override {
     return std::make_shared<PLNNModel>(*this);
