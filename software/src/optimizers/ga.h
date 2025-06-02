@@ -8,10 +8,7 @@
 
 namespace ga {
 
-// wrapping in anonymous namespace makes usage private to this file.
-namespace {
 using model::Model;
-}
 
 // a struct to keep track of various fitness values associated with a model
 template <typename ObsType>
@@ -90,7 +87,7 @@ void init(State<ObsType> &state, const Config<ObsType> &config) {
 
   // build initial population
   for (int i = 0; i < config.population_size; ++i) {
-    state.current.emplace_back(Solution{config.model_builder(state.rng), 0});
+    state.current.emplace_back(Solution{config.model_builder(state.rng)});
   }
 
   // prior best starts off with random models
