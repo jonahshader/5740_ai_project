@@ -120,6 +120,8 @@ set(COMMON_SOURCES
   src/optimizers/ga.h
   src/optimizers/openai_es.cpp
   src/optimizers/openai_es.h
+  src/optimizers/optimizers.cpp
+  src/optimizers/optimizers.h
   src/optimizers/simple.h
   src/comms.cpp
   src/comms.h

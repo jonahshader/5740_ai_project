@@ -36,7 +36,7 @@ struct Config {
   uint64_t seed{0};
   ga::Fitness<ObsType> fitness_fun{nullptr};
   ga::ModelBuilder<ObsType> model_builder{nullptr};
-  Optimizer optimizer{nullptr};
+  Optimizer optimizer{param_ops::axpy};
   size_t seeds_per_eval{4};
   ga::SeedChange seed_change{ga::NEVER};
   ga::Logger<ObsType> fitness_logger;
@@ -169,7 +169,8 @@ void step(ga::State<ObsType> &state, const Config<ObsType> &config) {
   grad_spans *= es_scale;
 
   // take a step towards the positive direction
-  param_ops::axpy(center_spans, grad_spans, config.learning_rate);
+  config.optimizer(center_spans, grad_spans, config.learning_rate);
+
   // apply spans to ensure validity
   center->apply_spans();
 

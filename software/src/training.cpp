@@ -7,6 +7,7 @@
 #include "optimizers/crossover_types.h"
 #include "optimizers/ga_funs.h"
 #include "optimizers/openai_es.h"
+#include "optimizers/optimizers.h"
 
 #include <random>
 
@@ -155,25 +156,29 @@ Solution<Simple> train_openai(const std::string &map_filename) {
 
   ModelBuilder<obs::Simple> build_model =
       [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
-    auto new_model = std::make_shared<model::SimpleMLP>(64, 1);
+    auto new_model = std::make_shared<model::SimpleMLP>(64, 2);
     new_model->init(sample_obs[0], game->get_action_count(), rng);
     return new_model;
   };
 
+  std::mt19937 temp_rng(0);
+  auto temp_model = build_model(temp_rng);
+
   es::Config<obs::Simple> config;
-  config.population_size = 256;
-  config.max_gen = 256;
-  config.seeds_per_eval = 4;
-  config.seed = 223123;
+  config.optimizer = make_adam(temp_model->get_spans());
+  config.population_size = 512;
+  config.max_gen = 80;
+  config.seeds_per_eval = 6;
+  config.seed = 223124;
   config.model_builder = build_model;
   // its single player, so no opponents needed
   config.prior_best_size = 0;
   config.references_size = 0;
-  config.mutation_rate = 0.2f;
-  config.learning_rate = 0.005f;
+  config.mutation_rate = 0.05f;
+  config.learning_rate = 0.001f;
   config.fitness_fun = make_game_fitness_1p<obs::Simple>(game);
   config.fitness_logger = fitness_printer<obs::Simple>;
-  config.seed_change = NEVER;
+  config.seed_change = PER_GEN;
 
   State<obs::Simple> state;
   es::init(state, config);
