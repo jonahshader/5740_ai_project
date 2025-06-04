@@ -136,7 +136,8 @@ struct DynamicLayer {
       for (int j = 0; j < inputs; ++j) {
         set_w(j, i, dist(rng));
       }
-      bias[i] = dist(rng);
+      // bias[i] = dist(rng);
+      bias[i] = 0.0f;
     }
   }
 

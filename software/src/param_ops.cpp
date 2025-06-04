@@ -54,6 +54,12 @@ ParamSpans to_spans(ParamVecs &owned_params) {
   return result;
 }
 
+ParamSpans to_spans(std::vector<float> &owned_params) {
+  ParamSpans result;
+  result.emplace_back(std::span<float>(owned_params.data(), owned_params.size()));
+  return result;
+}
+
 void copy_from_spans(const ParamSpans &spans, ParamVecs &dest_vecs) {
   for (size_t i = 0; i < spans.size(); ++i) {
     std::visit(

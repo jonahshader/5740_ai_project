@@ -32,6 +32,9 @@ ParamVecs zeros_like(const ParamSpans &template_spans);
 // Convert ParamVecs to ParamSpans (ParamVecs must outlive returned spans)
 ParamSpans to_spans(ParamVecs &owned_params);
 
+// Convert vector to ParamSpans (vector must outlive returned spans)
+ParamSpans to_spans(std::vector<float> &owned_params);
+
 // Copy data from spans to ParamVecs
 void copy_from_spans(const ParamSpans &spans, ParamVecs &dest_vecs);
 

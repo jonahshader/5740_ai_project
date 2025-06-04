@@ -32,7 +32,8 @@ int main(int argc, char *argv[]) {
 
   // train_crossover_example(map_file);
 
-  auto trained_sol = train_1_player_example(map_file);
+  // auto trained_sol = train_1_player_example(map_file);
+  auto trained_sol = train_openai(map_file);
   std::cout << "Final trained model performance: " << trained_sol.fitness << std::endl;
 
   // make players

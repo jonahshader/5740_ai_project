@@ -6,10 +6,13 @@
 #include "optimizers/crossover_funs.h"
 #include "optimizers/crossover_types.h"
 #include "optimizers/ga_funs.h"
+#include "optimizers/openai_es.h"
 
 #include <random>
 
 using namespace ga;
+
+using obs::Simple;
 
 void train(const std::string &map_filename) {
   jnb::JnBGame game(map_filename, 2, 400);
@@ -143,4 +146,39 @@ Solution<obs::Simple> train_1_player_example(const std::string &map_filename) {
 
   return best_prior_best<obs::Simple>(state.next, state.rng);
   // return state.current[5];
+}
+
+Solution<Simple> train_openai(const std::string &map_filename) {
+  auto game = std::make_shared<jnb::JnBGame>(map_filename, 1, 300);
+
+  auto sample_obs = game->build_observation();
+
+  ModelBuilder<obs::Simple> build_model =
+      [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
+    auto new_model = std::make_shared<model::SimpleMLP>(64, 1);
+    new_model->init(sample_obs[0], game->get_action_count(), rng);
+    return new_model;
+  };
+
+  es::Config<obs::Simple> config;
+  config.population_size = 256;
+  config.max_gen = 256;
+  config.seeds_per_eval = 4;
+  config.seed = 223123;
+  config.model_builder = build_model;
+  // its single player, so no opponents needed
+  config.prior_best_size = 0;
+  config.references_size = 0;
+  config.mutation_rate = 0.2f;
+  config.learning_rate = 0.005f;
+  config.fitness_fun = make_game_fitness_1p<obs::Simple>(game);
+  config.fitness_logger = fitness_printer<obs::Simple>;
+  config.seed_change = NEVER;
+
+  State<obs::Simple> state;
+  es::init(state, config);
+  es::run(state, config);
+
+  // return best_prior_best<obs::Simple>(state.next, state.rng);
+  return state.current[0];
 }

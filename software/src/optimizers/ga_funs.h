@@ -189,6 +189,9 @@ Fitness<ObsType> make_game_fitness_1p(std::shared_ptr<Game<ObsType>> game) {
   };
 }
 
+// template <typename ObsType>
+// Fitness<ObsType> make_
+
 template <typename ObsType>
 void fitness_printer(size_t current_gen, const Population<ObsType> &pop) {
   std::cout << "Generation: " << current_gen << std::endl;

@@ -13,3 +13,5 @@ void train(const std::string &map_filename);
 void train_crossover_example(const std::string &map_filename);
 
 Solution<Simple> train_1_player_example(const std::string &map_filename);
+
+Solution<Simple> train_openai(const std::string &map_filename);

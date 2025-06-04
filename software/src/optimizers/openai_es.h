@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <numeric>
 
 #include "ga.h"
 #include "param_ops.h"
@@ -17,6 +18,9 @@ using model::ParamVecs;
 using std::size_t;
 using std::uint64_t;
 
+using param_ops::operator*=;
+using param_ops::operator-=;
+
 using Optimizer = std::function<void(ParamSpans &params, const ParamSpans &grad, float lr)>;
 
 template <typename ObsType>
@@ -27,13 +31,14 @@ struct Config {
   size_t max_gen{128};
   size_t population_size{64};
   size_t prior_best_size{4};
+  size_t prior_best_interval{4};
   size_t references_size{4};
   uint64_t seed{0};
   ga::Fitness<ObsType> fitness_fun{nullptr};
   ga::ModelBuilder<ObsType> model_builder{nullptr};
   Optimizer optimizer{nullptr};
   size_t seeds_per_eval{4};
-  ga::SeedChange seed_change{NEVER};
+  ga::SeedChange seed_change{ga::NEVER};
   ga::Logger<ObsType> fitness_logger;
 };
 
@@ -73,8 +78,8 @@ std::vector<float> fitness_shaping(const ga::Population<ObsType> &population) {
   const float weight_sum = std::accumulate(weights.begin(), weights.end(), 0.0f);
   const float uniform_component = 1.0f / lambda;
 
-  if (weight_sum > 0.0) {
-    for (double &w : weights) {
+  if (weight_sum > 0.0f) {
+    for (float &w : weights) {
       w = w / weight_sum + uniform_component;
     }
   } else {
@@ -101,6 +106,7 @@ void init(ga::State<ObsType> &state, const Config<ObsType> &config) {
     auto clone = state.current[0].model->clone();
     clone->mutate(state.rng, config.mutation_rate);
     state.current.emplace_back(ga::Solution{clone});
+    // state.current.emplace_back(ga::Solution{config.model_builder(state.rng)});
   }
 
   // prior best starts off with random models
@@ -123,7 +129,7 @@ void init(ga::State<ObsType> &state, const Config<ObsType> &config) {
 }
 
 template <typename ObsType>
-void step(State<ObsType> &state, const Config<ObsType> &config) {
+void step(ga::State<ObsType> &state, const Config<ObsType> &config) {
   // evaluate the population.
   // this is the most expensive part of the algorithm, which happens to be
   // embarrassingly parallel, so we can use openmp to parallelize the loop.
@@ -143,8 +149,10 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
 
   // create the next population
   auto &center = state.current[0].model;
+  auto center_old = center->clone();
   auto center_spans = center->get_spans();
   ParamVecs grad = param_ops::zeros_like(center->get_spans());
+  auto grad_spans = param_ops::to_spans(grad);
 
   std::vector<ParamSpans> spans;
   for (auto &sol : state.current) {
@@ -152,17 +160,57 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
   }
 
   auto weighted_fitness = fitness_shaping(state.current);
-  param_ops::weighted_average(spans, weighted_fitness, grad);
-  grad -= center_spans;
+  auto weighted_fitness_spans = param_ops::to_spans(weighted_fitness);
+  param_ops::weighted_average(spans, weighted_fitness, grad_spans);
+  grad_spans -= center_spans;
+
+  // apply es scaling
+  float es_scale = 1.0f / config.mutation_rate;
+  grad_spans *= es_scale;
 
   // take a step towards the positive direction
-  param_ops::axpy(center_spans, grad, config.learning_rate);
+  param_ops::axpy(center_spans, grad_spans, config.learning_rate);
+  // apply spans to ensure validity
+  center->apply_spans();
 
-  state.next[0];
+  state.next.clear();
+  state.next.reserve(state.current.size());
+  // state.next[0].model = center;
+  state.next.emplace_back(ga::Solution{center});
   for (size_t i = 1; i < state.current.size(); ++i) {
-    state.next[i].model = center->clone();
-    state.next[i].model->mutate(state.rng, config.mutation_rate);
+    // state.next[i].model = center->clone();
+    // state.next[i].model->mutate(state.rng, config.mutation_rate);
+    auto new_model = center->clone();
+    new_model->mutate(state.rng, config.mutation_rate);
+    state.next.emplace_back(ga::Solution{new_model});
   }
+
+  // add to prior best
+  if (config.prior_best_size > 0 && state.gen % config.prior_best_interval == 0) {
+    state.prior_best.push_back(center_old);
+    state.prior_best.erase(state.prior_best.begin());
+  }
+
+  // swap current and next
+  std::swap(state.current, state.next);
+
+  // increment generation
+  ++state.gen;
+
+  // if seed change is set to PER_GEN, then regenerate the seeds
+  if (config.seed_change == ga::SeedChange::PER_GEN) {
+    state.eval_seeds.clear();
+    for (size_t i = 0; i < config.seeds_per_eval; ++i) {
+      state.eval_seeds.push_back(config.seed + i);
+    }
+  }
+}
+
+template <typename ObsType>
+void run(ga::State<ObsType> &state, const Config<ObsType> &config) {
+  do {
+    step(state, config);
+  } while (state.gen < config.max_gen);
 }
 
 } // namespace es
