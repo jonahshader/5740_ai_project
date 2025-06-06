@@ -358,11 +358,11 @@ int get_fitness(const GameState &state, int player) {
   return state.players[player].score;
 }
 
-JnBGame::JnBGame(const std::string &map_filename, int players, int frame_limit)
-    : frame_limit(frame_limit) {
+JnBGame::JnBGame(const std::string &map_filename, const Config &config)
+    : config(config) {
   // load map
   state.map.load_from_file(map_filename);
-  state.players.resize(players);
+  state.players.resize(config.players);
 
   // load spritesheet
   spritesheet = std::make_shared<std::vector<uint8_t>>();
@@ -479,7 +479,7 @@ void JnBGame::get_fitness(std::vector<int32_t> &fitness) {
 }
 
 bool JnBGame::is_done() {
-  return frame_limit > 0 && state.age >= frame_limit;
+  return config.frame_limit > 0 && state.age >= config.frame_limit;
 }
 
 void JnBGame::observe(std::vector<obs::Simple> &inputs) {

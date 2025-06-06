@@ -75,6 +75,12 @@ struct PlayerInput {
   bool jump{false};
 };
 
+struct Config {
+  size_t players{1}; // -1 signifies unlimited
+  int frame_limit{300};
+  size_t random_fourier_transforms{0};
+};
+
 // void observe_state_simple(const GameState &state, std::vector<F4> &observation, int player);
 void observe_state_simple(const GameState &state, std::vector<float> &observation, int player);
 int get_fitness(const GameState &state, int player);
@@ -83,7 +89,7 @@ int get_fitness(const GameState &state, int player);
 class JnBGame : public Game<obs::Simple> {
 public:
   // negative frame_limit means unlimited
-  JnBGame(const std::string &map_filename, int players, int frame_limit);
+  JnBGame(const std::string &map_filename, const Config &config);
 
   void init(uint64_t seed) override;
   void update(const std::vector<std::vector<float>> &actions);
@@ -128,7 +134,7 @@ private:
   // resources
   std::shared_ptr<std::vector<uint8_t>> spritesheet{nullptr};
 
-  int frame_limit;
+  Config config;
 };
 
 } // namespace jnb

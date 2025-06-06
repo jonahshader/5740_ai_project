@@ -271,7 +271,7 @@ void imgui_serial(std::shared_ptr<serial_cpp::Serial> &serial_connection,
 void run_on_pl(const std::string &map_filename) {
   // initialize game state
   // GameState state = jnb::init(map_filename, 1);
-  JnBGame game(map_filename, 2, -1);
+  JnBGame game(map_filename, {2, -1});
 
   PixelGame window("JnB Sim", 640, 480, 60);
 

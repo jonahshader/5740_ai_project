@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   players.push_back(trained_sol.model);
 
   // make game
-  jnb::JnBGame game(map_file, players.size(), 500);
+  jnb::JnBGame game(map_file, {players.size(), 500});
   std::vector<std::vector<float>> sample_observations = game.build_observation();
   std::cout << "Sample observations: " << sample_observations.size() << std::endl;
   std::cout << "Sample observation size: " << sample_observations[0].size() << std::endl;
