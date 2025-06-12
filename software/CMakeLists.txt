@@ -110,6 +110,9 @@ set(COMMON_SOURCES
   src/models/model.h
   src/models/pl_nn_model.cpp
   src/models/pl_nn_model.h
+  src/optimizers/crossover_funs.h
+  src/optimizers/crossover_types.cpp
+  src/optimizers/crossover_types.h
   src/optimizers/ga_funs.cpp
   src/optimizers/ga_funs.h
   src/optimizers/ga.cpp

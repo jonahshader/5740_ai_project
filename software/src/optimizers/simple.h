@@ -1,3 +1,5 @@
+// TODO: this is legacy code that is now only used for pl configuration. it should be refactored to
+// reflect that.
 #pragma once
 
 #include <functional>

@@ -3,6 +3,8 @@
 #include <random>
 #include <vector>
 
+#include "model.h"
+
 namespace model {
 
 // a staticly allocated neural network with a generic parameter type
@@ -169,6 +171,13 @@ struct DynamicLayer {
       bias[i] += dist(rng);
     }
   }
+
+  std::vector<ParamSpan> get_spans() {
+    std::vector<ParamSpan> spans;
+    spans.push_back(std::span<T>(weights.data(), weights.size()));
+    spans.push_back(std::span<T>(bias.data(), bias.size()));
+    return spans;
+  }
 };
 
 template <typename T>
@@ -223,6 +232,15 @@ struct DynamicNeuralNet {
       }
     }
     return shape;
+  }
+
+  std::vector<ParamSpan> get_spans() {
+    std::vector<ParamSpan> spans;
+    for (auto &layer : layers) {
+      auto layer_spans = layer.get_spans();
+      spans.insert(spans.end(), layer_spans.begin(), layer_spans.end());
+    }
+    return spans;
   }
 };
 

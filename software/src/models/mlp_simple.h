@@ -27,6 +27,7 @@ public:
   std::string get_name() const override {
     return "SimpleMLP";
   }
+  std::vector<ParamSpan> get_spans() override;
 
 private:
   size_t hidden_size;

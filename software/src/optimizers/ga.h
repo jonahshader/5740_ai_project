@@ -6,9 +6,12 @@
 
 #include "model.h"
 
-using model::Model;
-
 namespace ga {
+
+// wrapping in anonymous namespace makes usage private to this file.
+namespace {
+using model::Model;
+}
 
 // a struct to keep track of various fitness values associated with a model
 template <typename ObsType>
