@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <numeric>
 
@@ -53,6 +54,7 @@ struct State {
   int gen{0};
   std::mt19937 rng{};
   std::vector<uint64_t> eval_seeds{};
+  float mutation_rate_scale{1.0f};
 };
 
 template <typename ObsType>
@@ -117,6 +119,22 @@ void init(State<ObsType> &state, const Config<ObsType> &config,
     state.center.model = center_model;
   } else {
     state.center.model = config.model_builder(state.rng);
+    // // center starts at the center of init distribution, which is zero
+    // auto spans = state.center.model->get_spans();
+    // for (auto &span : spans) {
+    //   if (std::holds_alternative<std::span<float>>(span)) {
+    //     auto &f_span = std::get<std::span<float>>(span);
+    //     // initialize to zero
+    //     std::fill(f_span.begin(), f_span.end(), 0.0f);
+    //   } else if (std::holds_alternative<std::span<std::int8_t>>(span)) {
+    //     auto &i8_span = std::get<std::span<std::int8_t>>(span);
+    //     // initialize to zero
+    //     std::fill(i8_span.begin(), i8_span.end(), (std::int8_t)0);
+    //   } else {
+    //     // throw error
+    //     throw std::runtime_error("Expected span of floats or int8_t, got something else");
+    //   }
+    // }
   }
 
   // population should be a multiple of 2
@@ -126,15 +144,16 @@ void init(State<ObsType> &state, const Config<ObsType> &config,
 
   // build initial population.
   // the rest are perturbations of the center.
+  float mr = config.mutation_rate * state.mutation_rate_scale;
   for (size_t i = 0; i < config.population_size / 2; ++i) {
     auto clone = state.center.model->clone();
-    clone->mutate(state.rng, config.mutation_rate);
+    clone->mutate(state.rng, mr);
     state.pop.emplace_back(ga::Solution{clone});
 
     // build one with negative mutation
     auto neg_clone = state.center.model->clone();
-    auto params = neg_clone->get_spans(); // center
-    params -= clone->get_spans(); // center - (center + mutation) = -mutation
+    auto params = neg_clone->get_spans();      // center
+    params -= clone->get_spans();              // center - (center + mutation) = -mutation
     params += state.center.model->get_spans(); // center - mutation
     neg_clone->apply_spans();
     state.pop.emplace_back(ga::Solution{neg_clone});
@@ -195,7 +214,8 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
   grad_spans -= center_spans;
 
   // apply es scaling
-  float es_scale = 1.0f / config.mutation_rate;
+  float mr = config.mutation_rate * state.mutation_rate_scale;
+  float es_scale = 1.0f / mr;
   grad_spans *= es_scale;
 
   // take a step towards the positive direction
@@ -204,16 +224,39 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
   // apply spans to ensure validity
   state.center.model->apply_spans();
 
+  // determine if we need to change mutation rate based on variance of fitness
+  // TODO: try some other methods
+  {
+    bool flat_fitness = true;
+    auto fit = state.pop[0].fitness;
+    for (size_t i = 1; i < state.pop.size(); ++i) {
+      if (state.pop[i].fitness != fit) {
+        flat_fitness = false;
+        break;
+      }
+    }
+
+    if (flat_fitness) {
+      // increase mutation rate
+      state.mutation_rate_scale *= 1.1f;
+    } else {
+      // decrease mutation rate
+      state.mutation_rate_scale *= 0.98f;
+    }
+    std::cout << "Mutation rate scale: " << state.mutation_rate_scale << std::endl;
+    mr = config.mutation_rate * state.mutation_rate_scale;
+  }
+
   state.pop.clear();
   state.pop.reserve(config.population_size);
   for (size_t i = 0; i < config.population_size / 2; ++i) {
     auto new_model = state.center.model->clone();
-    new_model->mutate(state.rng, config.mutation_rate);
+    new_model->mutate(state.rng, mr);
     state.pop.emplace_back(ga::Solution{new_model});
     // build one with negative mutation
     auto neg_model = state.center.model->clone();
-    auto params = neg_model->get_spans(); // center
-    params -= new_model->get_spans(); // center - (center + mutation) = -mutation
+    auto params = neg_model->get_spans();      // center
+    params -= new_model->get_spans();          // center - (center + mutation) = -mutation
     params += state.center.model->get_spans(); // center - mutation
     neg_model->apply_spans();
     state.pop.emplace_back(ga::Solution{neg_model});

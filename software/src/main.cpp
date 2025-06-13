@@ -10,6 +10,7 @@
 #include "models/mlp_map_lut.h"
 #include "models/mlp_simple.h"
 #include "models/pl_nn_model.h"
+#include "nn_utils.h"
 #include "observation_types.h"
 #include "optimizers/simple.h"
 #include "pixel_game.h"
@@ -32,30 +33,78 @@ int main(int argc, char *argv[]) {
 
   // train_crossover_example(map_file);
 
-  // auto trained_sol = train_1_player_example(map_file);
-  auto trained_sol = train_openai(map_file);
+  std::mt19937 rng(0);
+  // auto fourier = make_gaussian_random_fourier_transform(rng, 1.0f, 4);
+  // std::vector<float> fourier_tranform;
+  // fourier(1.0f, fourier_tranform);
+  // for (auto f : fourier_tranform) {
+  //   std::cout << f << " ";
+  // }
+  // std::cout << std::endl;
+  // fourier(1.5f, fourier_tranform);
+  // for (auto f : fourier_tranform) {
+  //   std::cout << f << " ";
+  // }
+  std::vector<FloatToVec> fourier_transforms;
+  std::mt19937 temp_rng(324);
+  fourier_transforms.push_back(make_gaussian_random_fourier_transform(temp_rng, 2.0f, 3));
+  auto game =
+      std::make_shared<jnb::JnBGame>(map_file, jnb::Config(1, 4800, true, fourier_transforms));
+
+  // auto game = std::make_shared<jnb::JnBGame>(map_file, jnb::Config(1, 4800, true, {}));
+
+  // auto trained_sol = train_openai(game);
+  auto trained_sol = train_1_player_example(game);
+
+  // {
+  //   // temp manually making a good model lol
+  //   Solution<obs::Simple> trained_sol;
+  //   std::vector<obs::Simple> sample_obs;
+  //   game->observe(sample_obs);
+  //   trained_sol.model = std::make_shared<model::SimpleMLP>(2, 1);
+  //   trained_sol.model->init(sample_obs[0], game->get_action_count(), temp_rng);
+  //   // wipe out the params
+  //   auto spans = trained_sol.model->get_spans();
+  //   // just assume floats for now
+  //   for (auto &span : spans) {
+  //     if (std::holds_alternative<std::span<float>>(span)) {
+  //       auto &f_span = std::get<std::span<float>>(span);
+  //       std::fill(f_span.begin(), f_span.end(), 0.0f);
+  //     } else {
+  //       // throw error
+  //       // throw std::runtime_error("Expected span of floats, got something else");
+  //       std::cerr << "Expected span of floats, got something else" << std::endl;
+  //     }
+  //   }
+  //   // first weight matrix
+  //   auto &weights1 = std::get<std::span<float>>(spans[0]);
+  //   // second weight matrix
+  //   auto &weights2 = std::get<std::span<float>>(spans[2]);
+
+  //   // wire up
+  //   std::cout << weights1.size() << std::endl;
+  //   std::cout << weights2.size() << std::endl;
+  //   weights1[0 * sample_obs[0].size() + 2] = -1.0f;
+  //   weights1[1 * sample_obs[0].size() + 2] = 1.0f;
+
+  //   weights2[0 * 2 + 0] = 1.0f;
+  //   weights2[1 * 2 + 1] = 1.0f;
+  // }
+
   std::cout << "Final trained model performance: " << trained_sol.fitness << std::endl;
 
   // make players
-  std::mt19937 rng(0);
+
+  std::cout << std::endl;
   std::vector<std::shared_ptr<model::Model<obs::Simple>>> players;
   // players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
   players.push_back(trained_sol.model);
 
-  // make game
-  jnb::JnBGame game(map_file, {players.size(), 500});
-  std::vector<std::vector<float>> sample_observations = game.build_observation();
-  std::cout << "Sample observations: " << sample_observations.size() << std::endl;
-  std::cout << "Sample observation size: " << sample_observations[0].size() << std::endl;
-  // for (auto &player : players) {
-  //   player->init(sample_observations[0], game.get_action_count(), rng);
-  // }
-
   std::uint64_t seed = 123;
   while (true) {
-    game.init(seed++);
+    game->init(seed++);
     // play game
-    play_and_render(game, players);
+    play_and_render(*game, players);
   }
 
   // jnb::run_on_pl(map_file);

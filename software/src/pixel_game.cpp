@@ -59,8 +59,6 @@ PixelGame::PixelGame(const std::string &title, int initial_window_width, int ini
   if (window == nullptr) {
     std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
     return;
-  } else {
-    std::cout << "Window created successfully!" << std::endl;
   }
 
   // Create OpenGL context
@@ -109,8 +107,8 @@ PixelGame::PixelGame(const std::string &title, int initial_window_width, int ini
   if (frame_repeat_count < 1)
     frame_repeat_count = 1;
 
-  std::cout << "Monitor refresh: " << monitor_refresh_rate << "Hz, Target: " << target_fps
-            << "Hz, Frame repeat: " << frame_repeat_count << std::endl;
+  // std::cout << "Monitor refresh: " << monitor_refresh_rate << "Hz, Target: " << target_fps
+  //           << "Hz, Frame repeat: " << frame_repeat_count << std::endl;
 
   running = true;
 }

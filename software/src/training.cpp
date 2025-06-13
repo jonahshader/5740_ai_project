@@ -16,7 +16,8 @@ using obs::Simple;
 void train(const std::string &map_filename) {
   jnb::JnBGame game(map_filename, {2, 400});
 
-  auto sample_obs = game.build_observation();
+  std::vector<obs::Simple> sample_obs;
+  game.observe(sample_obs);
 
   ga::ModelBuilder<obs::Simple> build_model =
       [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
@@ -47,7 +48,8 @@ void train_crossover_example(const std::string &map_filename) {
 
   // the models need to know the shape of the game's observation,
   // so we build one and pass it to the model initialization.
-  auto sample_obs = game.build_observation();
+  std::vector<obs::Simple> sample_obs;
+  game.observe(sample_obs);
 
   // the ga config need a function that tells it how to create the
   // initial population. this is a function that takes in rng and returns
@@ -81,8 +83,8 @@ void train_crossover_example(const std::string &map_filename) {
   // crossover into a span-wise, then to vector-wise, then to sol-wise.
   // kinda gross, but this lets us define crossover functions of varying granularity,
   // then we can just convert them into the least granular type to pass to the ga config.
-  auto sol_uniform_crossover =
-      ga::to_sol_crossover<obs::Simple>(ga::to_vec_crossover(ga::to_span_crossover(ga::uniform_crossover)));
+  auto sol_uniform_crossover = ga::to_sol_crossover<obs::Simple>(
+      ga::to_vec_crossover(ga::to_span_crossover(ga::uniform_crossover)));
   // here im passing the solution-wise crossover function to a function that
   // make a population function using tournament select combined with the crossover.
   // it takes in the tournament size, the crossover, and the crossover proportion.
@@ -109,32 +111,32 @@ void train_crossover_example(const std::string &map_filename) {
   // should be training now
 }
 
-Solution<obs::Simple> train_1_player_example(const std::string &map_filename) {
-  auto game = std::make_shared<jnb::JnBGame>(map_filename, jnb::Config{1, 300});
-
-  auto sample_obs = game->build_observation();
+Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game) {
+  std::vector<obs::Simple> sample_obs;
+  game->observe(sample_obs);
 
   ga::ModelBuilder<obs::Simple> build_model =
       [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
-    auto new_model = std::make_shared<model::SimpleMLP>(64, 2);
+    auto new_model = std::make_shared<model::SimpleMLP>(64, 3);
     new_model->init(sample_obs[0], game->get_action_count(), rng);
     return new_model;
   };
 
   ga::Config<obs::Simple> config;
-  config.population_size = 64;
-  config.max_gen = 256;
+  config.population_size = 128;
+  config.max_gen = 40;
   config.seeds_per_eval = 1;
-  config.seed = 32517;
-  config.populate_fun = ga::make_tournament<obs::Simple>(3);
-  // config.populate_fun = make_tournament_with_crossover(
-  //     4, to_sol_crossover<obs::Simple>(to_vec_crossover(to_span_crossover(uniform_crossover))),
+  config.seed = 32515;
+  config.populate_fun = ga::make_tournament<obs::Simple>(2);
+  // config.populate_fun = ga::make_tournament_with_crossover(
+  //     3,
+  //     ga::to_sol_crossover<obs::Simple>(ga::to_vec_crossover(ga::to_span_crossover(ga::uniform_crossover))),
   //     0.8f);
   config.model_builder = build_model;
   // its single player, so no opponents needed
   config.prior_best_size = 0;
   config.references_size = 0;
-  config.mutation_rate = 0.3f;
+  config.mutation_rate = 0.05f;
   config.fitness_fun = ga::make_game_fitness_1p<obs::Simple>(game);
   config.fitness_logger = ga::fitness_printer<obs::Simple>;
   config.seed_change = ga::PER_GEN;
@@ -144,39 +146,36 @@ Solution<obs::Simple> train_1_player_example(const std::string &map_filename) {
   run(state, config);
 
   return best_prior_best<obs::Simple>(state.next, state.rng);
-  // return state.current[5];
 }
 
-Solution<Simple> train_openai(const std::string &map_filename) {
-  auto game = std::make_shared<jnb::JnBGame>(map_filename, jnb::Config{1, 250});
-
-  auto sample_obs = game->build_observation();
+Solution<Simple> train_openai(std::shared_ptr<Game<Simple>> game) {
+  std::vector<obs::Simple> sample_obs;
+  game->observe(sample_obs);
 
   ga::ModelBuilder<obs::Simple> build_model =
       [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
-    auto new_model = std::make_shared<model::SimpleMLP>(48, 2);
+    auto new_model = std::make_shared<model::SimpleMLP>(64, 2);
     new_model->init(sample_obs[0], game->get_action_count(), rng);
     return new_model;
   };
-
   std::mt19937 temp_rng(0);
   auto temp_model = build_model(temp_rng);
 
   es::Config<obs::Simple> config;
   config.optimizer = make_adam(temp_model->get_spans());
-  config.population_size = 256;
-  config.max_gen = 70;
-  config.seeds_per_eval = 8;
-  config.seed = 3;
+  config.population_size = 128;
+  config.max_gen = 40;
+  config.seeds_per_eval = 1;
+  config.seed = 4;
   config.model_builder = build_model;
   // its single player, so no opponents needed
   config.prior_best_size = 0;
   config.references_size = 0;
-  config.mutation_rate = 0.03f;
+  config.mutation_rate = 3.0f;
   config.learning_rate = 0.001f;
   config.fitness_fun = ga::make_game_fitness_1p<obs::Simple>(game);
   config.fitness_logger = ga::fitness_printer<obs::Simple>;
-  config.seed_change = ga::NEVER;
+  config.seed_change = ga::PER_GEN;
 
   es::State<obs::Simple> state;
   es::init(state, config);

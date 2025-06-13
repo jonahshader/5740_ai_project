@@ -15,7 +15,7 @@ std::vector<int> play(Game<ObsType> &game,
   assert(game.get_player_count() == models.size());
 
   // build io vectors, fitness vector
-  std::vector<ObsType> inputs = game.build_observation();
+  std::vector<ObsType> inputs;
   std::vector<std::vector<float>> outputs;
   std::vector<int> fitness;
   outputs.resize(game.get_player_count());
@@ -50,7 +50,7 @@ play_and_render(Game<ObsType> &game,
   assert(game.get_player_count() == models.size());
 
   // build io vectors, fitness vector
-  std::vector<ObsType> inputs = game.build_observation();
+  std::vector<ObsType> inputs;
   std::vector<std::vector<float>> outputs;
   std::vector<int> fitness;
   outputs.resize(game.get_player_count());

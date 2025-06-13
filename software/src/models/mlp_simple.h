@@ -30,6 +30,7 @@ public:
     return "SimpleMLP";
   }
   std::vector<ParamSpan> get_spans() override;
+  void apply_spans() override;
 
 private:
   size_t hidden_size;

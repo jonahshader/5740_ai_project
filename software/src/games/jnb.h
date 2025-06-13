@@ -11,6 +11,7 @@
 #include "game.h"
 #include "observation_types.h"
 #include "parse_map.h"
+#include "nn_utils.h"
 
 namespace jnb {
 
@@ -78,11 +79,12 @@ struct PlayerInput {
 struct Config {
   size_t players{1}; // -1 signifies unlimited
   int frame_limit{300};
-  size_t random_fourier_transforms{0};
+  bool use_position_delta_inputs{true};
+  std::vector<FloatToVec> fourier_transforms{};
 };
 
 // void observe_state_simple(const GameState &state, std::vector<F4> &observation, int player);
-void observe_state_simple(const GameState &state, std::vector<float> &observation, int player);
+// void observe_state_simple(const GameState &state, std::vector<float> &observation, int player);
 int get_fitness(const GameState &state, int player);
 // void observe_state_screen(const GameState &state, std::vector<uint8_t> &observation);
 
@@ -96,16 +98,6 @@ public:
   void get_fitness(std::vector<int32_t> &fitness) override;
   bool is_done() override;
   void observe(std::vector<obs::Simple> &inputs) override;
-
-  std::vector<obs::Simple> build_observation() override {
-    std::vector<obs::Simple> obs;
-    obs.resize(get_player_count());
-    for (size_t i = 0; i < get_player_count(); ++i) {
-      constexpr int INPUTS_PER_PLAYER = 7;
-      obs[i].resize(9 + INPUTS_PER_PLAYER * (state.players.size() - 1));
-    }
-    return obs;
-  }
 
   size_t get_action_count() override {
     return 3;
@@ -122,9 +114,7 @@ public:
   void render(std::vector<uint32_t> &pixels) override;
   std::pair<int, int> get_resolution() override;
   std::unique_ptr<Game<obs::Simple>> clone() const override {
-    auto new_game = std::make_unique<JnBGame>(*this);
-    new_game->state = state;
-    return new_game;
+    return std::make_unique<JnBGame>(*this);
   }
 
   // game state is public for PL interop

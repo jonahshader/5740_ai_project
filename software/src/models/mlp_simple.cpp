@@ -14,4 +14,8 @@ std::vector<ParamSpan> SimpleMLP::get_spans() {
   return net.get_spans();
 }
 
+void SimpleMLP::apply_spans() {
+  net.decay(0.1f);
+}
+
 } // namespace model

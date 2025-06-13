@@ -127,6 +127,8 @@ set(COMMON_SOURCES
   src/comms.h
   src/fixed_point.h
   src/neural_net.h
+  src/nn_utils.cpp
+  src/nn_utils.h
   src/observation_types.h
   src/param_ops.cpp
   src/param_ops.h

@@ -273,93 +273,12 @@ make_player_phases(const Player &_p, GameState &state) {
   return {phase1, phase2};
 }
 
-// void observe_state_simple(const GameState &state, std::vector<F4> &observation, int player) {
-//   constexpr int INPUTS_PER_PLAYER = 5;
-//   observation.resize(2 + INPUTS_PER_PLAYER * state.players.size());
-//   size_t index = 0;
-//   // coin pos
-//   observation[index++] = F4(static_cast<int16_t>(state.coin_pos.x * CELL_SIZE));
-//   observation[index++] = F4(static_cast<int16_t>(state.coin_pos.y * CELL_SIZE));
-//   // determine player state order based on who's observing (p1_perspective)
-//   const Player &us = state.players[player];
-//   // first player pos
-//   observation[index++] = us.x;
-//   observation[index++] = us.y;
-//   // first player vel
-//   observation[index++] = us.x_vel;
-//   observation[index++] = us.y_vel;
-//   // players dead
-//   observation[index++] = us.dead_timeout > 0 ? F4(32.0f) : F4(-32.0f);
-//   // iterate through remaining players
-//   for (size_t other_player_index = 0; other_player_index < state.players.size();
-//        ++other_player_index) {
-//     if (other_player_index == player)
-//       continue;
-//     const Player &other = state.players[other_player_index];
-//     observation[index++] = other.x;
-//     observation[index++] = other.y;
-//     observation[index++] = other.x_vel;
-//     observation[index++] = other.y_vel;
-//     observation[index++] = other.dead_timeout > 0 ? F4(32.0f) : F4(-32.0f);
-//   }
-// }
-
-void observe_state_simple(const GameState &state, std::vector<float> &observation, int player) {
-  const float x_norm = 1.0f / (state.map.width * CELL_SIZE);
-  const float y_norm = 1.0f / (state.map.height * CELL_SIZE);
-  const float x_vel_norm = 1.0f / (MOVE_MAX_VEL.to_float());
-  const float y_vel_norm = 1.0f / (-FALL_MAX_VEL.to_float());
-
-  // determine player state order based on who's observing (p1_perspective)
-  const Player &us = state.players[player];
-
-  constexpr int INPUTS_PER_OTHER_PLAYER = 7;
-  observation.resize(9 + INPUTS_PER_OTHER_PLAYER * (state.players.size() - 1));
-  size_t index = 0;
-  // coin pos
-  observation[index++] = state.coin_pos.x * CELL_SIZE * x_norm;
-  observation[index++] = state.coin_pos.y * CELL_SIZE * y_norm;
-  // sign(coin - player)
-  observation[index++] =
-      (state.coin_pos.x * CELL_SIZE + CELL_SIZE / 2) - (us.x.to_float()) > 0 ? 1.0f : -1.0f;
-  observation[index++] =
-      (state.coin_pos.y * CELL_SIZE + CELL_SIZE / 2) - (us.y.to_float()) > 0 ? 1.0f : -1.0f;
-  // first player pos
-  observation[index++] = us.x.to_float() * x_norm;
-  observation[index++] = us.y.to_float() * y_norm;
-  // first player vel
-  observation[index++] = us.x_vel.to_float() * x_vel_norm;
-  observation[index++] = us.y_vel.to_float() * y_vel_norm;
-  // players dead
-  observation[index++] = us.dead_timeout > 0 ? 1.0f : -1.0f;
-  // iterate through remaining players
-  for (size_t other_player_index = 0; other_player_index < state.players.size();
-       ++other_player_index) {
-    if (other_player_index == player)
-      continue;
-    const Player &other = state.players[other_player_index];
-
-    // other player pos
-    observation[index++] = other.x.to_float() * x_norm;
-    observation[index++] = other.y.to_float() * y_norm;
-    // sign(other - us)
-    observation[index++] = other.x.to_float() - us.x.to_float() > 0 ? 1.0f : -1.0f;
-    observation[index++] = other.y.to_float() - us.y.to_float() > 0 ? 1.0f : -1.0f;
-    // other player vel
-    observation[index++] = other.x_vel.to_float() * x_vel_norm;
-    observation[index++] = other.y_vel.to_float() * y_vel_norm;
-    // players dead
-    observation[index++] = other.dead_timeout > 0 ? 1.0f : -1.0f;
-  }
-}
-
 int get_fitness(const GameState &state, int player) {
   // fitness used to be relative, but with multiple players i think absolute makes more sense
   return state.players[player].score;
 }
 
-JnBGame::JnBGame(const std::string &map_filename, const Config &config)
-    : config(config) {
+JnBGame::JnBGame(const std::string &map_filename, const Config &config) : config(config) {
   // load map
   state.map.load_from_file(map_filename);
   state.players.resize(config.players);
@@ -483,8 +402,99 @@ bool JnBGame::is_done() {
 }
 
 void JnBGame::observe(std::vector<obs::Simple> &inputs) {
-  for (size_t i = 0; i < state.players.size(); ++i) {
-    observe_state_simple(state, inputs[i], i);
+  const float x_norm = 1.0f / (state.map.width * CELL_SIZE);
+  const float y_norm = 1.0f / (state.map.height * CELL_SIZE);
+  const float x_vel_norm = 1.0f / (MOVE_MAX_VEL.to_float());
+  const float y_vel_norm = 1.0f / (-FALL_MAX_VEL.to_float());
+
+  inputs.resize(state.players.size());
+  for (size_t player = 0; player < state.players.size(); ++player) {
+    size_t fourier_index = 0;
+    std::vector<float> fourier;
+    auto &observation = inputs[player];
+    observation.clear();
+
+    // determine player state order based on who's observing (p1_perspective)
+    const Player &us = state.players[player];
+
+    size_t index = 0;
+    // coin pos
+    observation.push_back(state.coin_pos.x * CELL_SIZE * x_norm);
+    observation.push_back(state.coin_pos.y * CELL_SIZE * y_norm);
+    if (config.fourier_transforms.size() > 0) {
+      config.fourier_transforms[fourier_index++ % config.fourier_transforms.size()](
+          state.coin_pos.x * CELL_SIZE * x_norm, fourier);
+      for (auto &f : fourier) {
+        observation.push_back(f);
+      }
+      config.fourier_transforms[fourier_index++ % config.fourier_transforms.size()](
+          state.coin_pos.y * CELL_SIZE * y_norm, fourier);
+      for (auto &f : fourier) {
+        observation.push_back(f);
+      }
+    }
+    // sign(coin - player)
+    if (config.use_position_delta_inputs) {
+      observation.push_back(
+          (state.coin_pos.x * CELL_SIZE + CELL_SIZE / 2) - (us.x.to_float()) > 0 ? 1.0f : -1.0f);
+      observation.push_back(
+          (state.coin_pos.y * CELL_SIZE + CELL_SIZE / 2) - (us.y.to_float()) > 0 ? 1.0f : -1.0f);
+    }
+
+    // first player pos
+    observation.push_back(us.x.to_float() * x_norm);
+    observation.push_back(us.y.to_float() * y_norm);
+    if (config.fourier_transforms.size() > 0) {
+      config.fourier_transforms[fourier_index++ % config.fourier_transforms.size()](
+          us.x.to_float() * x_norm, fourier);
+      for (auto &f : fourier) {
+        observation.push_back(f);
+      }
+      config.fourier_transforms[fourier_index++ % config.fourier_transforms.size()](
+          us.y.to_float() * y_norm, fourier);
+      for (auto &f : fourier) {
+        observation.push_back(f);
+      }
+    }
+    // first player vel
+    observation.push_back(us.x_vel.to_float() * x_vel_norm);
+    observation.push_back(us.y_vel.to_float() * y_vel_norm);
+    // TODO: fourier transform? or just scale this up?
+    // players dead
+    observation.push_back(us.dead_timeout > 0 ? 1.0f : -1.0f);
+    // iterate through remaining players
+    for (size_t other_player_index = 0; other_player_index < state.players.size();
+         ++other_player_index) {
+      if (other_player_index == player)
+        continue;
+      const Player &other = state.players[other_player_index];
+
+      // other player pos
+      observation.push_back(other.x.to_float() * x_norm);
+      observation.push_back(other.y.to_float() * y_norm);
+      if (config.fourier_transforms.size() > 0) {
+        config.fourier_transforms[fourier_index++ % config.fourier_transforms.size()](
+            other.x.to_float() * x_norm, fourier);
+        for (auto &f : fourier) {
+          observation.push_back(f);
+        }
+        config.fourier_transforms[fourier_index++ % config.fourier_transforms.size()](
+            other.y.to_float() * y_norm, fourier);
+        for (auto &f : fourier) {
+          observation.push_back(f);
+        }
+      }
+      // sign(other - us)
+      if (config.use_position_delta_inputs) {
+        observation.push_back(other.x.to_float() - us.x.to_float() > 0 ? 1.0f : -1.0f);
+        observation.push_back(other.y.to_float() - us.y.to_float() > 0 ? 1.0f : -1.0f);
+      }
+      // other player vel
+      observation.push_back(other.x_vel.to_float() * x_vel_norm);
+      observation.push_back(other.y_vel.to_float() * y_vel_norm);
+      // players dead
+      observation.push_back(other.dead_timeout > 0 ? 1.0f : -1.0f);
+    }
   }
 }
 

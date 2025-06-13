@@ -8,7 +8,8 @@
 namespace model {
 
 // a staticly allocated neural network with a generic parameter type
-template <typename T, int inputs, int outputs> struct StaticLayer {
+template <typename T, int inputs, int outputs>
+struct StaticLayer {
   T weights[outputs][inputs];
   T bias[outputs];
 
@@ -173,6 +174,16 @@ struct DynamicLayer {
     }
   }
 
+  void decay(float scale) {
+    // decay weights and bias
+    for (int i = 0; i < outputs; ++i) {
+      for (int j = 0; j < inputs; ++j) {
+        set_w(j, i, get_w(j, i) * scale);
+      }
+      bias[i] *= scale;
+    }
+  }
+
   std::vector<ParamSpan> get_spans() {
     std::vector<ParamSpan> spans;
     spans.push_back(std::span<T>(weights.data(), weights.size()));
@@ -192,12 +203,25 @@ struct DynamicNeuralNet {
       layers[i].init(rng, hidden_size, hidden_size);
     }
     layers[hidden_count].init(rng, hidden_size, outputs);
+
+    std::cout << "Initialized dynamic nn with inputs: " << inputs << " outputs: " << outputs
+              << std::endl;
   }
 
   void forward(const T *input, T *output) {
+    // for (int i = 0; i < layers[0].inputs; ++i) {
+    //   std::cout << input[i] << ", ";
+    // }
+    // std::cout << std::endl;
     // allocate buffers with maximum required size
-    std::vector<T> buffer_a(layers[0].outputs);
-    std::vector<T> buffer_b(layers[0].outputs);
+    int max_size = layers[0].inputs;
+    for (const auto &layer : layers) {
+      if (layer.outputs > max_size) {
+        max_size = layer.outputs;
+      }
+    }
+    std::vector<T> buffer_a(max_size);
+    std::vector<T> buffer_b(max_size);
 
     // set up pointers for current and next buffers
     T *current = buffer_a.data();
@@ -207,7 +231,7 @@ struct DynamicNeuralNet {
     layers[0].forward(input, current);
 
     // forward through hidden layers
-    for (int i = 1; i < layers.size(); ++i) {
+    for (int i = 1; i < layers.size() - 1; ++i) {
       layers[i].forward(current, next);
       // swap buffers
       std::swap(current, next);
@@ -221,6 +245,12 @@ struct DynamicNeuralNet {
     // mutate all layers
     for (auto &layer : layers) {
       layer.mutate(rng, mutation_rate);
+    }
+  }
+
+  void decay(float scale) {
+    for (auto &layer : layers) {
+      layer.decay(scale);
     }
   }
 
@@ -245,4 +275,4 @@ struct DynamicNeuralNet {
   }
 };
 
-} // namespace jnb
+} // namespace model

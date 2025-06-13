@@ -31,10 +31,7 @@ public:
 
   // Fill the inputs vector with observations for each player
   virtual void observe(std::vector<ObsType> &inputs) = 0;
-
-  // Create an initial observation vector, which is reused in the gameplay loop
-  virtual std::vector<ObsType> build_observation() = 0;
-
+  
   // Get the game name (for logging/identification)
   virtual std::string get_name() = 0;
 
