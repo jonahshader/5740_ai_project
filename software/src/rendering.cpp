@@ -13,8 +13,7 @@ void draw_tile(std::vector<uint32_t> &pixels, std::pair<int, int> pixels_res,
   for (int y = 0; y < tile_size; ++y) {
     for (int x = 0; x < tile_size; ++x) {
       const uint8_t *rgb = &spritesheet[4 * (x + (y + t_id * tile_size) * tile_size)];
-      size_t index =
-          (x + x_tile * tile_size) + (y + y_tile * tile_size) * pixels_res.first;
+      size_t index = (x + x_tile * tile_size) + (y + y_tile * tile_size) * pixels_res.first;
       pixels[index] = make_color(rgb[0], rgb[1], rgb[2], 255);
     }
   }
@@ -43,6 +42,29 @@ void draw_rect(std::vector<uint32_t> &pixels, std::pair<int, int> pixels_res, in
       }
       size_t index = px + py * pixels_res.first;
       pixels[index] = color;
+    }
+  }
+}
+
+void draw_circle(std::vector<uint32_t> &pixels, std::pair<int, int> pixels_res, int x, int y,
+                  int radius, uint32_t color) {
+  int x_min = x - radius;
+  int x_max = x + radius;
+  int y_min = y - radius;
+  int y_max = y + radius;
+
+  for (int i = y_min; i <= y_max; ++i) {
+    for (int j = x_min; j <= x_max; ++j) {
+      int dx = j - x;
+      int dy = i - y;
+      if (dx * dx + dy * dy <= radius * radius) {
+        // continue if out of bounds
+        if (j < 0 || j >= pixels_res.first || i < 0 || i >= pixels_res.second) {
+          continue;
+        }
+        size_t index = j + i * pixels_res.first;
+        pixels[index] = color;
+      }
     }
   }
 }

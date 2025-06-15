@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "games/seek.h"
 #include "jnb_render.h"
 #include "lodepng.h"
 #include "models/human.h"
@@ -48,10 +49,14 @@ int main(int argc, char *argv[]) {
   std::vector<FloatToVec> fourier_transforms;
   std::mt19937 temp_rng(324);
   fourier_transforms.push_back(make_gaussian_random_fourier_transform(temp_rng, 2.0f, 3));
-  auto game =
-      std::make_shared<jnb::JnBGame>(map_file, jnb::Config(1, 4800, true, fourier_transforms));
+  // auto game =
+  //     std::make_shared<jnb::JnBGame>(map_file, jnb::Config(1, 4800, true, fourier_transforms));
 
   // auto game = std::make_shared<jnb::JnBGame>(map_file, jnb::Config(1, 4800, true, {}));
+  ContinuousSeek::Config conf;
+  conf.absolute_inputs = false;
+  conf.coin_radius = 1.0f;
+  auto game = std::make_shared<ContinuousSeek>(conf);
 
   // auto trained_sol = train_openai(game);
   auto trained_sol = train_1_player_example(game);

@@ -103,6 +103,8 @@ set(COMMON_SOURCES
   src/games/jnb_render.h
   src/games/jnb.cpp
   src/games/jnb.h
+  src/games/seek.cpp
+  src/games/seek.h
   src/models/human.h
   src/models/mlp_map_lut.cpp
   src/models/mlp_map_lut.h
