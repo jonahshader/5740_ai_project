@@ -117,7 +117,7 @@ void ContinuousSeek::get_fitness(std::vector<int32_t> &fitness) {
   // std::cout << x << ", " << y << ", " << x_coin << ", " << y_coin << ", " << coins_collected <<
   // ", "
   //           << fit << std::endl;
-  fitness[0] = static_cast<int32_t>(fit * 100.0f); // scale to integer fitness
+  fitness[0] = static_cast<int32_t>(fit * 1000.0f); // scale to integer fitness
 }
 
 bool ContinuousSeek::is_done() {
@@ -142,11 +142,11 @@ void ContinuousSeek::observe(std::vector<obs::Simple> &inputs) {
     input.push_back(y_coin * y_norm);
   }
   if (config.relative_inputs) {
-    input.push_back((x_coin - x) * x_norm);
-    input.push_back((y_coin - y) * y_norm);
+    input.push_back(std::tanhf((x_coin - x) * x_norm));
+    input.push_back(std::tanhf((y_coin - y) * y_norm));
   }
-  input.push_back(x_vel * x_vel_norm);
-  input.push_back(y_vel * y_vel_norm);
+  input.push_back(std::tanhf(x_vel * x_vel_norm));
+  input.push_back(std::tanhf(y_vel * y_vel_norm));
   if (!config.fourier_transforms.empty()) {
     size_t fourier_index = 0;
     std::vector<float> fourier;

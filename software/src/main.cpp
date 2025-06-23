@@ -54,8 +54,10 @@ int main(int argc, char *argv[]) {
 
   // auto game = std::make_shared<jnb::JnBGame>(map_file, jnb::Config(1, 4800, true, {}));
   ContinuousSeek::Config conf;
-  conf.absolute_inputs = false;
-  conf.coin_radius = 1.0f;
+  // conf.absolute_inputs = false;
+  conf.frame_limit = 60;
+  conf.friction = 20;
+  conf.dt = 1 / 30.0f;
   auto game = std::make_shared<ContinuousSeek>(conf);
 
   // auto trained_sol = train_openai(game);
@@ -105,6 +107,8 @@ int main(int argc, char *argv[]) {
   // players.emplace_back(std::make_shared<model::Keyboard<obs::Simple>>());
   players.push_back(trained_sol.model);
 
+  conf.frame_limit *= 10;
+  game = std::make_shared<ContinuousSeek>(conf);
   std::uint64_t seed = 123;
   while (true) {
     game->init(seed++);

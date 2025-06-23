@@ -151,6 +151,7 @@ struct DynamicLayer {
       // activation function (ReLU)
       if (activate)
         output[i] = std::max(static_cast<T>(0), output[i]);
+      // output[i] = std::tanhf(output[i]);
     }
   }
 

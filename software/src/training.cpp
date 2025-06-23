@@ -117,17 +117,17 @@ Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game) {
 
   ga::ModelBuilder<obs::Simple> build_model =
       [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
-    auto new_model = std::make_shared<model::SimpleMLP>(64, 2);
+    auto new_model = std::make_shared<model::SimpleMLP>(32, 1);
     new_model->init(sample_obs[0], game->get_action_count(), rng);
     return new_model;
   };
 
   ga::Config<obs::Simple> config;
   config.population_size = 128;
-  config.max_gen = 400;
-  config.seeds_per_eval = 3;
+  config.max_gen = 100;
+  config.seeds_per_eval = 10;
   config.seed = 32515;
-  config.populate_fun = ga::make_tournament<obs::Simple>(5);
+  config.populate_fun = ga::make_tournament<obs::Simple>(10);
   // config.populate_fun = ga::make_tournament_with_crossover(
   //     3,
   //     ga::to_sol_crossover<obs::Simple>(ga::to_vec_crossover(ga::to_span_crossover(ga::uniform_crossover))),
@@ -136,7 +136,7 @@ Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game) {
   // its single player, so no opponents needed
   config.prior_best_size = 0;
   config.references_size = 0;
-  config.mutation_rate = 0.05f;
+  config.mutation_rate = 0.5f;
   config.fitness_fun = ga::make_game_fitness_1p<obs::Simple>(game);
   config.fitness_logger = ga::fitness_printer<obs::Simple>;
   config.seed_change = ga::PER_GEN;
@@ -154,7 +154,7 @@ Solution<Simple> train_openai(std::shared_ptr<Game<Simple>> game) {
 
   ga::ModelBuilder<obs::Simple> build_model =
       [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
-    auto new_model = std::make_shared<model::SimpleMLP>(64, 2);
+    auto new_model = std::make_shared<model::SimpleMLP>(64, 3);
     new_model->init(sample_obs[0], game->get_action_count(), rng);
     return new_model;
   };
@@ -163,19 +163,19 @@ Solution<Simple> train_openai(std::shared_ptr<Game<Simple>> game) {
 
   es::Config<obs::Simple> config;
   config.optimizer = make_adam(temp_model->get_spans());
-  config.population_size = 128;
-  config.max_gen = 40;
-  config.seeds_per_eval = 1;
+  config.population_size = 1024;
+  config.max_gen = 30;
+  config.seeds_per_eval = 4;
   config.seed = 4;
   config.model_builder = build_model;
   // its single player, so no opponents needed
   config.prior_best_size = 0;
   config.references_size = 0;
-  config.mutation_rate = 0.1f;
-  config.learning_rate = 0.1f;
+  config.mutation_rate = 0.01f;
+  config.learning_rate = 0.03f;
   config.fitness_fun = ga::make_game_fitness_1p<obs::Simple>(game);
   config.fitness_logger = ga::fitness_printer<obs::Simple>;
-  config.seed_change = ga::PER_GEN;
+  config.seed_change = ga::NEVER;
 
   es::State<obs::Simple> state;
   es::init(state, config);

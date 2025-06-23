@@ -51,10 +51,10 @@ public:
   struct Config {
     float world_width{32.0f};
     float world_height{32.0f};
-    float coin_radius{4.0f};
-    float friction{3.0f};
+    float coin_radius{1.5f};
+    float friction{6.0f};
     float max_accel{100.0f};
-    float dt{1/15.0f};
+    float dt{1 / 15.0f};
     int frame_limit{300};
     bool absolute_inputs{true};
     bool relative_inputs{true};
