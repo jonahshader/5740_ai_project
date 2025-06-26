@@ -151,13 +151,14 @@ Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game,
   return best_prior_best<obs::Simple>(state.next, state.rng);
 }
 
-Solution<Simple> train_openai(std::shared_ptr<Game<Simple>> game) {
+Solution<Simple> train_openai(std::shared_ptr<Game<Simple>> game,
+                              ga::PreviewCallback<Simple> &&update_callback) {
   std::vector<obs::Simple> sample_obs;
   game->observe(sample_obs);
 
   ga::ModelBuilder<obs::Simple> build_model =
       [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
-    auto new_model = std::make_shared<model::SimpleMLP>(64, 3);
+    auto new_model = std::make_shared<model::SimpleMLP>(32, 1);
     new_model->init(sample_obs[0], game->get_action_count(), rng);
     return new_model;
   };
@@ -165,20 +166,21 @@ Solution<Simple> train_openai(std::shared_ptr<Game<Simple>> game) {
   auto temp_model = build_model(temp_rng);
 
   es::Config<obs::Simple> config;
-  config.optimizer = make_adam(temp_model->get_spans());
-  config.population_size = 1024;
-  config.max_gen = 30;
-  config.seeds_per_eval = 4;
-  config.seed = 4;
+  // config.optimizer = make_adam(temp_model->get_spans());
+  config.population_size = 128;
+  config.max_gen = 300000;
+  config.seeds_per_eval = 5;
+  config.seed = 562731;
   config.model_builder = build_model;
   // its single player, so no opponents needed
   config.prior_best_size = 0;
   config.references_size = 0;
-  config.mutation_rate = 0.01f;
-  config.learning_rate = 0.03f;
+  config.mutation_rate = 0.015f;
+  config.learning_rate = 0.1f;
   config.fitness_fun = ga::make_game_fitness_1p<obs::Simple>(game);
   config.fitness_logger = ga::fitness_printer<obs::Simple>;
-  config.seed_change = ga::NEVER;
+  config.seed_change = ga::PER_GEN;
+  config.preview_callback = update_callback;
 
   es::State<obs::Simple> state;
   es::init(state, config);

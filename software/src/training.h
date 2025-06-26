@@ -19,4 +19,5 @@ void train_crossover_example(const std::string &map_filename);
 Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game,
                                         ga::PreviewCallback<Simple> &&update_callback);
 
-Solution<Simple> train_openai(std::shared_ptr<Game<Simple>> game);
+Solution<Simple> train_openai(std::shared_ptr<Game<Simple>> game,
+                              ga::PreviewCallback<Simple> &&update_callback);

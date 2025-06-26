@@ -31,6 +31,7 @@ struct Config {
   // std of gaussian noise for parameter exploration
   float mutation_rate{0.01f};
   float learning_rate{0.01f};
+  bool adaptive_mutation{false};
   size_t max_gen{128};
   size_t population_size{64};
   size_t prior_best_size{4};
@@ -249,7 +250,7 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
 
   // determine if we need to change mutation rate based on variance of fitness
   // TODO: try some other methods
-  {
+  if (config.adaptive_mutation) {
     bool flat_fitness = true;
     auto fit = state.pop[0].fitness;
     for (size_t i = 1; i < state.pop.size(); ++i) {
