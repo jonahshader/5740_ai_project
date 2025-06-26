@@ -42,7 +42,10 @@ struct Config {
   Optimizer optimizer{param_ops::axpy};
   size_t seeds_per_eval{4};
   ga::SeedChange seed_change{ga::NEVER};
-  ga::Logger<ObsType> fitness_logger;
+  ga::Logger<ObsType> fitness_logger{nullptr};
+
+  // Preview settings
+  ga::PreviewCallback<ObsType> preview_callback{nullptr};
 };
 
 template <typename ObsType>
@@ -223,6 +226,26 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
 
   // apply spans to ensure validity
   state.center.model->apply_spans();
+
+  // update preview with available models
+  if (config.preview_callback) {
+    auto preview_models = std::make_shared<std::vector<std::shared_ptr<Model<ObsType>>>>();
+
+    // Add center model (current best)
+    preview_models->push_back(state.center.model);
+
+    // Add prior_best models
+    for (auto &model : state.prior_best) {
+      preview_models->push_back(model);
+    }
+
+    // Add reference models if needed
+    for (auto &model : state.references) {
+      preview_models->push_back(model);
+    }
+
+    config.preview_callback(preview_models);
+  }
 
   // determine if we need to change mutation rate based on variance of fitness
   // TODO: try some other methods

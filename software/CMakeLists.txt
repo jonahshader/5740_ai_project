@@ -140,6 +140,7 @@ set(COMMON_SOURCES
   src/pl_nn.cpp
   src/pl_nn.h
   src/play.h
+  src/preview.h
   src/rendering.cpp
   src/rendering.h
   src/training.cpp

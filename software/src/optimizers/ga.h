@@ -45,6 +45,11 @@ using Fitness =
 template <typename ObsType>
 using Logger = std::function<void(size_t current_gen, const Population<ObsType> &pop)>;
 
+// Preview callback - receives models for multiplayer game preview
+template <typename ObsType>
+using PreviewCallback =
+    std::function<void(std::shared_ptr<std::vector<std::shared_ptr<Model<ObsType>>>>)>;
+
 enum SeedChange { NEVER, PER_GEN };
 
 template <typename ObsType>
@@ -75,6 +80,9 @@ struct Config {
   SeedChange seed_change{NEVER};
   PriorBestSelect<ObsType> prior_best_select{nullptr};
   Logger<ObsType> fitness_logger{nullptr};
+
+  // Preview settings
+  PreviewCallback<ObsType> preview_callback{nullptr};
 };
 
 template <typename ObsType>
@@ -126,6 +134,35 @@ void step(State<ObsType> &state, const Config<ObsType> &config) {
   // log fitness
   if (config.fitness_logger) {
     config.fitness_logger(state.gen, state.current);
+  }
+
+  // update preview with available models
+  if (config.preview_callback) {
+    auto preview_models = std::make_shared<std::vector<std::shared_ptr<Model<ObsType>>>>();
+
+    // Get the best model from current generation (reusing existing logic)
+    if (!state.current.empty()) {
+      // This mirrors the logic in best_prior_best from ga_funs.h
+      auto best = state.current[0];
+      for (const auto &sol : state.current) {
+        if (sol.fitness > best.fitness) {
+          best = sol;
+        }
+      }
+      preview_models->push_back(best.model);
+    }
+
+    // Add prior_best models
+    for (auto &model : state.prior_best) {
+      preview_models->push_back(model);
+    }
+
+    // Add reference models
+    for (auto &model : state.references) {
+      preview_models->push_back(model);
+    }
+
+    config.preview_callback(preview_models);
   }
 
   // create the next population

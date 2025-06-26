@@ -8,6 +8,7 @@
 #include "optimizers/ga_funs.h"
 #include "optimizers/openai_es.h"
 #include "optimizers/optimizers.h"
+#include "preview.h"
 
 #include <random>
 
@@ -111,7 +112,8 @@ void train_crossover_example(const std::string &map_filename) {
   // should be training now
 }
 
-Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game) {
+Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game,
+                                        ga::PreviewCallback<Simple> &&update_callback) {
   std::vector<obs::Simple> sample_obs;
   game->observe(sample_obs);
 
@@ -124,10 +126,10 @@ Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game) {
 
   ga::Config<obs::Simple> config;
   config.population_size = 128;
-  config.max_gen = 100;
-  config.seeds_per_eval = 10;
+  config.max_gen = 100000; // 100
+  config.seeds_per_eval = 5;
   config.seed = 32515;
-  config.populate_fun = ga::make_tournament<obs::Simple>(10);
+  config.populate_fun = ga::make_tournament<obs::Simple>(3);
   // config.populate_fun = ga::make_tournament_with_crossover(
   //     3,
   //     ga::to_sol_crossover<obs::Simple>(ga::to_vec_crossover(ga::to_span_crossover(ga::uniform_crossover))),
@@ -136,10 +138,11 @@ Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game) {
   // its single player, so no opponents needed
   config.prior_best_size = 0;
   config.references_size = 0;
-  config.mutation_rate = 0.5f;
+  config.mutation_rate = 0.25f;
   config.fitness_fun = ga::make_game_fitness_1p<obs::Simple>(game);
   config.fitness_logger = ga::fitness_printer<obs::Simple>;
   config.seed_change = ga::PER_GEN;
+  config.preview_callback = update_callback;
 
   ga::State<obs::Simple> state;
   init(state, config);
