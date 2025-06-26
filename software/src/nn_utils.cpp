@@ -43,3 +43,24 @@ FloatToVec make_pow_2_fourier_transform(float min_frequency, size_t transform_co
     }
   };
 }
+
+float sample_triangle_dist(float radius, std::mt19937 &rng) {
+  std::uniform_real_distribution<float> uniform(0.0f, 1.0f);
+  float u = uniform(rng);
+
+  if (u < 0.5f) {
+    // left side: from -radius to 0
+    return -radius + radius * std::sqrt(2.0f * u);
+  } else {
+    // right side: from 0 to +radius
+    return radius - radius * std::sqrt(2.0f * (1.0f - u));
+  }
+}
+
+float sample_half_triangle_dist(float radius, std::mt19937 &rng) {
+  std::uniform_real_distribution<float> uniform(0.0f, 1.0f);
+  float u = uniform(rng);
+
+  // just the positive side
+  return radius - radius * std::sqrt(u);
+}

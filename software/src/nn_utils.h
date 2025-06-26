@@ -11,3 +11,7 @@ FloatToVec make_gaussian_random_fourier_transform(std::mt19937 &rng, float std_d
                                                   size_t transform_count);
 
 FloatToVec make_pow_2_fourier_transform(float min_frequency, size_t transform_count);
+
+float sample_triangle_dist(float radius, std::mt19937 &rng);
+
+float sample_half_triangle_dist(float radius, std::mt19937 &rng);

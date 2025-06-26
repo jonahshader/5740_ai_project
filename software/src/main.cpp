@@ -66,8 +66,8 @@ int main(int argc, char *argv[]) {
   // auto trained_sol = train_openai(game);
   auto [update_callback, start_preview, stop_preview] = create_preview<obs::Simple>(preview_game);
   start_preview();
-  // auto trained_sol = train_1_player_example(game, update_callback);
-  auto trained_sol = train_openai(game, update_callback);
+  auto trained_sol = train_1_player_example(game, update_callback);
+  // auto trained_sol = train_openai(game, update_callback);
 
   std::cout << "Final trained model performance: " << trained_sol.fitness << std::endl;
 
