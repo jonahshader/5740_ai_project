@@ -12,6 +12,7 @@
 
 namespace model {
 
+// TODO: implement apply spans function
 template <typename ActFun>
 struct Pow2Layer {
   // config
@@ -24,18 +25,40 @@ struct Pow2Layer {
   ActFun act_fun;
 
   // trainable params
-  std::vector<std::int8_t> weights; // power values
-  std::vector<std::int16_t> bias;   // direct values
+  std::vector<std::int8_t> encoded_weights; // power values
+  std::vector<std::int16_t> bias;           // direct values
   std::int8_t pre_act_shift_right;
 
   explicit Pow2Layer(ActFun act_fun = ActFun{}) : act_fun(act_fun) {}
 
   int get_w(size_t input, size_t output) {
-    return weights[output * inputs + input];
+    return encoded_weights[output * inputs + input];
   }
 
   void set_w(size_t input, size_t output, int value) {
-    weights[output * inputs + input] = value;
+    encoded_weights[output * inputs + input] = value;
+  }
+
+  int effective_weight(std::int8_t encoded_weight) {
+    if (encoded_weight == 0) {
+      // zero is a special case as no shifting occurs
+      return 0;
+    }
+    else if (encoded_weight > 0) {
+      return 1 << (encoded_weight - 1);
+    } else {
+      return -(1 << (-encoded_weight - 1));
+    }
+  }
+
+  int apply_weight(std::int8_t encoded_weight, int input) {
+    if (encoded_weight == 0) {
+      return 0;
+    } else if (encoded_weight > 0) {
+      return input << (encoded_weight - 1); // positive weight
+    } else {
+      return (-input) << (-encoded_weight - 1); // negative weight
+    }
   }
 
   void init(std::mt19937 &rng, size_t inputs, size_t outputs, size_t weight_max_abs,
@@ -46,8 +69,8 @@ struct Pow2Layer {
     this->weight_max_abs = weight_max_abs;
     this->bias_max_abs = bias_max_abs;
     this->pre_act_shift_right_min = pre_act_shift_right_min;
-    this->pre_act_shift_right_max = pre_act_shift_right_max; // Fixed bug
-    weights.resize(inputs * outputs);
+    this->pre_act_shift_right_max = pre_act_shift_right_max;
+    encoded_weights.resize(inputs * outputs);
     bias.resize(outputs);
 
     // xavier/glorot init - target variance
@@ -58,7 +81,7 @@ struct Pow2Layer {
     // Sample weights using full range for maximum precision
     for (auto i = 0; i < outputs; ++i) {
       for (auto j = 0; j < inputs; ++j) {
-        auto triangle_sample = sample_half_triangle_dist(std::pow(2, weight_max_abs));
+        auto triangle_sample = sample_half_triangle_dist(std::pow(2, weight_max_abs), rng);
         int triangle_sample_pow = std::round(std::log2(triangle_sample));
         set_w(j, i, sign_dist(rng) ? triangle_sample_pow : -triangle_sample_pow);
       }
@@ -69,7 +92,8 @@ struct Pow2Layer {
     float actual_variance = 0.0f;
     for (auto i = 0; i < outputs; ++i) {
       for (auto j = 0; j < inputs; ++j) {
-        float weight_value = std::pow(2.0f, std::abs(get_w(j, i)));
+        auto encoded_weight = get_w(j, i);
+        auto weight_value = effective_weight(encoded_weight);
         actual_variance += weight_value * weight_value;
       }
     }
@@ -89,7 +113,7 @@ struct Pow2Layer {
       output[i] = bias[i];
       for (auto j = 0; j < inputs; ++j) {
         auto w = get_w(j, i);
-        output[i] += w >= 0 ? input[j] << w : (-input[j]) << (-w);
+        output[i] += apply_weight(w, input[j]);
       }
       // scale down output
       output[i] >>= pre_act_shift_right;
@@ -153,9 +177,29 @@ struct Pow2Layer {
     }
   }
 
+  void clamp_parameters() {
+    // Clamp weights to valid range
+    for (auto i = 0; i < outputs; ++i) {
+      for (auto j = 0; j < inputs; ++j) {
+        auto value = get_w(j, i);
+        if (value > static_cast<int>(weight_max_abs)) {
+          set_w(j, i, weight_max_abs);
+        } else if (value < -static_cast<int>(weight_max_abs)) {
+          set_w(j, i, -weight_max_abs);
+        }
+      }
+      // Clamp bias to valid range
+      if (bias[i] > static_cast<int>(bias_max_abs)) {
+        bias[i] = bias_max_abs;
+      } else if (bias[i] < -static_cast<int>(bias_max_abs)) {
+        bias[i] = -bias_max_abs;
+      }
+    }
+  }
+
   std::vector<ParamSpan> get_spans() {
     std::vector<ParamSpan> spans;
-    spans.push_back(std::span<std::int8_t>(weights.data(), weights.size()));
+    spans.push_back(std::span<std::int8_t>(encoded_weights.data(), encoded_weights.size()));
     spans.push_back(std::span<std::int16_t>(bias.data(), bias.size()));
     spans.push_back(std::span<std::int8_t>(&pre_act_shift_right, 1));
     return spans;
@@ -166,6 +210,9 @@ template <typename HiddenActFun, typename OutputActFun>
 struct Pow2NeuralNet {
   std::vector<Pow2Layer<HiddenActFun>> hidden_layers;
   Pow2Layer<OutputActFun> output_layer;
+
+  // Default constructor
+  Pow2NeuralNet() : output_layer(OutputActFun{}) {}
 
   void init(std::mt19937 &rng, size_t inputs, size_t hidden_size, size_t hidden_count,
             size_t outputs, size_t weight_max_abs = 4, size_t bias_max_abs = 1000,
@@ -249,6 +296,13 @@ struct Pow2NeuralNet {
       layer.decay_random(rng, decay_probability);
     }
     output_layer.decay_random(rng, decay_probability);
+  }
+
+  void clamp_parameters() {
+    for (auto &layer : hidden_layers) {
+      layer.clamp_parameters();
+    }
+    output_layer.clamp_parameters();
   }
 
   std::string get_shape() const {

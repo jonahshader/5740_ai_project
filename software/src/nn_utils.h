@@ -15,3 +15,9 @@ FloatToVec make_pow_2_fourier_transform(float min_frequency, size_t transform_co
 float sample_triangle_dist(float radius, std::mt19937 &rng);
 
 float sample_half_triangle_dist(float radius, std::mt19937 &rng);
+
+// auto identity_act = [](auto x) { return x; };
+// auto relu_act = [](auto x) {
+//   using T = decltype(x);
+//   return std::max(x, T{0});
+// };

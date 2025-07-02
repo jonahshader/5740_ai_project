@@ -58,8 +58,8 @@ void ContinuousSeek::update(const std::vector<std::vector<float>> &actions) {
   assert(actions.size() == 1); // just 1 player for now
   const auto &act = actions[0];
 
-  float x_accel = std::tanhf(act[0]) * config.max_accel - x_vel * config.friction;
-  float y_accel = std::tanhf(act[1]) * config.max_accel - y_vel * config.friction;
+  float x_accel = std::tanh(act[0]) * config.max_accel - x_vel * config.friction;
+  float y_accel = std::tanh(act[1]) * config.max_accel - y_vel * config.friction;
   x_vel += x_accel * config.dt;
   y_vel += y_accel * config.dt;
   x += x_vel * config.dt;
@@ -142,11 +142,11 @@ void ContinuousSeek::observe(std::vector<obs::Simple> &inputs) {
     input.push_back(y_coin * y_norm);
   }
   if (config.relative_inputs) {
-    input.push_back(std::tanhf((x_coin - x) * x_norm));
-    input.push_back(std::tanhf((y_coin - y) * y_norm));
+    input.push_back(std::tanh((x_coin - x) * x_norm));
+    input.push_back(std::tanh((y_coin - y) * y_norm));
   }
-  input.push_back(std::tanhf(x_vel * x_vel_norm));
-  input.push_back(std::tanhf(y_vel * y_vel_norm));
+  input.push_back(std::tanh(x_vel * x_vel_norm));
+  input.push_back(std::tanh(y_vel * y_vel_norm));
   if (!config.fourier_transforms.empty()) {
     size_t fourier_index = 0;
     std::vector<float> fourier;

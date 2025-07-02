@@ -11,8 +11,8 @@
 namespace model {
 
 // Covers all the possible parameter types that models use. Add more as needed.
-using ParamSpan = std::variant<std::span<float>, std::span<int8_t>>;
-using ParamVec = std::variant<std::vector<float>, std::vector<int8_t>>;
+using ParamSpan = std::variant<std::span<float>, std::span<int8_t>, std::span<int16_t>>;
+using ParamVec = std::variant<std::vector<float>, std::vector<int8_t>, std::vector<int16_t>>;
 
 using ParamSpans = std::vector<ParamSpan>;
 using ParamVecs = std::vector<ParamVec>;
