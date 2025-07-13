@@ -2,6 +2,7 @@
 
 #include "games/jnb.h"
 #include "models/mlp_simple.h"
+#include "models/pl_nn_model.h"
 #include "observation_types.h"
 #include "optimizers/crossover_funs.h"
 #include "optimizers/crossover_types.h"
@@ -119,7 +120,8 @@ Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game,
 
   ga::ModelBuilder<obs::Simple> build_model =
       [&](std::mt19937 &rng) -> std::shared_ptr<model::Model<obs::Simple>> {
-    auto new_model = std::make_shared<model::SimpleMLP>(32, 1);
+    // auto new_model = std::make_shared<model::SimpleMLP>(32, 1);
+    auto new_model = std::make_shared<model::SimplePow2MLP>(64, 1);
     new_model->init(sample_obs[0], game->get_action_count(), rng);
     return new_model;
   };
@@ -138,7 +140,7 @@ Solution<Simple> train_1_player_example(std::shared_ptr<Game<Simple>> game,
   // its single player, so no opponents needed
   config.prior_best_size = 0;
   config.references_size = 0;
-  config.mutation_rate = 0.25f;
+  config.mutation_rate = 0.025f;
   config.fitness_fun = ga::make_game_fitness_1p<obs::Simple>(game);
   config.fitness_logger = ga::fitness_printer<obs::Simple>;
   config.seed_change = ga::PER_GEN;
